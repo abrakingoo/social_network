@@ -1,28 +1,16 @@
 package main
 
 import (
-	"log"
-	"os"
-	"path/filepath"
-	"social/pkg/sqlite"
-
-
+	"fmt"
+	"social/pkg"
 )
 
 func main() {
-    currentDir, err := os.Getwd()
-    if err != nil {
-        log.Fatalf("Failed to get current directory: %v", err)
-    }
+	db, err := pkg.DBInstance()
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer db.Close()
 
-    dbPath := filepath.Join(currentDir, "backend.db")
-    migrationsPath := filepath.Join(currentDir, "pkg","sqlite")
-
-    db, err := sqlite.InitDB(dbPath, migrationsPath)
-    if err != nil {
-        log.Fatalf("Failed to initialize database: %v", err)
-    }
-    defer db.Close()
-
-    log.Println("Database successfully initialized and migrated.")
+	
 }
