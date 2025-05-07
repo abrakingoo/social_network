@@ -1,9 +1,10 @@
-CREATE TABLE posts (
+CREATE TABLE comments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     content TEXT,
     image TEXT,
-    privacy TEXT CHECK(privacy IN ('public', 'almost_private', 'private')) NOT NULL DEFAULT 'public',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
