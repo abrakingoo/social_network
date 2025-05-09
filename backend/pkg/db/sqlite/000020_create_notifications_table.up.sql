@@ -1,0 +1,13 @@
+CREATE TABLE notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient_id INTEGER NOT NULL, 
+    actor_id INTEGER,              
+    type TEXT NOT NULL,            
+    entity_id INTEGER,             
+    entity_type TEXT,              
+    is_read BOOLEAN DEFAULT 0,     
+    message TEXT,                 
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE
+);
