@@ -102,103 +102,103 @@ export default function Events() {
     : events;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Upcoming Events</h1>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Upcoming Events</h1>
 
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-social hover:bg-social-dark">
-              Create Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Create a New Event</DialogTitle>
-            </DialogHeader>
-            <EventForm onClose={() => setIsFormOpen(false)} onEventCreated={handleEventCreated} />
-          </DialogContent>
-        </Dialog>
-      </div>
+                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-social hover:bg-social-dark">
+                      Create Event
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Create a New Event</DialogTitle>
+                    </DialogHeader>
+                    <EventForm onClose={() => setIsFormOpen(false)} onEventCreated={handleEventCreated} />
+                  </DialogContent>
+                </Dialog>
+              </div>
 
-      <div className="mb-6 relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search events"
-          className="pl-10"
-        />
-      </div>
+              <div className="mb-6 relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search events"
+                  className="pl-10"
+                />
+              </div>
 
-      {filteredEvents.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredEvents.map((event) => (
-            <Card key={event.id} className="overflow-hidden">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-semibold">{event.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {format(event.date, 'EEEE, MMMM d, yyyy')}
-                    </p>
-                  </div>
-                  <Badge variant={event.isAttending ? "default" : "outline"}>
-                    {event.isAttending ? "Going" : "Not Going"}
-                  </Badge>
+              {filteredEvents.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {filteredEvents.map((event) => (
+                    <Card key={event.id} className="overflow-hidden">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-semibold">{event.title}</h3>
+                            <p className="text-sm text-gray-500">
+                              {format(event.date, 'EEEE, MMMM d, yyyy')}
+                            </p>
+                          </div>
+                          <Badge variant={event.isAttending ? "default" : "outline"}>
+                            {event.isAttending ? "Going" : "Not Going"}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-gray-600 mb-4">
+                          {event.description}
+                        </p>
+                        <div className="space-y-2">
+                          <div className="flex items-center text-sm">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span>{format(event.date, 'MMMM d, yyyy')}</span>
+                          </div>
+                          {event.time && (
+                            <div className="flex items-center text-sm">
+                              <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                              <span>{event.time}</span>
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center text-sm">
+                              <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                              <span>{event.location}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center text-sm">
+                            <Users className="h-4 w-4 mr-2 text-gray-500" />
+                            <span>{event.attendees} {event.attendees === 1 ? 'person' : 'people'} attending</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="border-t pt-4">
+                        <Button
+                          variant={event.isAttending ? "outline" : "default"}
+                          onClick={() => toggleAttendance(event.id)}
+                          className="w-full"
+                        >
+                          {event.isAttending ? "Cancel Attendance" : "Attend Event"}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  {event.description}
-                </p>
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm">
-                    <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>{format(event.date, 'MMMM d, yyyy')}</span>
-                  </div>
-                  {event.time && (
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                      <span>{event.time}</span>
-                    </div>
-                  )}
-                  {event.location && (
-                    <div className="flex items-center text-sm">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                      <span>{event.location}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center text-sm">
-                    <Users className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>{event.attendees} {event.attendees === 1 ? 'person' : 'people'} attending</span>
-                  </div>
+              ) : (
+                <div className="text-center py-10">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium">No events found</h3>
+                  <p className="text-gray-500 mt-1">
+                    {searchQuery
+                      ? `No events matching "${searchQuery}"`
+                      : "There are no upcoming events at this time"
+                    }
+                  </p>
                 </div>
-              </CardContent>
-              <CardFooter className="border-t pt-4">
-                <Button
-                  variant={event.isAttending ? "outline" : "default"}
-                  onClick={() => toggleAttendance(event.id)}
-                  className="w-full"
-                >
-                  {event.isAttending ? "Cancel Attendance" : "Attend Event"}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-10">
-          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-medium">No events found</h3>
-          <p className="text-gray-500 mt-1">
-            {searchQuery
-              ? `No events matching "${searchQuery}"`
-              : "There are no upcoming events at this time"
-            }
-          </p>
-        </div>
-      )}
+              )}
     </div>
   );
 }
