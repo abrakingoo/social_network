@@ -124,101 +124,101 @@ const Notifications = () => {
     : mockNotifications.filter(n => n.type === activeTab);
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card>
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-semibold">Notifications</h2>
-        </div>
+            <div className="max-w-2xl mx-auto">
+              <Card>
+                <div className="p-4 border-b">
+                  <h2 className="text-xl font-semibold">Notifications</h2>
+                </div>
 
-        <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-          <div className="p-4 border-b">
-            <TabsList className="grid grid-cols-5 w-full">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="follow">Follows</TabsTrigger>
-              <TabsTrigger value="like">Likes</TabsTrigger>
-              <TabsTrigger value="comment">Comments</TabsTrigger>
-              <TabsTrigger value="message">Messages</TabsTrigger>
-            </TabsList>
-          </div>
+                <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+                  <div className="p-4 border-b">
+                    <TabsList className="grid grid-cols-5 w-full">
+                      <TabsTrigger value="all">All</TabsTrigger>
+                      <TabsTrigger value="follow">Follows</TabsTrigger>
+                      <TabsTrigger value="like">Likes</TabsTrigger>
+                      <TabsTrigger value="comment">Comments</TabsTrigger>
+                      <TabsTrigger value="message">Messages</TabsTrigger>
+                    </TabsList>
+                  </div>
 
-          <TabsContent value="all" className="mt-0">
-            <div className="divide-y">
-              {filteredNotifications.length > 0 ? (
-                filteredNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 flex items-start ${notification.read ? '' : 'bg-gray-50'}`}
-                  >
-                    <div className="mr-3 mt-1">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={notification.actor.avatar} />
-                      <AvatarFallback>
-                        {notification.actor.firstName[0]}{notification.actor.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <p className="text-sm">
-                          <span className="font-medium">
-                            {notification.actor.firstName} {notification.actor.lastName}
-                          </span>
-                          {' '}
-                          {notification.content}
-                          {notification.groupName && (
-                            <span className="font-medium"> {notification.groupName}</span>
-                          )}
-                        </p>
-                        <span className="text-xs text-gray-500">
-                          {formatTime(notification.timestamp)}
-                        </span>
-                      </div>
+                  <TabsContent value="all" className="mt-0">
+                    <div className="divide-y">
+                      {filteredNotifications.length > 0 ? (
+                        filteredNotifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 flex items-start ${notification.read ? '' : 'bg-gray-50'}`}
+                          >
+                            <div className="mr-3 mt-1">
+                              {getNotificationIcon(notification.type)}
+                            </div>
+                            <Avatar className="h-10 w-10 mr-3">
+                              <AvatarImage src={notification.actor.avatar} />
+                              <AvatarFallback>
+                                {notification.actor.firstName[0]}{notification.actor.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex justify-between">
+                                <p className="text-sm">
+                                  <span className="font-medium">
+                                    {notification.actor.firstName} {notification.actor.lastName}
+                                  </span>
+                                  {' '}
+                                  {notification.content}
+                                  {notification.groupName && (
+                                    <span className="font-medium"> {notification.groupName}</span>
+                                  )}
+                                </p>
+                                <span className="text-xs text-gray-500">
+                                  {formatTime(notification.timestamp)}
+                                </span>
+                              </div>
 
-                      {(notification.type === 'follow' || notification.type === 'group') && (
-                        <div className="mt-2 flex space-x-2">
-                          <Button size="sm" className="bg-social hover:bg-social-dark">
-                            {notification.type === 'follow' ? 'Follow Back' : 'Accept'}
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            {notification.type === 'follow' ? 'Ignore' : 'Decline'}
-                          </Button>
+                              {(notification.type === 'follow' || notification.type === 'group') && (
+                                <div className="mt-2 flex space-x-2">
+                                  <Button size="sm" className="bg-social hover:bg-social-dark">
+                                    {notification.type === 'follow' ? 'Follow Back' : 'Accept'}
+                                  </Button>
+                                  <Button size="sm" variant="outline">
+                                    {notification.type === 'follow' ? 'Ignore' : 'Decline'}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center">
+                          <Bell className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                          <h3 className="font-medium text-lg mb-1">No notifications</h3>
+                          <p className="text-gray-500">You don't have any notifications yet</p>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-8 text-center">
-                  <Bell className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                  <h3 className="font-medium text-lg mb-1">No notifications</h3>
-                  <p className="text-gray-500">You don't have any notifications yet</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
+                  </TabsContent>
 
-          <TabsContent value="follow" className="mt-0">
-            {/* Content will be filtered based on the activeTab state */}
-            {/* Same structure as "all" tab */}
-          </TabsContent>
+                  <TabsContent value="follow" className="mt-0">
+                    {/* Content will be filtered based on the activeTab state */}
+                    {/* Same structure as "all" tab */}
+                  </TabsContent>
 
-          <TabsContent value="like" className="mt-0">
-            {/* Content will be filtered based on the activeTab state */}
-            {/* Same structure as "all" tab */}
-          </TabsContent>
+                  <TabsContent value="like" className="mt-0">
+                    {/* Content will be filtered based on the activeTab state */}
+                    {/* Same structure as "all" tab */}
+                  </TabsContent>
 
-          <TabsContent value="comment" className="mt-0">
-            {/* Content will be filtered based on the activeTab state */}
-            {/* Same structure as "all" tab */}
-          </TabsContent>
+                  <TabsContent value="comment" className="mt-0">
+                    {/* Content will be filtered based on the activeTab state */}
+                    {/* Same structure as "all" tab */}
+                  </TabsContent>
 
-          <TabsContent value="message" className="mt-0">
-            {/* Content will be filtered based on the activeTab state */}
-            {/* Same structure as "all" tab */}
-          </TabsContent>
-        </Tabs>
-      </Card>
+                  <TabsContent value="message" className="mt-0">
+                    {/* Content will be filtered based on the activeTab state */}
+                    {/* Same structure as "all" tab */}
+                  </TabsContent>
+                </Tabs>
+              </Card>
     </div>
   );
 };
