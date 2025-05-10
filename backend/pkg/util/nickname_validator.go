@@ -5,7 +5,7 @@ import (
 	"regexp"
 )
 
-func ValidateUsername(username string) error {
+func ValidateNickname(username string) error {
 	// Ensure it starts with a letter
 	if !regexp.MustCompile(`^[a-zA-Z]`).MatchString(username) {
 		return errors.New("username must start with a letter")
