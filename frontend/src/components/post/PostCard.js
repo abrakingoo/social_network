@@ -145,122 +145,124 @@ const PostCard = ({ post }) => {
   };
 
   return (
-    <Card className="mb-4">
-      <CardHeader className="pt-4 pb-0">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <Avatar>
-              <AvatarImage src={author.avatar} alt={authorName} />
-              <AvatarFallback>{firstName[0]}{lastName[0]}</AvatarFallback>
-            </Avatar>
+    <div className="max-w-4xl mx-auto">
+      <Card className="mb-4 bg-white shadow-sm">
+        <CardHeader className="pt-4 pb-0">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <Avatar>
+                <AvatarImage src={author.avatar} alt={authorName} />
+                <AvatarFallback>{firstName[0]}{lastName[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="font-semibold">{authorName}</div>
+                <div className="text-xs text-gray-500">{formattedDate}</div>
+              </div>
+            </div>
+
+            {isAuthor && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Edit</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-3">
+          <p className="whitespace-pre-wrap">{post.content}</p>
+
+          {post.images && post.images.length > 0 && (
+            <div className="mt-3 rounded-md overflow-hidden">
+              {post.images.map((image, index) => (
+                <img
+                  key={index}
+                  src={image}
+                  alt={`Post image ${index + 1}`}
+                  className="w-full h-auto max-h-96 object-cover"
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
             <div>
-              <div className="font-semibold">{authorName}</div>
-              <div className="text-xs text-gray-500">{formattedDate}</div>
+              {typeof post.likes === 'number' ?
+                `${post.likes} ${post.likes === 1 ? 'like' : 'likes'}` :
+                (Array.isArray(post.likes) && post.likes.length > 0 ?
+                  `${post.likes.length} ${post.likes.length === 1 ? 'like' : 'likes'}` : '')}
+            </div>
+            <div>
+              {typeof post.comments === 'number' ?
+                `${post.comments} ${post.comments === 1 ? 'comment' : 'comments'}` :
+                (Array.isArray(post.comments) && post.comments.length > 0 ?
+                  `${post.comments.length} ${post.comments.length === 1 ? 'comment' : 'comments'}` : '')}
             </div>
           </div>
+        </CardContent>
 
-          {isAuthor && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
-                  <MoreHorizontal className="h-5 w-5" />
+        <div className="border-t border-gray-200">
+          <div className="grid grid-cols-3 gap-1 py-1">
+            <Button
+              variant="ghost"
+              className={`flex items-center justify-center ${hasLiked ? 'text-red-500' : ''}`}
+              onClick={handleLike}
+            >
+              <Heart className={`mr-1 h-5 w-5 ${hasLiked ? 'fill-current' : ''}`} />
+              Like
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center justify-center"
+              onClick={() => setShowComments(!showComments)}
+            >
+              <MessageSquare className="mr-1 h-5 w-5" />
+              Comment
+            </Button>
+            <Button variant="ghost" className="flex items-center justify-center">
+              <Share2 className="mr-1 h-5 w-5" />
+              Share
+            </Button>
+          </div>
+        </div>
+
+        {showComments && (
+          <CardFooter className="flex flex-col p-0">
+            <div className="border-t border-gray-200 w-full">
+              {renderComments()}
+            </div>
+
+            {currentUser && (
+              <form onSubmit={handleCommentSubmit} className="flex items-center p-4 space-x-2 w-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={currentUser.avatar} alt={currentUser.firstName} />
+                  <AvatarFallback>{currentUser.firstName?.[0] || ''}{currentUser.lastName?.[0] || ''}</AvatarFallback>
+                </Avatar>
+                <Input
+                  placeholder="Write a comment..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="rounded-full bg-gray-100"
+                />
+                <Button type="submit" size="icon" className="rounded-full">
+                  <Send className="h-5 w-5" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Edit</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-3">
-        <p className="whitespace-pre-wrap">{post.content}</p>
-
-        {post.images && post.images.length > 0 && (
-          <div className="mt-3 rounded-md overflow-hidden">
-            {post.images.map((image, index) => (
-              <img
-                key={index}
-                src={image}
-                alt={`Post image ${index + 1}`}
-                className="w-full h-auto max-h-96 object-cover"
-              />
-            ))}
-          </div>
+              </form>
+            )}
+          </CardFooter>
         )}
-
-        <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-          <div>
-            {typeof post.likes === 'number' ?
-              `${post.likes} ${post.likes === 1 ? 'like' : 'likes'}` :
-              (Array.isArray(post.likes) && post.likes.length > 0 ?
-                `${post.likes.length} ${post.likes.length === 1 ? 'like' : 'likes'}` : '')}
-          </div>
-          <div>
-            {typeof post.comments === 'number' ?
-              `${post.comments} ${post.comments === 1 ? 'comment' : 'comments'}` :
-              (Array.isArray(post.comments) && post.comments.length > 0 ?
-                `${post.comments.length} ${post.comments.length === 1 ? 'comment' : 'comments'}` : '')}
-          </div>
-        </div>
-      </CardContent>
-
-      <div className="border-t border-gray-200">
-        <div className="grid grid-cols-3 gap-1 py-1">
-          <Button
-            variant="ghost"
-            className={`flex items-center justify-center ${hasLiked ? 'text-red-500' : ''}`}
-            onClick={handleLike}
-          >
-            <Heart className={`mr-1 h-5 w-5 ${hasLiked ? 'fill-current' : ''}`} />
-            Like
-          </Button>
-          <Button
-            variant="ghost"
-            className="flex items-center justify-center"
-            onClick={() => setShowComments(!showComments)}
-          >
-            <MessageSquare className="mr-1 h-5 w-5" />
-            Comment
-          </Button>
-          <Button variant="ghost" className="flex items-center justify-center">
-            <Share2 className="mr-1 h-5 w-5" />
-            Share
-          </Button>
-        </div>
-      </div>
-
-      {showComments && (
-        <CardFooter className="flex flex-col p-0">
-          <div className="border-t border-gray-200 w-full">
-            {renderComments()}
-          </div>
-
-          {currentUser && (
-            <form onSubmit={handleCommentSubmit} className="flex items-center p-4 space-x-2 w-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser.avatar} alt={currentUser.firstName} />
-                <AvatarFallback>{currentUser.firstName?.[0] || ''}{currentUser.lastName?.[0] || ''}</AvatarFallback>
-              </Avatar>
-              <Input
-                placeholder="Write a comment..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="rounded-full bg-gray-100"
-              />
-              <Button type="submit" size="icon" className="rounded-full">
-                <Send className="h-5 w-5" />
-              </Button>
-            </form>
-          )}
-        </CardFooter>
-      )}
-    </Card>
+      </Card>
+    </div>
   );
 };
 
