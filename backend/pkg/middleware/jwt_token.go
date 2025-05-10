@@ -107,3 +107,16 @@ func ValidateJWTToken(jwtToken string) (map[string]interface{}, error) {
 
 	return payload, nil
 }
+
+func ExtractJWTTokenFromHeader(r *http.Request) (string, error) {
+	authorizationHeader := r.Header.Get("Authorization")
+	if authorizationHeader == "" {
+		return "", fmt.Errorf("missing authorization header")
+	}
+	parts := strings.Split(authorizationHeader, " ")
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return "", errors.New("invalid Authorization header format")
+	}
+
+	return parts[1], nil
+}
