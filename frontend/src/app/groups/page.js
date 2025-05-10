@@ -125,140 +125,140 @@ const Groups = () => {
     : mockGroups;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Groups</h1>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold">Groups</h1>
 
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-social hover:bg-social-dark">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Group
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <form onSubmit={handleCreateGroup}>
-              <DialogHeader>
-                <DialogTitle>Create a New Group</DialogTitle>
-                <DialogDescription>
-                  Fill in the details to create your own group community.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Group Name*</Label>
-                  <Input
-                    id="name"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    placeholder="Enter group name"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={newGroupDescription}
-                    onChange={(e) => setNewGroupDescription(e.target.value)}
-                    placeholder="What is your group about?"
-                    rows={4}
-                  />
-                </div>
+                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-social hover:bg-social-dark">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Group
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <form onSubmit={handleCreateGroup}>
+                      <DialogHeader>
+                        <DialogTitle>Create a New Group</DialogTitle>
+                        <DialogDescription>
+                          Fill in the details to create your own group community.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">Group Name*</Label>
+                          <Input
+                            id="name"
+                            value={newGroupName}
+                            onChange={(e) => setNewGroupName(e.target.value)}
+                            placeholder="Enter group name"
+                            required
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea
+                            id="description"
+                            value={newGroupDescription}
+                            onChange={(e) => setNewGroupDescription(e.target.value)}
+                            placeholder="What is your group about?"
+                            rows={4}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit" className="bg-social hover:bg-social-dark">Create Group</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
-              <DialogFooter>
-                <Button type="submit" className="bg-social hover:bg-social-dark">Create Group</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <div className="mb-6 relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search groups"
-          className="pl-10"
-        />
-      </div>
+              <div className="mb-6 relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search groups"
+                  className="pl-10"
+                />
+              </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid grid-cols-3 w-full mb-6">
-          <TabsTrigger value="all">All Groups</TabsTrigger>
-          <TabsTrigger value="joined">My Groups</TabsTrigger>
-          <TabsTrigger value="discover">Discover</TabsTrigger>
-        </TabsList>
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="grid grid-cols-3 w-full mb-6">
+                  <TabsTrigger value="all">All Groups</TabsTrigger>
+                  <TabsTrigger value="joined">My Groups</TabsTrigger>
+                  <TabsTrigger value="discover">Discover</TabsTrigger>
+                </TabsList>
 
-        <TabsContent value="all" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredGroups.map((group) => (
+                <TabsContent value="all" className="mt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredGroups.map((group) => (
               <Card key={group.id} className="overflow-hidden bg-white shadow-sm">
-                <div className="h-32 bg-gradient-to-r from-social/20 to-social-accent/20"></div>
-                <CardHeader className="relative pt-0">
-                  <div className="absolute -top-6 left-4">
-                    <Avatar className="h-12 w-12 border-2 border-white">
-                      <AvatarFallback className="bg-social text-white">
-                        {group.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="ml-14 pt-2">
+                        <div className="h-32 bg-gradient-to-r from-social/20 to-social-accent/20"></div>
+                        <CardHeader className="relative pt-0">
+                          <div className="absolute -top-6 left-4">
+                            <Avatar className="h-12 w-12 border-2 border-white">
+                              <AvatarFallback className="bg-social text-white">
+                                {group.name.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                          <div className="ml-14 pt-2">
                     <Link href={`/groups/${group.id}`} className="text-lg font-semibold hover:text-social">
-                      {group.name}
-                    </Link>
-                    <p className="text-sm text-gray-500">{group.memberCount} members</p>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 line-clamp-3">
-                    {group.description}
-                  </p>
-                </CardContent>
-                <CardFooter className="border-t pt-4 pb-4">
-                  {group.isJoined ? (
-                    <Button variant="outline" className="w-full" asChild>
+                              {group.name}
+                            </Link>
+                            <p className="text-sm text-gray-500">{group.memberCount} members</p>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-600 line-clamp-3">
+                            {group.description}
+                          </p>
+                        </CardContent>
+                        <CardFooter className="border-t pt-4 pb-4">
+                          {group.isJoined ? (
+                            <Button variant="outline" className="w-full" asChild>
                       <Link href={`/groups/${group.id}`}>
-                        {group.isAdmin ? 'Manage Group' : 'View Group'}
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full bg-social hover:bg-social-dark"
-                      onClick={() => handleJoinGroup(group.id)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Join Group
-                    </Button>
+                                {group.isAdmin ? 'Manage Group' : 'View Group'}
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button
+                              className="w-full bg-social hover:bg-social-dark"
+                              onClick={() => handleJoinGroup(group.id)}
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Join Group
+                            </Button>
+                          )}
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {filteredGroups.length === 0 && (
+                    <div className="text-center py-10">
+                      <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium">No groups found</h3>
+                      <p className="text-gray-500 mt-1">
+                        {searchQuery
+                          ? `No groups matching "${searchQuery}"`
+                          : "There are no groups available right now"
+                        }
+                      </p>
+                    </div>
                   )}
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+                </TabsContent>
 
-          {filteredGroups.length === 0 && (
-            <div className="text-center py-10">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium">No groups found</h3>
-              <p className="text-gray-500 mt-1">
-                {searchQuery
-                  ? `No groups matching "${searchQuery}"`
-                  : "There are no groups available right now"
-                }
-              </p>
-            </div>
-          )}
-        </TabsContent>
+                <TabsContent value="joined" className="mt-0">
+                  {/* Will filter and show only joined groups */}
+                </TabsContent>
 
-        <TabsContent value="joined" className="mt-0">
-          {/* Will filter and show only joined groups */}
-        </TabsContent>
-
-        <TabsContent value="discover" className="mt-0">
-          {/* Will filter and show only groups to discover */}
-        </TabsContent>
-      </Tabs>
+                <TabsContent value="discover" className="mt-0">
+                  {/* Will filter and show only groups to discover */}
+                </TabsContent>
+              </Tabs>
     </div>
   );
 };
