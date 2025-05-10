@@ -9,6 +9,7 @@ import (
 	"social/pkg/util"
 )
 
+// Register handles user registration
 func Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 
