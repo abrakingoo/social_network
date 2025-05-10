@@ -2,15 +2,14 @@ package main
 
 import (
 	"fmt"
-	"social/pkg"
+
+	db "social/pkg/db"
 )
 
 func main() {
-	db, err := pkg.DBInstance()
+	db, err := db.DBInstance()
 	if err != nil {
 		fmt.Println(err)
 	}
 	defer db.Close()
-
-	
 }
