@@ -4,6 +4,8 @@ CREATE TABLE comments (
     user_id INTEGER NOT NULL,
     content TEXT,
     image TEXT,
+    likes_count INTEGER DEFAULT 0,  
+    dislikes_count INTEGER DEFAULT 0, 
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
