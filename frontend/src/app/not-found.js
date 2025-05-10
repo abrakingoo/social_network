@@ -1,9 +1,10 @@
+'use client';
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
-const NotFound = () => {
+export default function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-social-gray p-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 text-center">
@@ -16,11 +17,9 @@ const NotFound = () => {
           className="mt-6 bg-social hover:bg-social-dark"
           asChild
         >
-          <Link to="/">Back to Home</Link>
+          <Link href="/">Back to Home</Link>
         </Button>
       </div>
     </div>
   );
-};
-
-export default NotFound;
+}
