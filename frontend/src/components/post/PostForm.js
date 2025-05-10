@@ -63,93 +63,93 @@ const PostForm = () => {
   return (
     <div className="max-w-4xl mx-auto">
       <Card className="mb-6 bg-white shadow-sm">
-        <form onSubmit={handleSubmit}>
-          <CardContent className="pt-4">
-            <div className="flex space-x-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={currentUser.avatar} alt={displayName} />
-                <AvatarFallback>{currentUser.firstName[0]}{currentUser.lastName[0]}</AvatarFallback>
-              </Avatar>
-              <Textarea
-                placeholder={`What's on your mind, ${currentUser.firstName}?`}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="flex-1 resize-none focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-            </div>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="pt-4">
+          <div className="flex space-x-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={currentUser.avatar} alt={displayName} />
+              <AvatarFallback>{currentUser.firstName[0]}{currentUser.lastName[0]}</AvatarFallback>
+            </Avatar>
+            <Textarea
+              placeholder={`What's on your mind, ${currentUser.firstName}?`}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="flex-1 resize-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
 
-            {images.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                {images.map((img, index) => (
-                  <div key={index} className="relative rounded-md overflow-hidden">
-                    <img
-                      src={img}
-                      alt={`Upload preview ${index + 1}`}
-                      className="w-full h-32 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-black bg-opacity-60 rounded-full p-1 text-white"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-3">
-              <p className="text-sm font-medium mb-2">Privacy</p>
-              <RadioGroup
-                value={privacy}
-                onValueChange={setPrivacy}
-                className="flex flex-col space-y-1"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value={PRIVACY_LEVELS.PUBLIC} id="privacy-public" />
-                  <Label htmlFor="privacy-public" className="text-sm">Public - Anyone can see</Label>
+          {images.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              {images.map((img, index) => (
+                <div key={index} className="relative rounded-md overflow-hidden">
+                  <img
+                    src={img}
+                    alt={`Upload preview ${index + 1}`}
+                    className="w-full h-32 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-black bg-opacity-60 rounded-full p-1 text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value={PRIVACY_LEVELS.FOLLOWERS} id="privacy-followers" />
-                  <Label htmlFor="privacy-followers" className="text-sm">Followers - Only people who follow you</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value={PRIVACY_LEVELS.SELECTED} id="privacy-selected" />
-                  <Label htmlFor="privacy-selected" className="text-sm">Selected people only</Label>
-                </div>
-              </RadioGroup>
+              ))}
             </div>
-          </CardContent>
+          )}
 
-          <CardFooter className="border-t flex justify-between items-center p-3">
-            <div>
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <div className="flex items-center text-gray-500 hover:text-gray-700">
-                  <Image className="h-5 w-5 mr-1" />
-                  <span className="text-sm">Add Photos</span>
-                </div>
-                <input
-                  type="file"
-                  id="image-upload"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                  disabled={images.length >= 4}
-                />
-              </label>
-            </div>
-            <Button
-              type="submit"
-              className="bg-social hover:bg-social-dark"
-              disabled={isSubmitting || (!content.trim() && images.length === 0)}
+          <div className="mt-3">
+            <p className="text-sm font-medium mb-2">Privacy</p>
+            <RadioGroup
+              value={privacy}
+              onValueChange={setPrivacy}
+              className="flex flex-col space-y-1"
             >
-              {isSubmitting ? 'Posting...' : 'Post'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={PRIVACY_LEVELS.PUBLIC} id="privacy-public" />
+                <Label htmlFor="privacy-public" className="text-sm">Public - Anyone can see</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={PRIVACY_LEVELS.FOLLOWERS} id="privacy-followers" />
+                <Label htmlFor="privacy-followers" className="text-sm">Followers - Only people who follow you</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value={PRIVACY_LEVELS.SELECTED} id="privacy-selected" />
+                <Label htmlFor="privacy-selected" className="text-sm">Selected people only</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </CardContent>
+
+        <CardFooter className="border-t flex justify-between items-center p-3">
+          <div>
+            <label htmlFor="image-upload" className="cursor-pointer">
+              <div className="flex items-center text-gray-500 hover:text-gray-700">
+                <Image className="h-5 w-5 mr-1" />
+                <span className="text-sm">Add Photos</span>
+              </div>
+              <input
+                type="file"
+                id="image-upload"
+                multiple
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+                disabled={images.length >= 4}
+              />
+            </label>
+          </div>
+          <Button
+            type="submit"
+            className="bg-social hover:bg-social-dark"
+            disabled={isSubmitting || (!content.trim() && images.length === 0)}
+          >
+            {isSubmitting ? 'Posting...' : 'Post'}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
     </div>
   );
 };
