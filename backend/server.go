@@ -6,10 +6,11 @@ import (
 	db "social/pkg/db"
 )
 
+var Db, Err = db.DBInstance()
+
 func main() {
-	db, err := db.DBInstance()
-	if err != nil {
-		fmt.Println(err)
+	if Err != nil {
+		fmt.Println(Err)
 	}
-	defer db.Close()
+	defer Db.Close()
 }
