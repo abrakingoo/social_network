@@ -1,6 +1,6 @@
 -- Groups Table
 CREATE TABLE groups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     title TEXT NOT NULL,
     description TEXT,
     creator_id INTEGER NOT NULL,

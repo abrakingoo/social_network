@@ -1,5 +1,5 @@
 CREATE TABLE notifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     recipient_id INTEGER NOT NULL, 
     actor_id INTEGER,              
     type TEXT NOT NULL,            
