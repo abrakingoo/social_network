@@ -1,5 +1,5 @@
 CREATE TABLE group_comment_likes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_comment_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     is_like BOOLEAN NOT NULL, 
