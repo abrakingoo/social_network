@@ -1,5 +1,5 @@
 CREATE TABLE private_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER NOT NULL,
     content TEXT,

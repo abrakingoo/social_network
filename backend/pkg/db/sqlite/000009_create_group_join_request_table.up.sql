@@ -1,5 +1,5 @@
 CREATE TABLE group_join_requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     status TEXT CHECK(status IN ('pending', 'accepted', 'declined')) DEFAULT 'pending',
