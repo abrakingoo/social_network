@@ -46,14 +46,14 @@ const RightSidebar = () => {
   };
 
   return (
-    <div className="hidden lg:block w-80 p-4 space-y-4">
+    <div className="hidden lg:block w-64 p-2 flex-shrink-0 space-y-3">
       {/* Online Friends */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium mb-4">Online Friends</h3>
+      <div className="bg-white rounded-lg shadow-sm p-3">
+        <h3 className="font-medium mb-3">Online Friends</h3>
         <div className="space-y-3">
           {onlineUsers.map((user) => (
             <div key={user.id} className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <div className="relative">
                   <Avatar>
                     <AvatarImage src={user.avatar} alt={user.firstName} />
@@ -81,12 +81,12 @@ const RightSidebar = () => {
       </div>
 
       {/* Friend Suggestions */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium mb-4">People You May Know</h3>
-        <div className="space-y-4">
+      <div className="bg-white rounded-lg shadow-sm p-3">
+        <h3 className="font-medium mb-3">People You May Know</h3>
+        <div className="space-y-3">
           {friendSuggestions.map((user) => (
             <div key={user.id} className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 <Avatar>
                   <AvatarImage src={user.avatar} alt={user.firstName} />
                   <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
@@ -100,7 +100,7 @@ const RightSidebar = () => {
                   </div>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="h-8">Add</Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs">Add</Button>
             </div>
           ))}
 
@@ -111,20 +111,20 @@ const RightSidebar = () => {
       </div>
 
       {/* Upcoming Events */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium mb-4">Upcoming Events</h3>
-        <div className="space-y-4">
+      <div className="bg-white rounded-lg shadow-sm p-3">
+        <h3 className="font-medium mb-3">Upcoming Events</h3>
+        <div className="space-y-3">
           {upcomingEvents.map((event) => (
-            <div key={event.id} className="border border-gray-100 rounded-lg p-3">
-              <h4 className="font-medium">{event.title}</h4>
-              <p className="text-sm text-gray-500 mt-1">
+            <div key={event.id} className="border border-gray-100 rounded-lg p-2">
+              <h4 className="font-medium text-sm">{event.title}</h4>
+              <p className="text-xs text-gray-500 mt-1">
                 {formatDate(event.date)}
               </p>
               <div className="flex items-center justify-between mt-2">
                 <div className="text-xs text-gray-500">
                   {event.attendees} going
                 </div>
-                <Button variant="ghost" size="sm" className="h-7 text-social">
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-social">
                   Interested
                 </Button>
               </div>
