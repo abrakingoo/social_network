@@ -48,7 +48,7 @@ const LeftSidebar = () => {
 
   return (
     <div className="hidden md:block w-64 p-4">
-      <div className="mb-6">
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
         <Link href="/profile" className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors">
           <Avatar>
             <AvatarImage src={currentUser.avatar} alt={displayName} />
@@ -56,22 +56,22 @@ const LeftSidebar = () => {
           </Avatar>
           <div className="font-medium truncate">{displayName}</div>
         </Link>
+
+        <nav className="space-y-1 mt-4">
+          {sidebarItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.path}
+              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-social-light text-gray-700 hover:text-social transition-colors"
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
       </div>
 
-      <nav className="space-y-1">
-        {sidebarItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.path}
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-social-light text-gray-700 hover:text-social transition-colors"
-          >
-            <item.icon className="h-5 w-5" />
-            <span>{item.label}</span>
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-6 pt-6 border-t border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm p-4">
         <h3 className="text-sm font-medium text-gray-500 mb-3 px-3">Your shortcuts</h3>
         <nav className="space-y-1">
           <Link
