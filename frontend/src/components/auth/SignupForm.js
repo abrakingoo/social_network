@@ -80,9 +80,6 @@ export default function SignupForm() {
   return (
     <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow">
       <div className="text-center mb-8">
-        <div className="flex justify-center">
-          <h1 className="text-3xl font-bold text-blue-600">Social Network</h1>
-        </div>
         <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
           Create your account
         </h2>
@@ -108,6 +105,38 @@ export default function SignupForm() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {/* Required Fields */}
           <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="firstName"
+              name="firstName"
+              type="text"
+              autoComplete="given-name"
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              value={formData.firstName}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="lastName"
+              name="lastName"
+              type="text"
+              autoComplete="family-name"
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              value={formData.lastName}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email address <span className="text-red-500">*</span>
             </label>
@@ -119,6 +148,21 @@ export default function SignupForm() {
               required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               value={formData.email}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
+              Date of Birth <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="dateOfBirth"
+              name="dateOfBirth"
+              type="date"
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              value={formData.dateOfBirth}
               onChange={handleChange}
             />
           </div>
@@ -155,55 +199,10 @@ export default function SignupForm() {
             />
           </div>
           
-          <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-              First Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="firstName"
-              name="firstName"
-              type="text"
-              autoComplete="given-name"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              value={formData.firstName}
-              onChange={handleChange}
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-              Last Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="lastName"
-              name="lastName"
-              type="text"
-              autoComplete="family-name"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              value={formData.lastName}
-              onChange={handleChange}
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
-              Date of Birth <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="dateOfBirth"
-              name="dateOfBirth"
-              type="date"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-            />
-          </div>
+          {/* Date of Birth moved to be in same row as Email */}
           
           {/* Optional Fields */}
-          <div>
+          <div className="sm:col-span-2">
             <label htmlFor="nickname" className="block text-sm font-medium text-gray-700">
               Nickname <span className="text-gray-400">(Optional)</span>
             </label>
@@ -235,20 +234,9 @@ export default function SignupForm() {
             <label className="block text-sm font-medium text-gray-700">
               Profile Photo <span className="text-gray-400">(Optional)</span>
             </label>
-            <div className="mt-1 flex items-center space-x-5">
-              {avatarPreview ? (
-                <div className="flex-shrink-0 h-20 w-20 rounded-full overflow-hidden bg-gray-100">
-                  <img src={avatarPreview} alt="Avatar preview" className="h-full w-full object-cover" />
-                </div>
-              ) : (
-                <div className="flex-shrink-0 h-20 w-20 rounded-full overflow-hidden bg-gray-100">
-                  <svg className="h-full w-full text-gray-300" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </div>
-              )}
-              <label htmlFor="avatar" className="cursor-pointer bg-white py-2 px-3 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                <span>Upload</span>
+            <div className="mt-1">
+              <label htmlFor="avatar" className="cursor-pointer inline-flex items-center justify-center bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <span>Upload Image</span>
                 <input 
                   id="avatar" 
                   name="avatar" 
@@ -258,25 +246,14 @@ export default function SignupForm() {
                   onChange={handleFileChange}
                 />
               </label>
+              {avatarPreview && (
+                <p className="mt-2 text-sm text-gray-500">Image selected</p>
+              )}
             </div>
           </div>
         </div>
         
-        <div className="flex items-center">
-          <input
-            id="terms"
-            name="terms"
-            type="checkbox"
-            required
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-          <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-            I agree to the{' '}
-            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-              Terms and Conditions
-            </a>
-          </label>
-        </div>
+        {/* Terms and conditions section removed */}
         
         <div>
           <button
