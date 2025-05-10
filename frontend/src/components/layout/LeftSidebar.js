@@ -47,8 +47,8 @@ const LeftSidebar = () => {
   const displayName = currentUser.nickname || `${currentUser.firstName} ${currentUser.lastName}`;
 
   return (
-    <div className="hidden md:block w-64 p-4">
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+    <div className="hidden md:block w-56 p-2 flex-shrink-0">
+      <div className="bg-white rounded-lg shadow-sm p-3 mb-3">
         <Link href="/profile" className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors">
           <Avatar>
             <AvatarImage src={currentUser.avatar} alt={displayName} />
@@ -62,7 +62,7 @@ const LeftSidebar = () => {
             <Link
               key={item.label}
               href={item.path}
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-social-light text-gray-700 hover:text-social transition-colors"
+              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light text-gray-700 hover:text-social transition-colors"
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
@@ -71,32 +71,32 @@ const LeftSidebar = () => {
         </nav>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="text-sm font-medium text-gray-500 mb-3 px-3">Your shortcuts</h3>
+      <div className="bg-white rounded-lg shadow-sm p-3">
+        <h3 className="text-sm font-medium text-gray-500 mb-3 px-2">Your shortcuts</h3>
         <nav className="space-y-1">
           <Link
             href="/groups/dev"
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-social-light transition-colors"
+            className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors"
           >
-            <div className="h-8 w-8 rounded-md bg-social-dark text-white flex items-center justify-center">
+            <div className="h-7 w-7 rounded-md bg-social-dark text-white flex items-center justify-center">
               D
             </div>
             <span>Developer Community</span>
           </Link>
           <Link
             href="/groups/tech"
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-social-light transition-colors"
+            className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors"
           >
-            <div className="h-8 w-8 rounded-md bg-purple-600 text-white flex items-center justify-center">
+            <div className="h-7 w-7 rounded-md bg-purple-600 text-white flex items-center justify-center">
               T
             </div>
             <span>Tech Enthusiasts</span>
           </Link>
           <Link
             href="/groups/design"
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-social-light transition-colors"
+            className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors"
           >
-            <div className="h-8 w-8 rounded-md bg-pink-600 text-white flex items-center justify-center">
+            <div className="h-7 w-7 rounded-md bg-pink-600 text-white flex items-center justify-center">
               D
             </div>
             <span>Design Inspiration</span>
