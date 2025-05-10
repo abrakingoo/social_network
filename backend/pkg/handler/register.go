@@ -13,22 +13,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		util.SendErr(w, "Method not allowed")
 		return
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		util.SendErr(w, "Bad request")
 	}
 
 	hashed, err := util.EncryptPassword(user.Password)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to register user. Try again later.",
-		})
+		util.SendErr(w, "Failed to register user. Try again later.")
 		return
 	}
 
@@ -53,13 +48,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		user.AboutMe,
 		user.IsPublic,
 	})
-	
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Failed to register user. Try again later.",
-		})
+		util.SendErr(w, "Failed to register user. Try again later.")
 		return
 	}
 
