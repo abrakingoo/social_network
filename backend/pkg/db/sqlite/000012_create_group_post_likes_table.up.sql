@@ -1,5 +1,5 @@
 CREATE TABLE group_post_likes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_post_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     is_like BOOLEAN NOT NULL, 

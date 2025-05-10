@@ -1,5 +1,5 @@
 CREATE TABLE posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
     content TEXT,
     image TEXT,
