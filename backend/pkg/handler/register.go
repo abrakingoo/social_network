@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"social/pkg/model"
+	"social/pkg/repository"
 	"social/pkg/util"
 )
 
@@ -22,7 +23,26 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hashed, err := util.EncryptPassword(user.Password)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to register user. Try again later.",
+		})
+		return
+	}
 
+	err = repository.InsertData(Db, "users", []string{"email", "password", "first_name", "last_name", "date_of_birth", "avatar", "nickname", "about_me", "is_public"}, []any{
+		user.Email,
+		hashed,
+		user.FirstName,
+		user.LastName,
+		user.DateOfBirth,
+		user.Avatar,
+		user.Nickname,
+		user.AboutMe,
+		user.IsPublic,
+	})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
