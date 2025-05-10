@@ -32,7 +32,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.InsertData(util.Db, "users", []string{"email", "password", "first_name", "last_name", "date_of_birth", "avatar", "nickname", "about_me", "is_public"}, []any{
+	err = repository.InsertData(util.Db, "users", []string{
+		"email",
+		"password",
+		"first_name",
+		"last_name",
+		"date_of_birth",
+		"avatar",
+		"nickname",
+		"about_me",
+		"is_public",
+	}, []any{
 		user.Email,
 		hashed,
 		user.FirstName,
@@ -43,6 +53,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		user.AboutMe,
 		user.IsPublic,
 	})
+	
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
