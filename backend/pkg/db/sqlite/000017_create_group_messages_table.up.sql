@@ -1,5 +1,5 @@
 CREATE TABLE group_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_id INTEGER NOT NULL,
     sender_id INTEGER NOT NULL,
     content TEXT,
