@@ -26,11 +26,13 @@ export default function RootLayoutClient({ children }) {
               <div className="flex flex-col min-h-screen">
                 <Navbar />
                 <div className="flex flex-1 bg-gray-100">
-                  <LeftSidebar />
-                  <main className="flex-1 py-4 px-4 md:px-0">
-                    {children}
-                  </main>
-                  <RightSidebar />
+                  <div className="container mx-auto flex max-w-7xl">
+                    <LeftSidebar />
+                    <main className="flex-1 py-4 px-4">
+                      {children}
+                    </main>
+                    <RightSidebar />
+                  </div>
                 </div>
               </div>
             </PostProvider>
