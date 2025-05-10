@@ -9,7 +9,7 @@ import (
 
 var Db *sql.DB
 
-func init() {
+func Init() {
 	db, err := pkg.DBInstance()
 	if err != nil {
 		log.Println(err)
