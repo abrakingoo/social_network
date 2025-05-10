@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"social/pkg/model"
+	"social/pkg/util"
 )
 
 func Register(w http.ResponseWriter, r *http.Request) {
@@ -17,6 +18,17 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	hashed, err := util.EncryptPassword(user.Password)
+
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Failed to register user. Try again later.",
+		})
 		return
 	}
 
