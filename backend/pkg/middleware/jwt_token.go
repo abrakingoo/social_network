@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"social/pkg/utils"
+	"net/http"
+	"social/pkg/util"
 	"strings"
 	"time"
 )
 
 func GenerateJWTToken(email, userID string) (string, error) {
-	secretKey, err := utils.GetEnvVal("SECRET_KEY")
+	secretKey, err := util.GetEnvVal("SECRET_KEY")
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +55,7 @@ func GenerateJWTToken(email, userID string) (string, error) {
 }
 
 func ValidateJWTToken(jwtToken string) (map[string]interface{}, error) {
-	secretKey, err := utils.GetEnvVal("SECRET_KEY")
+	secretKey, err := util.GetEnvVal("SECRET_KEY")
 	if err != nil {
 		return nil, err
 	}
