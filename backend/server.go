@@ -3,6 +3,6 @@ package main
 import "social/pkg/util"
 
 func main() {
-	util.init()
+	util.Init()
 	defer util.Db.Close()
 }
