@@ -1,16 +1,8 @@
 package main
 
-import (
-	"fmt"
-
-	db "social/pkg/db"
-)
-
-var Db, Err = db.DBInstance()
+import "social/pkg/util"
 
 func main() {
-	if Err != nil {
-		fmt.Println(Err)
-	}
-	defer Db.Close()
+	util.init()
+	defer util.Db.Close()
 }
