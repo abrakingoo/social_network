@@ -25,9 +25,9 @@ export default function RootLayoutClient({ children }) {
               <Sonner />
               <div className="flex flex-col min-h-screen">
                 <Navbar />
-                <div className="flex flex-1">
+                <div className="flex flex-1 bg-gray-100">
                   <LeftSidebar />
-                  <main className="flex-1 p-4">
+                  <main className="flex-1 py-4 px-4 md:px-0">
                     {children}
                   </main>
                   <RightSidebar />
