@@ -32,7 +32,6 @@ func  ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (i
 	
 	form_errors := map[string][]string{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		fmt.Println("here")
 		return http.StatusBadRequest, form_errors, fmt.Errorf("bad request")
 	}
 	fmt.Println(user)
