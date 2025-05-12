@@ -2,8 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"strings"
 
 	"social/pkg/model"
 	"social/pkg/repository"
@@ -13,25 +13,22 @@ import (
 // Register handles user registration
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
-	err, code, msgs := user.ValidateUserDetails(w, r)
+	code, msgs, err := model.ValidateUserDetails(w, r, &user)
 	if err != nil {
-		msg := ""
-		for _, value := range msgs {
-			msg += strings.Join(value, "\n") + "\n"
+		if len(msgs) > 0 {
+			formErrors, err := json.Marshal(msgs)
+			if err != nil {
+				app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to generate json response")
+				return
+			}
+			app.JSONResponse(w, r, http.StatusNotAcceptable, string(formErrors))
+
 		}
-		app.JSONResponse(w, r, code, msg)
+		app.JSONResponse(w, r, code, err.Error())
 		return
 	}
 
-	if r.Method != http.MethodPost {
-		app.JSONResponse(w, r, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		app.JSONResponse(w, r, http.StatusBadRequest, "Bad request")
-	}
-
+	fmt.Println(user)
 	hashed, err := util.EncryptPassword(user.Password)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
@@ -60,6 +57,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		user.IsPublic,
 	})
 	if err != nil {
+		fmt.Println(err)
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
 		return
 	}
