@@ -1,8 +1,37 @@
 package main
 
-import "social/pkg/util"
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+
+	db "social/pkg/db"
+	handler "social/pkg/handlers"
+	"social/pkg/model"
+)
 
 func main() {
-	util.Init()
-	defer util.Db.Close()
+	db, err := db.DBInstance()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	app := handler.App{
+		Queries: db,
+		User:    &model.User{},
+	}
+
+	server := http.Server{
+		Addr:    ":8000",
+		Handler: app.RouteChecker(app.Routes()),
+	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			log.Println(err)
+			os.Exit(0)
+		}
+	}()
+	fmt.Printf("Listening on port %s\n", server.Addr)
+	select {}
 }
