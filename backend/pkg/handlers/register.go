@@ -19,12 +19,12 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		app.JSONResponse(w,r , http.StatusBadRequest, "Bad request")
+		app.JSONResponse(w, r, http.StatusBadRequest, "Bad request")
 	}
 
 	hashed, err := util.EncryptPassword(user.Password)
 	if err != nil {
-		util.SendErr(w, "Failed to register user. Try again later.", http.StatusInternalServerError)
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
 		return
 	}
 
@@ -50,9 +50,9 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		user.IsPublic,
 	})
 	if err != nil {
-		util.SendErr(w, "Failed to register user. Try again later.", http.StatusInternalServerError)
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
 		return
 	}
 
-	util.Success(w, "User registered successfully")
+	app.JSONResponse(w, r, http.StatusOK, "User registered successfully")
 }
