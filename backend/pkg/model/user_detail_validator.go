@@ -22,18 +22,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"social/pkg/middleware"
-	"social/pkg/util"
 	"strings"
 	"time"
+
+	"social/pkg/util"
 )
 
-func (user User) ValidateUserDetails(w http.ResponseWriter, r *http.Request) (error, int, map[string][]string) {
+func  ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (int, map[string][]string, error) {
+	
 	form_errors := map[string][]string{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		middleware.JSONResponse(w, http.StatusBadRequest, "Bad request")
-		return fmt.Errorf("Bad request"), http.StatusBadRequest, form_errors
+		return http.StatusBadRequest, form_errors, fmt.Errorf("bad request")
 	}
+	fmt.Println(user)
 
 	email_address := strings.TrimSpace(user.Email)
 	first_name := strings.TrimSpace(user.FirstName)
@@ -82,8 +83,8 @@ func (user User) ValidateUserDetails(w http.ResponseWriter, r *http.Request) (er
 	}
 
 	if len(form_errors) != 0 {
-		return fmt.Errorf("form errors"), http.StatusNotAcceptable, form_errors
+		return http.StatusNotAcceptable, form_errors, fmt.Errorf("form errors")
 	}
 
-	return nil, http.StatusOK, nil
+	return http.StatusOK, nil, nil
 }
