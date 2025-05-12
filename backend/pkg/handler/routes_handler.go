@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 
 	"social/pkg/model"
+	"social/pkg/repository"
 )
 
 var allowedRoutes = map[string][]string{
@@ -14,7 +14,7 @@ var allowedRoutes = map[string][]string{
 }
 
 type App struct {
-	Queries *sql.DB
+	Queries repository.Query
 	User    *model.User
 }
 
