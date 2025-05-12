@@ -9,6 +9,7 @@ import (
 	db "social/pkg/db"
 	handler "social/pkg/handler"
 	"social/pkg/model"
+	"social/pkg/repository"
 )
 
 func main() {
@@ -18,7 +19,9 @@ func main() {
 	}
 
 	app := handler.App{
-		Queries: db,
+		Queries: repository.Query{
+			Db: db,
+		},
 		User:    &model.User{},
 	}
 
