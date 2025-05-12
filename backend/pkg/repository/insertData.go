@@ -6,7 +6,11 @@ import (
 	"strings"
 )
 
-func InsertData(db *sql.DB, table string, columns []string, values []any) error {
+type Query struct {
+	Db *sql.DB
+}
+
+func (q *Query) InsertData(table string, columns []string, values []any) error {
 	// Validate input
 	if len(columns) == 0 {
 		return fmt.Errorf("no columns provided")
@@ -30,7 +34,7 @@ func InsertData(db *sql.DB, table string, columns []string, values []any) error 
 	)
 
 	// Execute the query
-	_, err := db.Exec(query, values...)
+	_, err := q.Db.Exec(query, values...)
 	if err != nil {
 		return fmt.Errorf("failed to insert data: %w", err)
 	}
