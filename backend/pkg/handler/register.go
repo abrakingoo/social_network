@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"social/pkg/model"
-	"social/pkg/repository"
 	"social/pkg/util"
 )
 
@@ -34,7 +33,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.InsertData(app.Queries, "users", []string{
+	err = app.Queries.InsertData("users", []string{
 		"id",
 		"email",
 		"password",
