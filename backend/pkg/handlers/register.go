@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 import (
 	"encoding/json"
@@ -10,16 +10,16 @@ import (
 )
 
 // Register handles user registration
-func Register(w http.ResponseWriter, r *http.Request) {
+func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 
 	if r.Method != http.MethodPost {
-		util.SendErr(w, "Method not allowed", http.StatusMethodNotAllowed)
+		app.JSONResponse(w, r, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		util.SendErr(w, "Bad request", http.StatusBadRequest)
+		app.JSONResponse(w,r , http.StatusBadRequest, "Bad request")
 	}
 
 	hashed, err := util.EncryptPassword(user.Password)
@@ -28,7 +28,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.InsertData(util.Db, "users", []string{
+	err = repository.InsertData(app.Queries, "users", []string{
 		"email",
 		"password",
 		"first_name",
