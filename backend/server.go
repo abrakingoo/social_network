@@ -7,7 +7,7 @@ import (
 	"os"
 
 	db "social/pkg/db"
-	handler "social/pkg/handlers"
+	handler "social/pkg/handler"
 	"social/pkg/model"
 )
 
