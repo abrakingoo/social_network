@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"social/pkg/model"
 	"social/pkg/repository"
@@ -12,6 +13,15 @@ import (
 // Register handles user registration
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
+	err, code, msgs := user.ValidateUserDetails(w, r)
+	if err != nil {
+		msg := ""
+		for _, value := range msgs {
+			msg += strings.Join(value, "\n") + "\n"
+		}
+		app.JSONResponse(w, r, code, msg)
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		app.JSONResponse(w, r, http.StatusMethodNotAllowed, "Method not allowed")
