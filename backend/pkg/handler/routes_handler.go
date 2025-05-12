@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+
 	"social/pkg/model"
 )
 
 var allowedRoutes = map[string][]string{
-	"/api/login": {"POST"},
+	"/api/login":    {"POST"},
+	"/api/register": {"POST"},
 }
 
 type App struct {
@@ -45,5 +47,7 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 
 func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("/api/register", app.Register)
 	return mux
 }
