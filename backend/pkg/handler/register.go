@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"social/pkg/model"
@@ -22,13 +21,13 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			app.JSONResponse(w, r, http.StatusNotAcceptable, string(formErrors))
+			return
 
 		}
 		app.JSONResponse(w, r, code, err.Error())
 		return
 	}
 
-	fmt.Println(user)
 	hashed, err := util.EncryptPassword(user.Password)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
@@ -36,6 +35,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = repository.InsertData(app.Queries, "users", []string{
+		"id",
 		"email",
 		"password",
 		"first_name",
@@ -46,6 +46,7 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		"about_me",
 		"is_public",
 	}, []any{
+		util.UUIDGen(),
 		user.Email,
 		hashed,
 		user.FirstName,
@@ -57,7 +58,6 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		user.IsPublic,
 	})
 	if err != nil {
-		fmt.Println(err)
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
 		return
 	}
