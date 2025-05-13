@@ -22,7 +22,7 @@ func (app *App) JWTMiddleware(next http.Handler) http.Handler {
 
 		payload, err := middleware.ValidateJWTToken(token)
 		if err != nil {
-			http.Error(w, "Invalid or expired token: "+err.Error(), http.StatusUnauthorized)
+			app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 			return
 		}
 
