@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"social/pkg/model"
@@ -23,9 +22,7 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 		func(w http.ResponseWriter, r *http.Request) {
 			allowedURL, ok := allowedRoutes[r.URL.Path]
 			if !ok {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotFound)
-				json.NewEncoder(w).Encode(map[string]string{"message": "route not found"})
+				app.JSONResponse(w, r, http.StatusNotFound, "route not found", Error)
 				return
 			}
 
@@ -38,7 +35,7 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 			}
 
 			if !method_found {
-				app.JSONResponse(w, r, http.StatusMethodNotAllowed, "method not allowed")
+				app.JSONResponse(w, r, http.StatusMethodNotAllowed, "method not allowed", Error)
 				return
 			}
 			next.ServeHTTP(w, r)
