@@ -5,28 +5,26 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import LoginForm from '@/components/auth/LoginForm';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (formData) => {
     setIsLoading(true);
 
     try {
-      // In a real app, you would call your auth API here
-      console.log('Logging in with:', formData);
+      // Use the context login function
+      const success = login(formData.email, formData.password, formData.rememberMe);
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      toast({
-        title: "Success",
-        description: "You have successfully logged in",
-      });
-
+      if (success) {
       router.push('/');
+      } else {
+        throw new Error("Invalid credentials");
+      }
     } catch (error) {
       toast({
         title: "Error",
