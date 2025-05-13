@@ -13,6 +13,7 @@ var allowedMIMETypes = map[string]bool{
 	"image/jpeg": true,
 	"image/png":  true,
 	"video/mp4":  true,
+	"text/plain": true,
 }
 
 // IsValidMimeType checks whether the MIME type of the given file is among the allowed types.
@@ -33,11 +34,6 @@ func IsValidMimeType(file io.Reader) (bool, error) {
 	n, err := io.ReadFull(file, buf)
 	if err != nil && err != io.ErrUnexpectedEOF {
 		// Any error other than io.ErrUnexpectedEOF indicates a real read failure (e.g. broken stream).
-		return false, err
-	}
-
-	// If no bytes were read at all, the file is either empty or unreadable.
-	if n < 1 {
 		return false, errors.New("file is empty or too small to detect MIME type")
 	}
 
