@@ -8,6 +8,7 @@ import { PostProvider } from "@/context/PostContext";
 import { ToastProvider } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import dynamic from 'next/dynamic';
+import { usePathname } from 'next/navigation';
 
 // Dynamic imports for non-critical components
 const LeftSidebar = dynamic(() => import("@/components/layout/LeftSidebar"), {
@@ -31,6 +32,9 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayoutClient({ children }) {
+  const pathname = usePathname();
+  const isMessagesPage = pathname === '/messages';
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -42,7 +46,7 @@ export default function RootLayoutClient({ children }) {
                 <Navbar />
                 <div className="flex flex-1 bg-gray-100 pt-4">
                   <div className="container mx-auto flex max-w-7xl">
-                    <LeftSidebar />
+                    {!isMessagesPage && <LeftSidebar />}
                     <main className="flex-1 px-4">
                       {children}
                     </main>
