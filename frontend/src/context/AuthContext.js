@@ -1,10 +1,9 @@
-
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from "@/components/ui/sonner";
 
 export const AuthContext = createContext();
 
-// Mock user data - this would typically come from your backend
+// Move mock data outside of component to prevent re-creation
 const MOCK_USERS = [
   {
     id: '1',
@@ -43,30 +42,38 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState(MOCK_USERS);
 
-  // Check if user is already logged in (from localStorage)
+  // Check if user is already logged in (from localStorage) only once on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const loadUser = () => {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          setCurrentUser(JSON.parse(storedUser));
+        } catch (e) {
+          localStorage.removeItem('currentUser');
+        }
+      }
+      setLoading(false);
+    };
+
+    loadUser();
   }, []);
 
-  // Login function
+  // Login function with memoization
   const login = useCallback((email, password, rememberMe) => {
     // Find user with matching email and password
     const user = users.find(u => u.email === email && u.password === password);
-    
+
     if (user) {
       // Remove password from stored user object
       const { password, ...userWithoutPassword } = user;
       setCurrentUser(userWithoutPassword);
-      
+
       // Store in localStorage if rememberMe is true
       if (rememberMe) {
         localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
       }
-      
+
       toast.success("Successfully logged in!");
       return true;
     } else {
@@ -75,14 +82,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, [users]);
 
-  // Register function
+  // Register function with memoization
   const register = useCallback((userData) => {
     // Check if email already exists
     if (users.some(user => user.email === userData.email)) {
       toast.error("Email already in use");
       return false;
     }
-    
+
     // Create new user
     const newUser = {
       id: Date.now().toString(),
@@ -91,48 +98,50 @@ export const AuthProvider = ({ children }) => {
       following: [],
       posts: []
     };
-    
+
     // Add to users array
     setUsers(prevUsers => [...prevUsers, newUser]);
-    
+
     // Log user in
     const { password, ...userWithoutPassword } = newUser;
     setCurrentUser(userWithoutPassword);
     localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-    
+
     toast.success("Account created successfully!");
     return true;
   }, [users]);
 
-  // Logout function
+  // Logout function with memoization
   const logout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
     toast.success("Successfully logged out");
   }, []);
 
-  // Toggle profile visibility
+  // Toggle profile visibility with memoization
   const toggleProfileVisibility = useCallback(() => {
     if (!currentUser) return;
-    
+
     const updatedUser = { ...currentUser, isPublic: !currentUser.isPublic };
     setCurrentUser(updatedUser);
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    
+
     // Update in users array
-    setUsers(prevUsers => 
-      prevUsers.map(user => 
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
         user.id === currentUser.id ? { ...user, isPublic: !user.isPublic } : user
       )
     );
-    
+
     toast.success(`Profile visibility set to ${updatedUser.isPublic ? 'public' : 'private'}`);
   }, [currentUser]);
-  
+
+  // Change back to useCallback function since it's being called as a function
   const getAllUsers = useCallback(() => {
     return users.map(({ password, ...user }) => user);
   }, [users]);
 
+  // Get user by ID with memoization
   const getUserById = useCallback((userId) => {
     const user = users.find(u => u.id === userId);
     if (user) {
@@ -142,26 +151,27 @@ export const AuthProvider = ({ children }) => {
     return null;
   }, [users]);
 
-  // Update user profile
+  // Update user profile with memoization
   const updateUserProfile = useCallback((profileData) => {
     if (!currentUser) return false;
-    
+
     const updatedUser = { ...currentUser, ...profileData };
     setCurrentUser(updatedUser);
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    
+
     // Update in users array
-    setUsers(prevUsers => 
-      prevUsers.map(user => 
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
         user.id === currentUser.id ? { ...user, ...profileData } : user
       )
     );
-    
+
     toast.success("Profile updated successfully");
     return true;
   }, [currentUser]);
 
-  const value = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     currentUser,
     loading,
     login,
@@ -171,7 +181,17 @@ export const AuthProvider = ({ children }) => {
     getAllUsers,
     getUserById,
     updateUserProfile
-  };
+  }), [
+    currentUser,
+    loading,
+    login,
+    register,
+    logout,
+    toggleProfileVisibility,
+    getAllUsers,
+    getUserById,
+    updateUserProfile
+  ]);
 
   return (
     <AuthContext.Provider value={value}>
