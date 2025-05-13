@@ -1,19 +1,16 @@
 'use client';
 
 import React, { useState, useCallback, memo } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 const LoginForm = memo(({ onSubmit, isLoading }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [email, setEmail] = useState('john@example.com'); // Default demo user
+  const [password, setPassword] = useState('password123'); // Default demo password
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
-
-  const { login } = useAuth();
 
   const handleEmailChange = useCallback((e) => {
     setEmail(e.target.value);
@@ -105,11 +102,15 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
 
       <Button
         type="submit"
-        className="w-full"
+        className="w-full bg-social hover:bg-social-dark"
         disabled={isLoading}
       >
         {isLoading ? 'Logging in...' : 'Login'}
       </Button>
+
+      <div className="text-xs text-gray-500 text-center mt-3">
+        <p>Demo credentials are provided for testing</p>
+      </div>
     </form>
   );
 });
