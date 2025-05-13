@@ -60,3 +60,50 @@ func CompressPNG(path string) error {
 	encoder := png.Encoder{CompressionLevel: png.BestCompression}
 	return encoder.Encode(out, img)
 }
+
+// CompressGIF reduces color depth using a basic palette (WebSafe or Plan9).
+func CompressGIF(path string, useWebSafe bool) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	gifImg, err := gif.DecodeAll(file)
+	if err != nil {
+		return err
+	}
+
+	// Choose a built-in palette
+	var pal color.Palette
+	if useWebSafe {
+		pal = palette.WebSafe
+	} else {
+		pal = palette.Plan9
+	}
+
+	for i, frame := range gifImg.Image {
+		bounds := frame.Bounds()
+		palettedImg := image.NewPaletted(bounds, pal)
+		drawImage(palettedImg, frame)
+		gifImg.Image[i] = palettedImg
+	}
+
+	out, err := os.Create("compressed_" + filepath.Base(path))
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return gif.EncodeAll(out, gifImg)
+}
+
+// drawImage copies an image onto a paletted image
+func drawImage(dst *image.Paletted, src image.Image) {
+	b := src.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			dst.Set(x, y, src.At(x, y))
+		}
+	}
+}
