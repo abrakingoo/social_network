@@ -22,4 +22,6 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Content:", content)
 	fmt.Println("File:", file)
+
+	app.JSONResponse(w, r, http.StatusOK, "Post added successfully", Success)
 }
