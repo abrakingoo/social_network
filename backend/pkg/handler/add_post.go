@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
@@ -10,13 +11,15 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return
 	}
-
-	// Get the form data
-	title := r.FormValue("title")
 	content := r.FormValue("content")
 	file := r.FormValue("media")
 
-	fmt.Println("Title:", title)
+	content = strings.Trim(content, " ")
+	if content == "" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Title and content cannot be empty", Error)
+		return
+	}
+
 	fmt.Println("Content:", content)
 	fmt.Println("File:", file)
 }
