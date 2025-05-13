@@ -4,9 +4,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strings"
+
 	"social/pkg/middleware"
 	"social/pkg/util"
-	"strings"
 )
 
 func (app *App) Login(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +45,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check password hash if it matches
-	if res := util.CheckPasswordHash(encryptedPassword, password); !res {
+	if err := util.ValidatePassword(password, encryptedPassword); err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
