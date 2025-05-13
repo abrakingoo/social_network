@@ -1,6 +1,5 @@
 "use client";
 
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,20 +7,36 @@ import { AuthProvider } from "@/context/AuthContext";
 import { PostProvider } from "@/context/PostContext";
 import { ToastProvider } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
-import LeftSidebar from "@/components/layout/LeftSidebar";
-import RightSidebar from "@/components/layout/RightSidebar";
+import dynamic from 'next/dynamic';
+
+// Dynamic imports for non-critical components
+const LeftSidebar = dynamic(() => import("@/components/layout/LeftSidebar"), {
+  ssr: false,
+  loading: () => <div className="w-64 hidden md:block" />
+});
+
+const RightSidebar = dynamic(() => import("@/components/layout/RightSidebar"), {
+  ssr: false,
+  loading: () => <div className="w-64 hidden lg:block" />
+});
+
+// Create QueryClient outside of component to prevent re-initialization
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function RootLayoutClient({ children }) {
-  // Create a new QueryClient instance
-  const queryClient = new QueryClient();
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ToastProvider>
           <AuthProvider>
             <PostProvider>
-              <Toaster />
               <Sonner />
               <div className="flex flex-col min-h-screen">
                 <Navbar />
