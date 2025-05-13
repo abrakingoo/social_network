@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense, lazy } from "react";
+import { useEffect, Suspense, lazy, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { usePosts } from "@/context/PostContext";
 import Loading from "@/components/ui/loading";
@@ -13,6 +13,23 @@ const PostCard = lazy(() => import("@/components/post/PostCard"));
 const HomeContent = () => {
   const { currentUser, login } = useAuth();
   const { posts, getVisiblePosts } = usePosts();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Initial check
+    checkIfMobile();
+
+    // Add event listener
+    window.addEventListener('resize', checkIfMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   // Auto-login as test user if no user is logged in
   useEffect(() => {
@@ -26,22 +43,22 @@ const HomeContent = () => {
   const visiblePosts = currentUser ? getVisiblePosts() : [];
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-1 ${isMobile ? '-mx-4' : ''}`}>
       {/* Post Form */}
-      <Suspense fallback={<div className="h-32 bg-gray-100 animate-pulse rounded-lg"></div>}>
+      <Suspense fallback={<div className={`h-32 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
         <PostForm />
       </Suspense>
 
       {/* Feed */}
-      <div className="space-y-4">
+      <div className="space-y-1">
         {visiblePosts.length > 0 ? (
           visiblePosts.map(post => (
-            <Suspense key={post.id} fallback={<div className="h-64 bg-gray-100 animate-pulse rounded-lg"></div>}>
+            <Suspense key={post.id} fallback={<div className={`h-64 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
               <PostCard post={post} />
             </Suspense>
           ))
         ) : (
-          <div className="text-center p-8 bg-white rounded-lg shadow-sm">
+          <div className={`text-center p-8 bg-white ${isMobile ? 'shadow-none rounded-none border-x-0' : 'rounded-lg shadow-sm'}`}>
             <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
             <p className="text-gray-500 mt-2">
               {currentUser
