@@ -63,7 +63,7 @@ const Profile = () => {
             {isOwnProfile && (
               <Button
                 variant="secondary"
-                className="absolute bottom-4 right-4 flex items-center space-x-2 bg-white/80 backdrop-blur-sm"
+                className="absolute bottom-4 right-4 flex items-center space-x-2 bg-white/80 backdrop-blur-sm hover:bg-white/80"
               >
                 <Camera className="h-4 w-4" />
                 <span>Change Cover</span>
@@ -75,7 +75,7 @@ const Profile = () => {
         {/* Profile picture and name */}
         <div className="absolute bottom-0 left-0 transform translate-y-1/2 ml-8">
           <div className="relative">
-            <Avatar className="h-32 w-32 border-4 border-white shadow-lg">
+            <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-default">
               <AvatarImage src={profileUser.avatar} alt={displayName} />
               <AvatarFallback>{profileUser.firstName[0]}{profileUser.lastName[0]}</AvatarFallback>
             </Avatar>
@@ -84,7 +84,7 @@ const Profile = () => {
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-gray-100"
+                className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-100"
               >
                 <Camera className="h-4 w-4" />
               </Button>
