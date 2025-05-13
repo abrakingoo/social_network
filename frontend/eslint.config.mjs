@@ -1,14 +1,10 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { createESLintConfig } from 'eslint-config-next';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
+export default createESLintConfig({
+  extends: ['eslint:recommended', 'next'],
+  rules: {
+    'react/no-unescaped-entities': 'off',
+    '@next/next/no-img-element': 'off',
+    'jsx-a11y/alt-text': 'off',
+  },
 });
-
-const eslintConfig = [...compat.extends("next/core-web-vitals")];
-
-export default eslintConfig;
