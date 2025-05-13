@@ -139,7 +139,7 @@ const Messages = () => {
 
   return (
     <div className={`h-[calc(100vh-120px)] ${isMobile ? '-mx-4' : ''}`}>
-      <div className={`h-full ${isMobile ? 'rounded-none shadow-none' : ''}`}>
+      <div className={`h-full ${isMobile ? 'rounded-none shadow-none' : 'border border-gray-200 rounded-lg shadow-sm'}`}>
         <div className="h-full flex">
           {/* Chat List - Hidden on mobile when a chat is selected */}
           <div className={`${isMobile && selectedChat ? 'hidden' : 'block'} md:block w-full md:w-72 ${!isMobile && 'border-r border-gray-200'} flex-shrink-0 flex flex-col`}>
@@ -195,12 +195,12 @@ const Messages = () => {
 
           {/* Chat Window - Hidden on mobile when no chat is selected */}
           <div
-            className={`${isMobile && !selectedChat ? 'hidden' : 'flex'} md:flex flex-1 flex-col md:max-w-[calc(100%-18rem)] ${isMobile && selectedChat ? 'fixed inset-0 z-50' : ''}`}
+            className={`${isMobile && !selectedChat ? 'hidden' : 'flex'} md:flex flex-1 flex-col md:max-w-[calc(100%-18rem)] ${isMobile && selectedChat ? 'fixed inset-0 z-50' : 'border-l border-gray-200'}`}
           >
             {selectedChat ? (
               <>
                 {/* Chat Header */}
-                <div className="flex items-center p-4 border-b border-gray-200 bg-white">
+                <div className={`flex items-center p-4 border-b border-gray-200 bg-white ${!isMobile && 'rounded-tr-lg'}`}>
                   {isMobile && (
                     <Button
                       variant="ghost"
@@ -252,7 +252,7 @@ const Messages = () => {
                 </div>
 
                 {/* Message Input */}
-                <form onSubmit={handleSendMessage} className="border-t border-gray-200 p-3 flex gap-2 bg-white">
+                <form onSubmit={handleSendMessage} className={`border-t border-gray-200 p-3 flex gap-2 bg-white ${!isMobile && 'rounded-br-lg'}`}>
                   <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -270,7 +270,7 @@ const Messages = () => {
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center flex-col bg-gray-50">
-                <div className="text-center p-4 max-w-md">
+                <div className={`text-center p-4 max-w-md ${!isMobile && 'border border-gray-200 rounded-lg bg-white shadow-sm p-8'}`}>
                   <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Send className="h-10 w-10 text-gray-400" />
                   </div>
