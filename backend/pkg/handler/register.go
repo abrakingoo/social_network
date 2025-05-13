@@ -16,20 +16,20 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		if len(msgs) > 0 {
 			formErrors, err := json.Marshal(msgs)
 			if err != nil {
-				app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to generate json response")
+				app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to generate json response", Error)
 				return
 			}
-			app.JSONResponse(w, r, http.StatusNotAcceptable, string(formErrors))
+			app.JSONResponse(w, r, http.StatusNotAcceptable, string(formErrors), Error)
 			return
 
 		}
-		app.JSONResponse(w, r, code, err.Error())
+		app.JSONResponse(w, r, code, err.Error(), Error)
 		return
 	}
 
 	hashed, err := util.EncryptPassword(user.Password)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.", Error)
 		return
 	}
 
@@ -57,9 +57,9 @@ func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 		user.IsPublic,
 	})
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.")
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to register user. Try again later.", Error)
 		return
 	}
 
-	app.JSONResponse(w, r, http.StatusOK, "User registered successfully")
+	app.JSONResponse(w, r, http.StatusOK, "User registered successfully", Success)
 }
