@@ -46,9 +46,9 @@ const RightSidebar = () => {
   };
 
   return (
-    <div className="hidden lg:block w-64 p-2 flex-shrink-0 space-y-3">
+    <div className="hidden lg:block w-64 pl-2 flex-shrink-0 space-y-3">
       {/* Online Friends */}
-      <div className="bg-white rounded-lg shadow-sm p-3">
+      <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <h3 className="font-medium mb-3">Online Friends</h3>
         <div className="space-y-3">
           {onlineUsers.map((user) => (
@@ -81,7 +81,7 @@ const RightSidebar = () => {
       </div>
 
       {/* Friend Suggestions */}
-      <div className="bg-white rounded-lg shadow-sm p-3">
+      <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <h3 className="font-medium mb-3">People You May Know</h3>
         <div className="space-y-3">
           {friendSuggestions.map((user) => (
@@ -111,7 +111,7 @@ const RightSidebar = () => {
       </div>
 
       {/* Upcoming Events */}
-      <div className="bg-white rounded-lg shadow-sm p-3">
+      <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <h3 className="font-medium mb-3">Upcoming Events</h3>
         <div className="space-y-3">
           {upcomingEvents.map((event) => (
