@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"social/pkg/middleware"
 )
@@ -15,20 +14,11 @@ const JWTUserKey = contextKey("jwt_payload")
 // JWTMiddleware validates the JWT and injects payload into request context
 func (app *App) JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+		token, err := middleware.ExtractJWTTokenFromHeader(r)
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 			return
 		}
-
-		// Expect "Bearer <token>"
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
-			return
-		}
-
-		token := parts[1]
 
 		payload, err := middleware.ValidateJWTToken(token)
 		if err != nil {
