@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
-const LoginForm = ({ onSubmit, isLoading }) => {
+const LoginForm = memo(({ onSubmit, isLoading }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -15,7 +15,19 @@ const LoginForm = ({ onSubmit, isLoading }) => {
 
   const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
+  const handleEmailChange = useCallback((e) => {
+    setEmail(e.target.value);
+  }, []);
+
+  const handlePasswordChange = useCallback((e) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleRememberMeChange = useCallback((checked) => {
+    setRememberMe(checked);
+  }, []);
+
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setError('');
 
@@ -37,7 +49,7 @@ const LoginForm = ({ onSubmit, isLoading }) => {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [email, password, rememberMe, onSubmit]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,7 +66,7 @@ const LoginForm = ({ onSubmit, isLoading }) => {
           type="email"
           placeholder="name@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={handleEmailChange}
           required
         />
       </div>
@@ -77,7 +89,7 @@ const LoginForm = ({ onSubmit, isLoading }) => {
           id="password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={handlePasswordChange}
           required
         />
       </div>
@@ -86,7 +98,7 @@ const LoginForm = ({ onSubmit, isLoading }) => {
         <Checkbox
           id="remember-me"
           checked={rememberMe}
-          onCheckedChange={(checked) => setRememberMe(checked)}
+          onCheckedChange={handleRememberMeChange}
         />
         <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
       </div>
@@ -100,6 +112,8 @@ const LoginForm = ({ onSubmit, isLoading }) => {
       </Button>
     </form>
   );
-};
+});
+
+LoginForm.displayName = 'LoginForm';
 
 export default LoginForm;
