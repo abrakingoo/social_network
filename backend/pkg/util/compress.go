@@ -12,66 +12,84 @@ import (
 	"path/filepath"
 )
 
+const mediaPath = "backend/pkg/db/media" // Base directory for compressed files
+
 // CompressJPEG reduces JPEG quality (1-100, lower = smaller size).
-func CompressJPEG(path string, quality int) error {
+// Returns the path to the compressed file.
+func CompressJPEG(path string, quality int) (string, error) {
 	if quality < 1 || quality > 100 {
-		return errors.New("quality must be between 1 and 100")
+		return "", errors.New("quality must be between 1 and 100")
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	out, err := os.Create("compressed_" + filepath.Base(path))
+	// Ensure output directory exists
+	if err := os.MkdirAll(mediaPath, 0o755); err != nil {
+		return "", err
+	}
+
+	outPath := filepath.Join(mediaPath, "compressed_"+filepath.Base(path))
+	out, err := os.Create(outPath)
 	if err != nil {
-		return err
+		return outPath, err
 	}
 	defer out.Close()
 
-	return jpeg.Encode(out, img, &jpeg.Options{Quality: quality})
+	err = jpeg.Encode(out, img, &jpeg.Options{Quality: quality})
+	return outPath, err
 }
 
 // CompressPNG compresses PNG with the best available compression.
-func CompressPNG(path string) error {
+// Returns the path to the compressed file.
+func CompressPNG(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	out, err := os.Create("compressed_" + filepath.Base(path))
+	// Ensure output directory exists
+	if err := os.MkdirAll(mediaPath, 0o755); err != nil {
+		return "", err
+	}
+
+	outPath := filepath.Join(mediaPath, "compressed_"+filepath.Base(path))
+	out, err := os.Create(outPath)
 	if err != nil {
-		return err
+		return outPath, err
 	}
 	defer out.Close()
 
 	encoder := png.Encoder{CompressionLevel: png.BestCompression}
-	return encoder.Encode(out, img)
+	return outPath, encoder.Encode(out, img)
 }
 
 // CompressGIF reduces color depth using a basic palette (WebSafe or Plan9).
-func CompressGIF(path string, useWebSafe bool) error {
+// Returns the path to the compressed file.
+func CompressGIF(path string, useWebSafe bool) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer file.Close()
 
 	gifImg, err := gif.DecodeAll(file)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Choose a built-in palette
@@ -89,13 +107,19 @@ func CompressGIF(path string, useWebSafe bool) error {
 		gifImg.Image[i] = palettedImg
 	}
 
-	out, err := os.Create("compressed_" + filepath.Base(path))
+	// Ensure output directory exists
+	if err := os.MkdirAll(mediaPath, 0o755); err != nil {
+		return "", err
+	}
+
+	outPath := filepath.Join(mediaPath, "compressed_"+filepath.Base(path))
+	out, err := os.Create(outPath)
 	if err != nil {
-		return err
+		return outPath, err
 	}
 	defer out.Close()
 
-	return gif.EncodeAll(out, gifImg)
+	return outPath, gif.EncodeAll(out, gifImg)
 }
 
 // drawImage copies an image onto a paletted image
