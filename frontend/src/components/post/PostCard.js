@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Heart, Share2, MoreHorizontal, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,8 +21,25 @@ import { usePosts } from '@/context/PostContext';
 const PostCard = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   const { currentUser, getUserById } = useAuth();
   const { toggleLike, addComment, deletePost } = usePosts();
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Initial check
+    checkIfMobile();
+
+    // Add event listener
+    window.addEventListener('resize', checkIfMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   // Ensure post is properly formatted regardless of source
   const normalizePost = (inputPost) => {
@@ -159,8 +176,8 @@ const PostCard = ({ post }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="mb-4 bg-white shadow-sm">
+    <div className={`max-w-4xl mx-auto ${isMobile ? '-mx-4' : ''}`}>
+      <Card className={`mb-1 bg-white ${isMobile ? 'shadow-none rounded-none border-x-0' : 'shadow-sm'}`}>
         <CardHeader className="pt-4 pb-0">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
@@ -221,7 +238,7 @@ const PostCard = ({ post }) => {
           </div>
         </CardContent>
 
-        <div className="border-t border-gray-200">
+        <div className={`border-t border-gray-200 ${isMobile ? 'border-x-0' : ''}`}>
           <div className="grid grid-cols-3 gap-1 py-1">
             <Button
               variant="ghost"
@@ -248,7 +265,7 @@ const PostCard = ({ post }) => {
 
         {showComments && (
           <CardFooter className="flex flex-col p-0">
-            <div className="border-t border-gray-200 w-full">
+            <div className={`border-t border-gray-200 w-full ${isMobile ? 'border-x-0' : ''}`}>
               {renderComments()}
             </div>
 

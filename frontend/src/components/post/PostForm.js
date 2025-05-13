@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Image, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -17,9 +17,26 @@ const PostForm = () => {
   const [privacy, setPrivacy] = useState(PRIVACY_LEVELS.PUBLIC);
   const [images, setImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const { currentUser } = useAuth();
   const { addPost } = usePosts();
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Initial check
+    checkIfMobile();
+
+    // Add event listener
+    window.addEventListener('resize', checkIfMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   if (!currentUser) return null;
 
@@ -61,8 +78,8 @@ const PostForm = () => {
   const displayName = currentUser.nickname || `${currentUser.firstName} ${currentUser.lastName}`;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="mb-6 bg-white shadow-sm">
+    <div className={`max-w-4xl mx-auto ${isMobile ? '-mx-4' : ''}`}>
+      <Card className={`mb-1 bg-white ${isMobile ? 'shadow-none rounded-none border-x-0' : 'shadow-sm'}`}>
       <form onSubmit={handleSubmit}>
         <CardContent className="pt-4">
           <div className="flex space-x-3">
@@ -122,7 +139,7 @@ const PostForm = () => {
           </div>
         </CardContent>
 
-        <CardFooter className="border-t flex justify-between items-center p-3">
+        <CardFooter className={`border-t flex justify-between items-center p-3 ${isMobile ? 'border-x-0' : ''}`}>
           <div>
             <label htmlFor="image-upload" className="cursor-pointer">
               <div className="flex items-center text-gray-500 hover:text-gray-700">
