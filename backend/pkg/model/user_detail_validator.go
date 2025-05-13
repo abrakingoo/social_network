@@ -28,13 +28,11 @@ import (
 	"social/pkg/util"
 )
 
-func  ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (int, map[string][]string, error) {
-	
+func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (int, map[string][]string, error) {
 	form_errors := map[string][]string{}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		return http.StatusBadRequest, form_errors, fmt.Errorf("bad request")
 	}
-	fmt.Println(user)
 
 	email_address := strings.TrimSpace(user.Email)
 	first_name := strings.TrimSpace(user.FirstName)
