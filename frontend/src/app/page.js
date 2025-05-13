@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
-import PostForm from "@/components/post/PostForm";
-import PostCard from "@/components/post/PostCard";
+import { useEffect, Suspense, lazy } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { usePosts } from "@/context/PostContext";
+import Loading from "@/components/ui/loading";
 
-export default function Home() {
+// Lazy load components that aren't needed immediately
+const PostForm = lazy(() => import("@/components/post/PostForm"));
+const PostCard = lazy(() => import("@/components/post/PostCard"));
+
+// Extracting the content into a separate component for Suspense
+const HomeContent = () => {
   const { currentUser, login } = useAuth();
   const { posts, getVisiblePosts } = usePosts();
 
@@ -24,13 +28,17 @@ export default function Home() {
   return (
     <div className="space-y-6">
       {/* Post Form */}
-      <PostForm />
+      <Suspense fallback={<div className="h-32 bg-gray-100 animate-pulse rounded-lg"></div>}>
+        <PostForm />
+      </Suspense>
 
       {/* Feed */}
       <div className="space-y-4">
         {visiblePosts.length > 0 ? (
           visiblePosts.map(post => (
-            <PostCard key={post.id} post={post} />
+            <Suspense key={post.id} fallback={<div className="h-64 bg-gray-100 animate-pulse rounded-lg"></div>}>
+              <PostCard post={post} />
+            </Suspense>
           ))
         ) : (
           <div className="text-center p-8 bg-white rounded-lg shadow-sm">
@@ -44,5 +52,13 @@ export default function Home() {
         )}
       </div>
     </div>
+  );
+};
+
+export default function Home() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <HomeContent />
+    </Suspense>
   );
 }
