@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Bell,
   MessageSquare,
@@ -31,6 +31,10 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { currentUser, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Check if on authentication pages
+  const isAuthPage = pathname.includes('/login') || pathname.includes('/register');
 
   const handleLogout = () => {
     logout();
@@ -44,6 +48,21 @@ const Navbar = () => {
     { icon: Bell, label: 'Notifications', path: '/notifications', badge: 5 }
   ];
 
+  // Simplified version of navbar for auth pages
+  if (isAuthPage) {
+    return (
+      <header className="sticky top-0 z-50 bg-white shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="text-social font-bold text-2xl">
+              social<span className="text-social-accent">network</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       <div className="container mx-auto px-4">
@@ -52,45 +71,49 @@ const Navbar = () => {
           <div className="flex items-center flex-1">
             <Link href="/" className="text-social font-bold text-2xl">social<span className="text-social-accent">network</span></Link>
 
-            <div className="hidden md:block ml-6 flex-1 max-w-md">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
+            {currentUser && (
+              <div className="hidden md:block ml-6 flex-1 max-w-md">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <Input
+                    type="search"
+                    placeholder="Search..."
+                    className="pl-10 h-9 md:w-full max-w-sm rounded-full bg-gray-100"
+                  />
                 </div>
-                <Input
-                  type="search"
-                  placeholder="Search..."
-                  className="pl-10 h-9 md:w-full max-w-sm rounded-full bg-gray-100"
-                />
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Desktop navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.path}
-                className="px-3 py-2 rounded-md text-gray-500 hover:bg-social-light hover:text-social relative"
-              >
-                <item.icon className="h-6 w-6" />
-                {item.badge && (
-                  <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
+          {/* Desktop navigation - only show when authenticated */}
+          {currentUser && (
+            <nav className="hidden md:flex items-center space-x-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.path}
+                  className="px-3 py-2 rounded-md text-gray-500 hover:bg-social-light hover:text-social relative"
+                >
+                  <item.icon className="h-6 w-6" />
+                  {item.badge && (
+                    <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </nav>
+          )}
 
-          {/* User menu */}
+          {/* User menu - only for authenticated users */}
           {currentUser ? (
             <div className="flex items-center ml-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="rounded-full p-0">
-                    <Avatar className="h-8 w-8">
+                  <Button variant="ghost" className="rounded-full p-0 hover:bg-transparent focus:bg-transparent">
+                    <Avatar className="h-8 w-8 cursor-default">
                       <AvatarImage src={currentUser.avatar} />
                       <AvatarFallback>{currentUser.firstName[0]}{currentUser.lastName[0]}</AvatarFallback>
                     </Avatar>
@@ -119,7 +142,7 @@ const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Mobile menu button */}
+              {/* Mobile menu button - only show when authenticated */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -154,8 +177,8 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile navigation menu */}
-      {mobileMenuOpen && (
+      {/* Mobile navigation menu - only show when authenticated */}
+      {mobileMenuOpen && currentUser && (
         <nav className="md:hidden bg-white border-t border-gray-200">
           <div className="px-2 py-3 space-y-1">
             <div className="px-4 py-2">
