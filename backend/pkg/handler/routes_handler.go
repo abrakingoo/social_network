@@ -49,5 +49,6 @@ func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/api/register", app.Register)
+	mux.HandleFunc("/api/login", app.Login)
 	return mux
 }
