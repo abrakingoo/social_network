@@ -6,7 +6,7 @@ import (
 )
 
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return
 	}
