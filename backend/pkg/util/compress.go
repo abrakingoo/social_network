@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 )
 
-const mediaPath = "backend/pkg/db/media" // Base directory for compressed files
+const mediaPath = "backend/pkg/db/media"
 
 // CompressJPEG reduces JPEG quality (1-100, lower = smaller size).
 // Returns the path to the compressed file.
@@ -78,7 +78,7 @@ func CompressPNG(path string) (string, error) {
 	return outPath, encoder.Encode(out, img)
 }
 
-// CompressGIF reduces color depth using a basic palette (WebSafe or Plan9).
+// CompressGIF reduces color depth using a basic palette.
 // Returns the path to the compressed file.
 func CompressGIF(path string, useWebSafe bool) (string, error) {
 	file, err := os.Open(path)
