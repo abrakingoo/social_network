@@ -1,7 +1,7 @@
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
-    recipient_id INTEGER NOT NULL, 
-    actor_id INTEGER,              
+    recipient_id TEXT NOT NULL, 
+    actor_id TEXT,              
     type TEXT NOT NULL,            
     entity_id INTEGER,             
     entity_type TEXT,              
