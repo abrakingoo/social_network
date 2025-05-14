@@ -23,7 +23,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := claims["user_id"].(string)
+	userID, ok := claims["sub"].(string)
 	if !ok || userID == "" {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: missing user ID", Error)
 		return
@@ -80,7 +80,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		"id",
 		"user_id",
 		"content",
-		"image",
+		"media",
 	}, []any{
 		util.UUIDGen(),
 		userID,
