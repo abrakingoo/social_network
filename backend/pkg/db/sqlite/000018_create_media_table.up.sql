@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS media (
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
+    url TEXT NOT NULL,
+    parent_id TEXT NOT NULL 
+);
