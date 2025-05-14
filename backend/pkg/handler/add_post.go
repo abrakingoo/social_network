@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -23,34 +24,60 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract user_id
 	userID, ok := claims["sub"].(string)
 	if !ok || userID == "" {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: missing user ID", Error)
 		return
 	}
 
+	// Parse form data
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return
 	}
 
-	content := r.FormValue("content")
-	file := r.FormValue("media")
-
-	content = strings.Trim(content, " ")
+	content := strings.TrimSpace(r.FormValue("content"))
 	if content == "" {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Content cannot be empty", Error)
 		return
 	}
 
-	// Handle media (if any)
-	path := ""
-	if file != "" {
-		f, err := os.Open(file)
-		if err != nil {
-			app.JSONResponse(w, r, http.StatusBadRequest, "Failed to open file", Error)
+	var path string
+
+	// Try to retrieve the optional file
+	file, header, err := r.FormFile("media")
+	if err != nil {
+		if err == http.ErrMissingFile {
+			file = nil
+			header = nil
+		} else {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Failed to retrieve file", Error)
 			return
 		}
+	}
+
+	// If file was provided, process it
+	if file != nil && header != nil {
+		defer file.Close()
+
+		// Save file temporarily
+		tempFilePath := "/tmp/" + header.Filename
+		out, err := os.Create(tempFilePath)
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Could not save uploaded file", Error)
+			return
+		}
+		defer out.Close()
+
+		_, err = io.Copy(out, file)
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to write uploaded file", Error)
+			return
+		}
+
+		// Validate mime type
+		f, _ := os.Open(tempFilePath)
 		defer f.Close()
 
 		mimetype, err := util.IsValidMimeType(f)
@@ -59,24 +86,26 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Compress or move file
 		switch mimetype {
 		case "image/jpeg":
-			path, err = util.CompressJPEG(file, 70)
+			path, err = util.CompressJPEG(tempFilePath, 70)
 		case "image/png":
-			path, err = util.CompressPNG(file)
+			path, err = util.CompressPNG(tempFilePath)
 		case "image/gif":
-			path, err = util.CompressGIF(file, true)
+			path, err = util.CompressGIF(tempFilePath, true)
 		default:
-			path = "backend/pkg/db/media" + file
+			path = "pkg/db/media/" + header.Filename
 		}
+
 		if err != nil {
-			app.JSONResponse(w, r, http.StatusBadRequest, "Failed to compress file", Error)
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to compress file", Error)
 			return
 		}
 	}
 
-	// Insert post
-	err := app.Queries.InsertData("posts", []string{
+	// Insert post into DB
+	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
 		"content",
@@ -88,7 +117,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		path,
 	})
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert data into database", Error)
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
 		return
 	}
 
