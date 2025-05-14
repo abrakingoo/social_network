@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS group_invitations (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
-    group_id INTEGER NOT NULL,
-    sender_id INTEGER NOT NULL,
+    group_id TEXT NOT NULL,
+    sender_id TEXT NOT NULL,
     receiver_id INTEGER NOT NULL,
     status TEXT CHECK(status IN ('pending', 'accepted', 'declined')) DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

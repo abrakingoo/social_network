@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS group_posts (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
-    group_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
+    group_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     content TEXT,
     image TEXT,
     likes_count INTEGER DEFAULT 0,  
