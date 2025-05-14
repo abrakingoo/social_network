@@ -1,4 +1,4 @@
-CREATE TABLE event_attendance (
+CREATE TABLE IF NOT EXISTS event_attendance (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     event_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,

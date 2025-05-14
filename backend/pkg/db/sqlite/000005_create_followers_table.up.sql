@@ -1,4 +1,4 @@
-CREATE TABLE user_follows (
+CREATE TABLE IF NOT EXISTS user_follows (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     follower_id INTEGER NOT NULL,
     following_id INTEGER NOT NULL,

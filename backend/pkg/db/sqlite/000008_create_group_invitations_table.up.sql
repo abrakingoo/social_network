@@ -1,4 +1,4 @@
-CREATE TABLE group_invitations (
+CREATE TABLE IF NOT EXISTS group_invitations (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_id INTEGER NOT NULL,
     sender_id INTEGER NOT NULL,

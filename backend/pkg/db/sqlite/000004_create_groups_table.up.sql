@@ -1,5 +1,5 @@
 -- Groups Table
-CREATE TABLE groups (
+CREATE TABLE IF NOT EXISTS groups (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     title TEXT NOT NULL,
     description TEXT,

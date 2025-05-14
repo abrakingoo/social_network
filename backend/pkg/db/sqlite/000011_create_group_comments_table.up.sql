@@ -1,4 +1,4 @@
-CREATE TABLE group_comments (
+CREATE TABLE IF NOT EXISTS group_comments (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_post_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,

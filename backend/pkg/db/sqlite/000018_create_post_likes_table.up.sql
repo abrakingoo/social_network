@@ -1,4 +1,4 @@
-CREATE TABLE post_likes (
+CREATE TABLE IF NOT EXISTS post_likes (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     post_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,

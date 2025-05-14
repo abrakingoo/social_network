@@ -1,4 +1,4 @@
-CREATE TABLE posts (
+CREATE TABLE IF NOT EXISTS posts (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     user_id INTEGER NOT NULL,
     content TEXT,

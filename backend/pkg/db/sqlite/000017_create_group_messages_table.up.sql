@@ -1,4 +1,4 @@
-CREATE TABLE group_messages (
+CREATE TABLE IF NOT EXISTS group_messages (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_id INTEGER NOT NULL,
     sender_id INTEGER NOT NULL,

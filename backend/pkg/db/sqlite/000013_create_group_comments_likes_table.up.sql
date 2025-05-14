@@ -1,4 +1,4 @@
-CREATE TABLE group_comment_likes (
+CREATE TABLE IF NOT EXISTS group_comment_likes (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_comment_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,

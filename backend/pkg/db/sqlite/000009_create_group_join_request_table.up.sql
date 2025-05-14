@@ -1,4 +1,4 @@
-CREATE TABLE group_join_requests (
+CREATE TABLE IF NOT EXISTS group_join_requests (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
