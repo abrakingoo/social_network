@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS posts (
     user_id TEXT NOT NULL,
     group_id TEXT,
     content TEXT,
+    media TEXT,
     likes_count INTEGER DEFAULT 0,  
     dislikes_count INTEGER DEFAULT 0, 
     comments_count INTEGER DEFAULT 0, 
