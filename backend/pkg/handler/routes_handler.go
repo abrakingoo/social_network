@@ -48,6 +48,6 @@ func (app *App) Routes() http.Handler {
 
 	mux.HandleFunc("/api/register", app.Register)
 	mux.HandleFunc("/api/login", app.Login)
-	mux.HandleFunc("/api/addPost", app.AddPost)
+	mux.Handle("/api/addPost", app.JWTMiddleware(http.HandlerFunc(app.AddPost)))
 	return mux
 }
