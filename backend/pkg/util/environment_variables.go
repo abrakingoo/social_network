@@ -39,5 +39,5 @@ func GetEnvVal(s string) (string, error) {
 			return value, nil
 		}
 	}
-	return "", fmt.Errorf("environment variable with that value is not yet set.")
+	return "", fmt.Errorf("environment variable with that value is not yet set")
 }
