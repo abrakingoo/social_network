@@ -51,7 +51,17 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = app.Queries.InsertData("posts", []string{"id", "user_id", "content", "image"}, []any{util.UUIDGen(), "fff", content, path})
+		err = app.Queries.InsertData("posts", []string{
+			"id",
+			"user_id",
+			"content",
+			"image",
+		}, []any{
+			util.UUIDGen(),
+			"fff",
+			content,
+			path,
+		})
 		if err != nil {
 			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert data into database", Error)
 			return
