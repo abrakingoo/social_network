@@ -10,6 +10,7 @@ import (
 var allowedRoutes = map[string][]string{
 	"/api/login":    {"POST"},
 	"/api/register": {"POST"},
+	"/api/addPost":  {"POST"},
 }
 
 type App struct {
