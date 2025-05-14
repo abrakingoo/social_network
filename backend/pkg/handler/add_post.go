@@ -16,22 +16,19 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: no token context", Error)
 		return
 	}
-
-	// Type assert the payload
+	
 	claims, ok := payload.(map[string]interface{})
 	if !ok {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: invalid token data", Error)
 		return
 	}
 
-	// Extract user_id
 	userID, ok := claims["sub"].(string)
 	if !ok || userID == "" {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: missing user ID", Error)
 		return
 	}
 
-	// Parse form data
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return
@@ -76,7 +73,6 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Validate mime type
 		f, _ := os.Open(tempFilePath)
 		defer f.Close()
 
@@ -86,7 +82,6 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Compress or move file
 		switch mimetype {
 		case "image/jpeg":
 			path, err = util.CompressJPEG(tempFilePath, 70)
@@ -104,7 +99,6 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Insert post into DB
 	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
