@@ -1,0 +1,2 @@
+backend/pkg/db/backend.db
+backend/.env

@@ -1,5 +1,5 @@
 CREATE TABLE event_attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     event_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     status TEXT CHECK(status IN ('going', 'not going')) NOT NULL,

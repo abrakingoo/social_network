@@ -1,5 +1,5 @@
 CREATE TABLE group_invitations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY NOT NULL UNIQUE,
     group_id INTEGER NOT NULL,
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER NOT NULL,
