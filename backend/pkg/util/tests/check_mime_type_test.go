@@ -9,14 +9,13 @@ import (
 func TestIsValidMimeType(t *testing.T) {
 	tests := []struct {
 		filename       string
-		expectedResult bool
+		expectedResult string
 		expectedError  string
 	}{
-		{"testdata/thunderbolts.jpeg", true, ""},
-		{"testdata/test_image.jpeg", false, "file is empty or too small to detect MIME type"},
-		{"testdata/test_invalid.txt", true, ""},
-		{"testdata/small_file.txt", false, "file is empty or too small to detect MIME type"},
-		{"testdata/test_file.exe", false, "file is empty or too small to detect MIME type"},
+		{"testdata/thunderbolts.jpeg", "image/jpeg", ""},
+		{"testdata/test_image.jpeg", "", "file is empty or too small to detect MIME type"},
+		{"testdata/test_file.exe", "", "file is empty or too small to detect MIME type"},
+		{"testdata/gif_test.gif", "image/gif", ""},
 	}
 
 	// Loop through the test cases
