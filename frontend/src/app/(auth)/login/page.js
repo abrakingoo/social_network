@@ -5,26 +5,36 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import LoginForm from '@/components/auth/LoginForm';
-import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (formData) => {
     setIsLoading(true);
 
     try {
-      // Use the context login function
-      const success = login(formData.email, formData.password, formData.rememberMe);
+      const credentials = btoa(`${formData.email}:${formData.password}`);
 
-      if (success) {
-      router.push('/');
-      } else {
-        throw new Error("Invalid credentials");
+
+      const response = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${credentials}`,
+        },
+      })
+
+      if (!response.ok) {
+        console.log(response);
+        throw new Error($`Failed to login: ${response.error}`);
       }
+      
+      const data = await response.json();
+      sessionStorage.setItem('token', data.token);
+
+      router.push('/');
     } catch (error) {
       toast({
         title: "Error",
