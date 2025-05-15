@@ -12,8 +12,6 @@ import (
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 
-	util.EnableCORS(w, r)
-
 	code, msgs, err := model.ValidateUserDetails(w, r, &user)
 	if err != nil {
 		if len(msgs) > 0 {
