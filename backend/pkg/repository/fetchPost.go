@@ -135,3 +135,31 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 
 	return commentsByPost, nil
 }
+
+
+func (q *Query) FetchAllPosts() ([]model.Post, error) {
+    // 1. Fetch posts with their media
+    posts, err := q.FetchPostWithMedia()
+    if err != nil {
+        return nil, fmt.Errorf("failed to get posts: %w", err)
+    }
+
+    // 2. Get post IDs for comment fetching
+    postIDs := make([]string, len(posts))
+    for i, post := range posts {
+        postIDs[i] = post.ID
+    }
+
+    // 3. Fetch comments with their media
+    commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get comments: %w", err)
+    }
+
+    // 4. Attach comments to posts
+    for i := range posts {
+        posts[i].Comments = commentsByPost[posts[i].ID]
+    }
+
+    return posts, nil
+}
