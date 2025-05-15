@@ -8,9 +8,9 @@ import (
 )
 
 var allowedRoutes = map[string][]string{
-	"/api/login":    {"POST"},
-	"/api/register": {"POST"},
-	"/api/addPost":  {"POST"},
+	"/api/login":    {"POST", "OPTIONS"},
+	"/api/register": {"POST", "OPTIONS"},
+	"/api/addPost":  {"POST", "OPTIONS"},
 }
 
 type App struct {
