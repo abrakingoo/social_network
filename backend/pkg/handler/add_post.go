@@ -9,6 +9,7 @@ import (
 	"social/pkg/util"
 )
 
+// AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	// Extract JWT payload from context
 	payload := r.Context().Value(JWTUserKey)
