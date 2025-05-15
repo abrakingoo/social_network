@@ -10,13 +10,13 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    dateOfBirth: '',
+    confirmed_password: '',
+    first_name: '',
+    last_name: '',
+    date_of_birth: '',
     nickname: '',
     about: '',
-    isPublic: true
+    is_public: true
   });
 
   const [error, setError] = useState('');
@@ -40,10 +40,10 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
     setError('');
 
     try {
-      const { email, password, confirmPassword, firstName, lastName, dateOfBirth } = formData;
+      let { email, password, confirmed_password, first_name, last_name, date_of_birth } = formData;
 
       // Validate required fields
-      if (!email || !password || !confirmPassword || !firstName || !lastName || !dateOfBirth) {
+      if (!email || !password || !confirmed_password || !first_name || !last_name || !date_of_birth) {
         throw new Error('Please fill in all required fields');
       }
 
@@ -59,18 +59,20 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
       }
 
       // Check if passwords match
-      if (password !== confirmPassword) {
+      if (password !== confirmed_password) {
         throw new Error('Passwords do not match');
       }
 
       // Check age (must be at least 13)
-      const birthDate = new Date(dateOfBirth);
+      const birthDate = new Date(date_of_birth);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDifference = today.getMonth() - birthDate.getMonth();
       if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
+
+      
 
       if (age < 13) {
         throw new Error('You must be at least 13 years old to register');
@@ -80,8 +82,10 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
       if (onSubmit) {
         // Add default avatar if none provided
         if (!formData.avatar) {
-          formData.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName + ' ' + lastName)}&background=random`;
+          formData.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name + ' ' + last_name)}&background=random`;
         }
+
+        formData.date_of_birth = birthDate.toISOString();
 
         onSubmit(formData);
       }
@@ -100,22 +104,22 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="first_name">First Name <span className="text-red-500">*</span></Label>
           <Input
-            id="firstName"
-            name="firstName"
-            value={formData.firstName}
+            id="first_name"
+            name="first_name"
+            value={formData.first_name}
             onChange={handleChange}
             required
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
+          <Label htmlFor="last_name">Last Name <span className="text-red-500">*</span></Label>
           <Input
-            id="lastName"
-            name="lastName"
-            value={formData.lastName}
+            id="last_name"
+            name="last_name"
+            value={formData.last_name}
             onChange={handleChange}
             required
           />
@@ -150,24 +154,24 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+        <Label htmlFor="confirmed_password">Confirm Password <span className="text-red-500">*</span></Label>
         <Input
-          id="confirmPassword"
-          name="confirmPassword"
+          id="confirmed_password"
+          name="confirmed_password"
           type="password"
-          value={formData.confirmPassword}
+          value={formData.confirmed_password}
           onChange={handleChange}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="dateOfBirth">Date of Birth <span className="text-red-500">*</span></Label>
+        <Label htmlFor="date_of_birth">Date of Birth <span className="text-red-500">*</span></Label>
         <Input
-          id="dateOfBirth"
-          name="dateOfBirth"
+          id="date_of_birth"
+          name="date_of_birth"
           type="date"
-          value={formData.dateOfBirth}
+          value={formData.date_of_birth}
           onChange={handleChange}
           required
         />
