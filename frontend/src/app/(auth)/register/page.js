@@ -13,19 +13,28 @@ export default function RegisterPage() {
 
   const handleRegister = async (formData) => {
     setIsLoading(true);
-
+  
     try {
-      // In a real app, you would call your auth API here
       console.log('Registering with:', formData);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
+  
+      const response = await fetch('http://localhost:8000/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Registration failed');
+      }
+  
       toast({
         title: "Account created",
         description: "Your account has been created successfully",
       });
-
+  
       router.push('/login');
     } catch (error) {
       toast({
@@ -37,6 +46,7 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <div className="space-y-6">
