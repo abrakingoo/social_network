@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"social/pkg/model"
@@ -10,6 +11,7 @@ import (
 
 // Register handles user registration
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
+	log.Println("Registering user")
 	var user model.User
 
 	code, msgs, err := model.ValidateUserDetails(w, r, &user)
