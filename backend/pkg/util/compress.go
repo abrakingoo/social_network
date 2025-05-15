@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 )
 
-const mediaPath = "backend/pkg/db/media"
+const mediaPath = "pkg/db/media"
 
 // CompressJPEG reduces JPEG quality (1-100, lower = smaller size).
 // Returns the path to the compressed file.
