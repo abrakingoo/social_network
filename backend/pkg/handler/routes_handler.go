@@ -46,10 +46,11 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/register", app.Register)
-	mux.HandleFunc("/api/login", app.Login)
+	// Public routes with CORS
+	mux.Handle("/api/register", app.WithCORS(http.HandlerFunc(app.Register)))
+	mux.Handle("/api/login", app.WithCORS(http.HandlerFunc(app.Login)))
 
-	// protected routes
-	mux.Handle("/api/addPost", app.JWTMiddleware(http.HandlerFunc(app.AddPost)))
+	// Protected route with JWT and CORS
+	mux.Handle("/api/addPost", app.WithCORS(app.JWTMiddleware(http.HandlerFunc(app.AddPost))))
 	return mux
 }
