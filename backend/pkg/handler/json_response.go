@@ -11,14 +11,15 @@ const (
 	Success Message = iota
 	Error
 	Token
+	Data
 )
 
 func (s Message) String() string {
 	return [...]string{"message", "error", "token"}[s]
 }
 
-func (app *App) JSONResponse(w http.ResponseWriter, r *http.Request, status int, message string, messageType Message) {
+func (app *App) JSONResponse(w http.ResponseWriter, r *http.Request, status int, message any, messageType Message) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{messageType.String(): message})
+	json.NewEncoder(w).Encode(map[string]any{messageType.String(): message})
 }
