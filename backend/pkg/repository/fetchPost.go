@@ -29,18 +29,26 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 	for rows.Next() {
 		var (
 			post     model.Post
+			groupID sql.NullString
 			mediaID  sql.NullString
 			mediaURL sql.NullString
 		)
 
 		err := rows.Scan(
-			&post.ID, &post.GroupID, &post.Content,
+			&post.ID, &groupID, &post.Content,
 			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
 			&mediaID, &mediaURL,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
+
+		//if the post has a group id we assign it, else we put an empty string
+		if groupID.Valid {
+            post.GroupID = groupID.String
+        } else {
+            post.GroupID = ""
+        }
 
 		if existingPost, exists := postsMap[post.ID]; exists {
 			if mediaID.Valid {
