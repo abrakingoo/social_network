@@ -11,6 +11,7 @@ var allowedRoutes = map[string][]string{
 	"/api/login":    {"POST"},
 	"/api/register": {"POST"},
 	"/api/addPost":  {"POST"},
+	"/api/getPosts": {"GET"},
 }
 
 type App struct {
@@ -51,5 +52,6 @@ func (app *App) Routes() http.Handler {
 
 	// protected routes
 	mux.Handle("/api/addPost", app.JWTMiddleware(http.HandlerFunc(app.AddPost)))
+	mux.Handle("/api/getPosts", app.JWTMiddleware(http.HandlerFunc(app.GetPosts)))
 	return mux
 }
