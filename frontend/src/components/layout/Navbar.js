@@ -25,11 +25,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/context/AuthContext';
+// Auth context dependency removed
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { currentUser, logout } = useAuth();
+  // Static data instead of context
+  const currentUser = {
+    id: '1',
+    firstName: 'Demo',
+    lastName: 'User',
+    avatar: ''
+  };
+  
+  // Static logout function
+  const logout = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('token');
+    }
+  };
   const router = useRouter();
   const pathname = usePathname();
 
