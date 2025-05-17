@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // Fetch user data with the token
-      const response = await fetch('http://localhost:8000/api/user', {
+      const response = await fetch('http://localhost:8000/api/getPosts', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }) => {
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('logged in')
         setCurrentUser(userData);
       } else {
         // Token is invalid
