@@ -8,9 +8,10 @@ import (
 )
 
 var allowedRoutes = map[string][]string{
-	"/api/login":    {"POST", "OPTIONS"},
-	"/api/register": {"POST", "OPTIONS"},
-	"/api/addPost":  {"POST", "OPTIONS"},
+	"/api/login":    {"POST"},
+	"/api/register": {"POST"},
+	"/api/addPost":  {"POST"},
+	"/api/getPosts": {"GET"},
 }
 
 type App struct {
@@ -50,7 +51,8 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/register", app.WithCORS(http.HandlerFunc(app.Register)))
 	mux.Handle("/api/login", app.WithCORS(http.HandlerFunc(app.Login)))
 
-	// Protected route with JWT and CORS
-	mux.Handle("/api/addPost", app.WithCORS(app.JWTMiddleware(http.HandlerFunc(app.AddPost))))
+	// protected routes
+	mux.Handle("/api/addPost", app.JWTMiddleware(http.HandlerFunc(app.AddPost)))
+	mux.Handle("/api/getPosts", app.JWTMiddleware(http.HandlerFunc(app.GetPosts)))
 	return mux
 }
