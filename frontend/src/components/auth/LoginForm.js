@@ -7,18 +7,25 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 const LoginForm = memo(({ onSubmit, isLoading }) => {
-  const [email, setEmail] = useState('john@example.com'); // Default demo user
-  const [password, setPassword] = useState('password123'); // Default demo password
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleEmailChange = useCallback((e) => {
     setEmail(e.target.value);
-  }, []);
+    if (fieldErrors.email) {
+      setFieldErrors(prev => ({ ...prev, email: '' }));
+    }
+  }, [fieldErrors]);
 
   const handlePasswordChange = useCallback((e) => {
     setPassword(e.target.value);
-  }, []);
+    if (fieldErrors.password) {
+      setFieldErrors(prev => ({ ...prev, password: '' }));
+    }
+  }, [fieldErrors]);
 
   const handleRememberMeChange = useCallback((checked) => {
     setRememberMe(checked);
@@ -27,15 +34,26 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+    
+    const newFieldErrors = {};
+    let hasErrors = false;
 
     try {
       // Validate form
       if (!email.trim()) {
-        throw new Error('Email is required');
+        newFieldErrors.email = 'Email or nickname is required';
+        hasErrors = true;
       }
 
       if (!password) {
-        throw new Error('Password is required');
+        newFieldErrors.password = 'Password is required';
+        hasErrors = true;
+      }
+      
+      if (hasErrors) {
+        setFieldErrors(newFieldErrors);
+        throw new Error('Please fill in all required fields');
       }
 
       // Call the provided onSubmit handler
@@ -57,38 +75,36 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Email or Nickname</Label>
         <Input
           id="email"
-          type="email"
-          placeholder="name@example.com"
+          type="text"
+          placeholder="Enter nickname or email address"
           value={email}
           onChange={handleEmailChange}
+          className={fieldErrors.email ? "border-red-500" : ""}
           required
         />
+        {fieldErrors.email && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div>
           <Label htmlFor="password">Password</Label>
-          <a
-            href="#"
-            className="text-sm text-blue-600 hover:underline"
-            onClick={(e) => {
-              e.preventDefault();
-              // Password reset functionality would be implemented here
-            }}
-          >
-            Forgot password?
-          </a>
         </div>
         <Input
           id="password"
           type="password"
           value={password}
           onChange={handlePasswordChange}
+          className={fieldErrors.password ? "border-red-500" : ""}
           required
         />
+        {fieldErrors.password && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>
+        )}
       </div>
 
       <div className="flex items-center space-x-2">
@@ -108,9 +124,7 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
         {isLoading ? 'Logging in...' : 'Login'}
       </Button>
 
-      <div className="text-xs text-gray-500 text-center mt-3">
-        <p>Demo credentials are provided for testing</p>
-      </div>
+
     </form>
   );
 });
