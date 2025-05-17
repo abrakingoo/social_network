@@ -4,10 +4,16 @@ import React from 'react';
 import Link from 'next/link';
 import { User, Users, BookOpen, Calendar, Image, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/context/AuthContext';
+// Auth context dependency removed
 
 const LeftSidebar = () => {
-  const { currentUser } = useAuth();
+  // Static data instead of context
+  const currentUser = {
+    id: '1',
+    firstName: 'Demo',
+    lastName: 'User',
+    avatar: ''  
+  };
 
   if (!currentUser) return null;
 
