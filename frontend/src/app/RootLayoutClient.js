@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostProvider } from "@/context/PostContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import dynamic from 'next/dynamic';
@@ -85,9 +86,13 @@ export default function RootLayoutClient({ children }) {
   if (isAuthRoute) {
     return (
       <QueryClientProvider client={queryClient}>
-        <PostProvider>
-          {children}
-        </PostProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <PostProvider>
+              {children}
+            </PostProvider>
+          </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
   }
@@ -96,12 +101,14 @@ export default function RootLayoutClient({ children }) {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ToastProvider>
-          <PostProvider>
-            <Sonner />
-            <AuthenticatedLayout>
-              {children}
-            </AuthenticatedLayout>
-          </PostProvider>
+          <AuthProvider>
+            <PostProvider>
+              <Sonner />
+              <AuthenticatedLayout>
+                {children}
+              </AuthenticatedLayout>
+            </PostProvider>
+          </AuthProvider>
         </ToastProvider>
       </TooltipProvider>
     </QueryClientProvider>
