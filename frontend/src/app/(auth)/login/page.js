@@ -32,6 +32,8 @@ export default function LoginPage() {
       }
       
       const data = await response.json();
+      // Store token in both cookie and sessionStorage
+      document.cookie = `token=${data.token};path=/;max-age=86400`; // 24 hours
       sessionStorage.setItem('token', data.token);
 
       router.push('/');
