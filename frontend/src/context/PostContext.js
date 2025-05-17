@@ -1,6 +1,13 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { toast } from "@/components/ui/sonner";
-import { useAuth } from './AuthContext';
+
+// Use static dummy user data instead of context
+const dummyUser = {
+  id: '1',
+  email: 'user@example.com',
+  firstName: 'Demo',
+  lastName: 'User'
+};
 
 // Privacy levels
 export const PRIVACY_LEVELS = {
@@ -81,7 +88,9 @@ export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState(INITIAL_POSTS);
-  const { currentUser, getUserById } = useAuth();
+  // Using static dummy user instead of AuthContext
+  const currentUser = dummyUser;
+  const getUserById = (id) => dummyUser;
 
   // Normalize post data to ensure consistent structure
   const normalizePost = useCallback((postData) => {
