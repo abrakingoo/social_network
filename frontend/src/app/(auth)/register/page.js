@@ -39,7 +39,7 @@ export default function RegisterPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create account",
+        description: error.error || "Failed to create account",
         variant: "destructive",
       });
     } finally {
