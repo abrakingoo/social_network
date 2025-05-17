@@ -15,14 +15,27 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 
-import { useAuth } from '@/context/AuthContext';
+// Auth context dependency removed
 import { usePosts } from '@/context/PostContext';
 
 const PostCard = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  const { currentUser, getUserById } = useAuth();
+  // Static data instead of context
+  const currentUser = {
+    id: '1',
+    firstName: 'Demo',
+    lastName: 'User'
+  };
+  
+  // Static function for getting user data
+  const getUserById = (id) => ({
+    id,
+    firstName: id === '1' ? 'Demo' : 'User',
+    lastName: id === '1' ? 'User' : String(id),
+    avatar: ''
+  });
   const { toggleLike, addComment, deletePost } = usePosts();
 
   // Check if we're on mobile
