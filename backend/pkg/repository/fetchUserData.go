@@ -36,6 +36,9 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
         user.Post[i].Comments = commentsByPost[user.Post[i].ID]
     }
 
+	//fetch all the user comments
+	
+
 	
 
 	return user, nil
@@ -125,4 +128,34 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 	}
 
 	return nil
+}
+
+
+func (q *Query) getAllCommentedPostID( userid string) ([]string, error) {
+	query := `
+		SELECT DISTINCT post_id 
+		FROM comments 
+		WHERE user_id = ?
+	`
+
+	rows, err := q.Db.Query(query, userid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query posts: %v", err)
+	}
+	defer rows.Close()
+
+	var postIDs []string
+	for rows.Next() {
+		var postID string
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("failed to scan post ID: %v", err)
+		}
+		postIDs = append(postIDs, postID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error after row iteration: %v", err)
+	}
+
+	return postIDs, nil
 }
