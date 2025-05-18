@@ -413,6 +413,123 @@ func (q *Query) FetchLikedPostById(postIDs []string, user *model.UserData) error
 
 	return nil
 }
+
+func (q *Query) GetLikedComments(userid string, user *model.UserData) error {
+	//get all the post where the user has commented
+	postIDs, err := q.GetallLikedCommentsPostIDs(userid)
+	if err != nil {
+		return err
+	}
+
+	//use all the ids to fetch the post
+	if err = q.GetLikedCommentPost(postIDs, user); err != nil {
+		return err
+	}
+
+	//get all the post ids to fetch the comments( might refactor)
+	postIDs = make([]string, len(user.LikedPost))
+	for i, post := range user.Comments {
+		postIDs[i] = post.ID
+	}
+
+	// Fetch comments with their media
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	if err != nil {
+		return fmt.Errorf("failed to get comments: %w", err)
+	}
+
+	//attach comments to user post
+	for i := range user.LikedComments {
+		user.LikedComments[i].Comments = commentsByPost[user.LikedComments[i].ID]
+	}
+
+	
+	
+	return nil
+}
+
+func (q *Query) GetLikedCommentPost(postIDs []string, user *model.UserData) error {
+	
+	if len(postIDs) == 0 {
+		return nil // Early exit if no post IDs provided
+	}
+
+	placeholders := strings.Repeat("?,", len(postIDs))
+	placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+
+	query := `
+        SELECT 
+            p.id, p.group_id, p.content, 
+            p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
+            m.id, m.url
+        FROM posts p
+        LEFT JOIN media m ON m.parent_id = p.id
+        WHERE p.id IN (` + placeholders + `)
+        ORDER BY p.created_at DESC
+    `
+
+	// Convert postIDs ([]string) to []interface{} for Query
+	args := make([]interface{}, len(postIDs))
+	for i, id := range postIDs {
+		args[i] = id
+	}
+
+	rows, err := q.Db.Query(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to fetch posts {user liked comments post} by IDs: %w", err)
+	}
+	defer rows.Close()
+
+	postsMap := make(map[string]*model.Post)
+
+	for rows.Next() {
+		var (
+			post     model.Post
+			groupID  sql.NullString
+			mediaID  sql.NullString
+			mediaURL sql.NullString
+		)
+
+		if err := rows.Scan(
+			&post.ID, &groupID, &post.Content,
+			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
+			&mediaID, &mediaURL,
+		); err != nil {
+			return fmt.Errorf("failed to scan post: %w", err)
+		}
+
+		// Handle NULL group_id
+		if groupID.Valid {
+			post.GroupID = groupID.String
+		} else {
+			post.GroupID = ""
+		}
+
+		// Check if post already exists in the map (due to LEFT JOIN media)
+		if existingPost, exists := postsMap[post.ID]; exists {
+			// Append media if it exists
+			if mediaID.Valid {
+				existingPost.Media = append(existingPost.Media, model.Media{
+					URL: mediaURL.String,
+				})
+			}
+		} else {
+			// Initialize post media (if exists)
+			if mediaID.Valid {
+				post.Media = []model.Media{{
+					URL: mediaURL.String,
+				}}
+			} else {
+				post.Media = []model.Media{}
+			}
+			post.Comments = []model.Comment{} // Initialize empty comments
+			postsMap[post.ID] = &post
+			user.LikedComments = append(user.LikedComments, post)
+		}
+	}
+
+	return nil
+}
 func (q *Query) GetFollowers(userid string, user *model.UserData) error {
 	// Fetch followers (people who follow the current user)
 	err := q.FetchFollowers(userid, user)
