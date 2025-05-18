@@ -15,6 +15,11 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		return model.UserData{}, err
 	}
 
+	//fetch all the user post
+	if err:= q.fetchUserPost(userid, &user ); err != nil {
+		return model.UserData{}, err
+	} 
+
 	return user, nil
 }
 
@@ -31,7 +36,7 @@ func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
 
 	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe)
 	if err == sql.ErrNoRows {
-		return errors.New("user not found by email or nickname")
+		return errors.New("no user data found")
 	}
 	if err != nil {
 		return err
@@ -40,19 +45,21 @@ func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
 	return nil
 }
 
-func (q *Query) fetchUserPost(userid string, user *model.UserData) error {
+func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 	query := `
-				SELECT 
-					p.id, p.group_id, p.content, 
-					p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-					m.id, m.url
-				FROM posts p WHERE p.id = ?
-				LEFT JOIN media m ON m.parent_id = p.id
-				ORDER BY p.created_at DESC
-			`
-	rows, err := q.Db.Query(query)
+		SELECT 
+			p.id, p.group_id, p.content, 
+			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
+			m.id, m.url
+		FROM posts p
+		LEFT JOIN media m ON m.parent_id = p.id
+		WHERE p.user_id = ?
+		ORDER BY p.created_at DESC
+	`
+
+	rows, err := q.Db.Query(query, userID)
 	if err != nil {
-		return fmt.Errorf("failed to fetch posts: %w", err)
+		return fmt.Errorf("failed to fetch user posts: %w", err)
 	}
 	defer rows.Close()
 
@@ -66,20 +73,17 @@ func (q *Query) fetchUserPost(userid string, user *model.UserData) error {
 			mediaURL sql.NullString
 		)
 
-		err := rows.Scan(
+		if err := rows.Scan(
 			&post.ID, &groupID, &post.Content,
 			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
 			&mediaID, &mediaURL,
-		)
-		if err != nil {
-			fmt.Errorf("failed to scan post: %w", err)
+		); err != nil {
+			return fmt.Errorf("failed to scan user post: %w", err)
 		}
 
-		//if the post has a group id we assign it, else we put an empty string
+		post.GroupID = ""
 		if groupID.Valid {
 			post.GroupID = groupID.String
-		} else {
-			post.GroupID = ""
 		}
 
 		if existingPost, exists := postsMap[post.ID]; exists {
