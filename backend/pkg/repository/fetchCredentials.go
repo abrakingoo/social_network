@@ -3,6 +3,8 @@ package repository
 import(
 	"database/sql"
 	"errors"
+	"fmt"
+	"log"
 )
 
 // GetUserCredentials takes in either a nickname or email and returns the userid & password, and an error if non are found
@@ -17,11 +19,15 @@ func (q *Query) GetUserCredentials(identifier string) (userID, password string, 
 
     err = row.Scan(&userID, &password)
     if err == sql.ErrNoRows {
+        log.Printf("Login failed: user not found by identifier '%s'", identifier)
         return "", "", errors.New("user not found by email or nickname")
     }
     if err != nil {
-        return "", "", err
+        log.Printf("Database error when retrieving credentials for '%s': %v", identifier, err)
+        return "", "", fmt.Errorf("database error: %w", err)
     }
+    
+    log.Printf("User found: %s successfully authenticated", userID)
 
     return userID, password, nil
 }
