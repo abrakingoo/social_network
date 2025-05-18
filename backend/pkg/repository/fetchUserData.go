@@ -16,9 +16,42 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		return model.UserData{}, err
 	}
 
-	//fetch all the user post
-	if err := q.fetchUserPost(userid, &user); err != nil {
+	//fetch all user created post
+	if err := q.FethUserPost(userid, &user); err != nil {
 		return model.UserData{}, err
+	}
+
+	//fetch all user created comments
+	if err := q.FetchUserComments(userid, &user); err != nil {
+		return model.UserData{}, err
+	}
+
+	//fetch liked post by the user
+	if err := q.FetchLikedPost(userid, &user); err != nil {
+		return model.UserData{}, err
+	}
+
+	//fetch liked comments (the whole post) by the user
+	if err := q.FetchLikedComments(userid, &user); err != nil {
+		return model.UserData{}, err
+	}
+
+	//fetch the followers who are following the user
+	if err := q.FetchFollowers(userid, &user); err != nil {
+		return model.UserData{}, err
+	}
+
+	//fetch the followers who the user is following
+	if err :=  q.FetchFollowing(userid, &user); err != nil {
+		return model.UserData{}, err
+	}
+
+	return user, nil
+}
+
+func (q *Query) FethUserPost(userid string, user *model.UserData) error {
+	if err := q.fetchUserPost(userid, user); err != nil {
+		return err
 	}
 
 	postIDs := make([]string, len(user.Post))
@@ -29,7 +62,7 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	// Fetch comments with their media
 	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
 	if err != nil {
-		return model.UserData{}, fmt.Errorf("failed to get comments: %w", err)
+		return fmt.Errorf("failed to get comments: %w", err)
 	}
 
 	//attach comments to user post
@@ -37,18 +70,19 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		user.Post[i].Comments = commentsByPost[user.Post[i].ID]
 	}
 
-	//fetch all the user comments
-	//the section below sorts the post where the user has commented
+	return nil
 
-	//get all the post where the user has commented
-	postIDs, err = q.getAllCommentedPostID(userid)
+}
+
+func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
+	postIDs, err := q.getAllCommentedPostID(userid)
 	if err != nil {
-		return model.UserData{}, err
+		return err
 	}
 
 	//use all the ids to fetch the post
-	if err = q.fetchPostsByIDs(postIDs, &user); err != nil {
-		return model.UserData{}, err
+	if err = q.fetchPostsByIDs(postIDs, user); err != nil {
+		return err
 	}
 
 	//get all the post ids to fetch the comments( might refactor)
@@ -58,9 +92,9 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	}
 
 	// Fetch comments with their media
-	commentsByPost, err = q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
 	if err != nil {
-		return model.UserData{}, fmt.Errorf("failed to get comments: %w", err)
+		return fmt.Errorf("failed to get comments: %w", err)
 	}
 
 	//attach comments to user post
@@ -68,7 +102,7 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		user.Comments[i].Comments = commentsByPost[user.Comments[i].ID]
 	}
 
-	return user, nil
+	return nil
 }
 
 // fetchUserInfo first fetches userinfo from the user info table
@@ -414,7 +448,7 @@ func (q *Query) FetchLikedPostById(postIDs []string, user *model.UserData) error
 	return nil
 }
 
-func (q *Query) GetLikedComments(userid string, user *model.UserData) error {
+func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 	//get all the post where the user has commented
 	postIDs, err := q.GetallLikedCommentsPostIDs(userid)
 	if err != nil {
