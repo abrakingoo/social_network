@@ -20,6 +20,24 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		return model.UserData{}, err
 	} 
 
+	postIDs := make([]string, len(user.Post))
+    for i, post := range user.Post {
+        postIDs[i] = post.ID
+    }
+
+    // Fetch comments with their media
+    commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+    if err != nil {
+        return model.UserData{}, fmt.Errorf("failed to get comments: %w", err)
+    }
+
+	//attach comments to user post
+	for i := range user.Post {
+        user.Post[i].Comments = commentsByPost[user.Post[i].ID]
+    }
+
+	
+
 	return user, nil
 }
 
