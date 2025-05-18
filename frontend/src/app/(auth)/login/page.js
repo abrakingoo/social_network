@@ -28,9 +28,10 @@ export default function LoginPage() {
 
       if (!response.ok) {
         console.log(response);
-        throw new Error($`Failed to login: ${response.error}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to login: ${errorData.error || response.statusText}`);
       }
-      
+
       const data = await response.json();
       // Store token in both cookie and sessionStorage
       document.cookie = `token=${data.token};path=/;max-age=86400`; // 24 hours
