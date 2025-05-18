@@ -17,7 +17,7 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	}
 
 	//fetch all user created post
-	if err := q.FethUserPost(userid, &user); err != nil {
+	if err := q.FetchUserPost(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
@@ -36,20 +36,15 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		return model.UserData{}, err
 	}
 
-	//fetch the followers who are following the user
-	if err := q.FetchFollowers(userid, &user); err != nil {
-		return model.UserData{}, err
-	}
-
-	//fetch the followers who the user is following
-	if err :=  q.FetchFollowing(userid, &user); err != nil {
+	//handle all followers logic
+	if err := q.GetFollowers(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
 	return user, nil
 }
 
-func (q *Query) FethUserPost(userid string, user *model.UserData) error {
+func (q *Query) FetchUserPost(userid string, user *model.UserData) error {
 	if err := q.fetchUserPost(userid, user); err != nil {
 		return err
 	}
@@ -116,7 +111,7 @@ func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
         LIMIT 1
     `, userid)
 
-	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe)
+	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.IsPublic)
 	if err == sql.ErrNoRows {
 		return errors.New("no user data found")
 	}
@@ -317,7 +312,7 @@ func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
 
 	//get all the post ids to fetch the comments( might refactor)
 	postIDs = make([]string, len(user.LikedPost))
-	for i, post := range user.Comments {
+	for i, post := range user.LikedPost {
 		postIDs[i] = post.ID
 	}
 
@@ -379,8 +374,8 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 	}
 
 	//get all the post ids to fetch the comments( might refactor)
-	postIDs = make([]string, len(user.LikedPost))
-	for i, post := range user.Comments {
+	postIDs = make([]string, len(user.LikedComments))
+	for i, post := range user.LikedComments {
 		postIDs[i] = post.ID
 	}
 
