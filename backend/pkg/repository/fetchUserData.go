@@ -41,12 +41,12 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	//the section below sorts the post where the user has commented
 
 	//get all the post where the user has commented
-	postIDs , err = q.getAllCommentedPostID(userid)
+	postIDs, err = q.getAllCommentedPostID(userid)
 	if err != nil {
 		return model.UserData{}, err
 	}
-	
-	//use all the ids to fetch the post 
+
+	//use all the ids to fetch the post
 	if err = q.fetchPostsByIDs(postIDs, &user); err != nil {
 		return model.UserData{}, err
 	}
@@ -67,10 +67,6 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	for i := range user.Comments {
 		user.Comments[i].Comments = commentsByPost[user.Comments[i].ID]
 	}
-
-
-	
-
 
 	return user, nil
 }
@@ -191,14 +187,14 @@ func (q *Query) getAllCommentedPostID(userid string) ([]string, error) {
 }
 
 func (q *Query) fetchPostsByIDs(postIDs []string, user *model.UserData) error {
-    if len(postIDs) == 0 {
-        return nil // Early exit if no post IDs provided
-    }
-	
-    placeholders := strings.Repeat("?,", len(postIDs))
-    placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+	if len(postIDs) == 0 {
+		return nil // Early exit if no post IDs provided
+	}
 
-    query := `
+	placeholders := strings.Repeat("?,", len(postIDs))
+	placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+
+	query := `
         SELECT 
             p.id, p.group_id, p.content, 
             p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
@@ -209,65 +205,125 @@ func (q *Query) fetchPostsByIDs(postIDs []string, user *model.UserData) error {
         ORDER BY p.created_at DESC
     `
 
-    // Convert postIDs ([]string) to []interface{} for Query
-    args := make([]interface{}, len(postIDs))
-    for i, id := range postIDs {
-        args[i] = id
-    }
+	// Convert postIDs ([]string) to []interface{} for Query
+	args := make([]interface{}, len(postIDs))
+	for i, id := range postIDs {
+		args[i] = id
+	}
 
-    rows, err := q.Db.Query(query, args...)
-    if err != nil {
-        return fmt.Errorf("failed to fetch posts {user commented post} by IDs: %w", err)
-    }
-    defer rows.Close()
+	rows, err := q.Db.Query(query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to fetch posts {user commented post} by IDs: %w", err)
+	}
+	defer rows.Close()
 
-    postsMap := make(map[string]*model.Post)
+	postsMap := make(map[string]*model.Post)
 
-    for rows.Next() {
-        var (
-            post     model.Post
-            groupID  sql.NullString
-            mediaID  sql.NullString
-            mediaURL sql.NullString
-        )
+	for rows.Next() {
+		var (
+			post     model.Post
+			groupID  sql.NullString
+			mediaID  sql.NullString
+			mediaURL sql.NullString
+		)
 
-        if err := rows.Scan(
-            &post.ID, &groupID, &post.Content,
-            &post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
-            &mediaID, &mediaURL,
-        ); err != nil {
-            return fmt.Errorf("failed to scan post: %w", err)
-        }
+		if err := rows.Scan(
+			&post.ID, &groupID, &post.Content,
+			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
+			&mediaID, &mediaURL,
+		); err != nil {
+			return fmt.Errorf("failed to scan post: %w", err)
+		}
 
-        // Handle NULL group_id
-        if groupID.Valid {
-            post.GroupID = groupID.String
-        } else {
-            post.GroupID = ""
-        }
+		// Handle NULL group_id
+		if groupID.Valid {
+			post.GroupID = groupID.String
+		} else {
+			post.GroupID = ""
+		}
 
-        // Check if post already exists in the map (due to LEFT JOIN media)
-        if existingPost, exists := postsMap[post.ID]; exists {
-            // Append media if it exists
-            if mediaID.Valid {
-                existingPost.Media = append(existingPost.Media, model.Media{
-                    URL: mediaURL.String,
-                })
-            }
-        } else {
-            // Initialize post media (if exists)
-            if mediaID.Valid {
-                post.Media = []model.Media{{
-                    URL: mediaURL.String,
-                }}
-            } else {
-                post.Media = []model.Media{}
-            }
-            post.Comments = []model.Comment{} // Initialize empty comments
-            postsMap[post.ID] = &post
-            user.Comments = append(user.Comments, post)
-        }
-    }
+		// Check if post already exists in the map (due to LEFT JOIN media)
+		if existingPost, exists := postsMap[post.ID]; exists {
+			// Append media if it exists
+			if mediaID.Valid {
+				existingPost.Media = append(existingPost.Media, model.Media{
+					URL: mediaURL.String,
+				})
+			}
+		} else {
+			// Initialize post media (if exists)
+			if mediaID.Valid {
+				post.Media = []model.Media{{
+					URL: mediaURL.String,
+				}}
+			} else {
+				post.Media = []model.Media{}
+			}
+			post.Comments = []model.Comment{} // Initialize empty comments
+			postsMap[post.ID] = &post
+			user.Comments = append(user.Comments, post)
+		}
+	}
 
-    return nil
+	return nil
+}
+
+func (q *Query) GetallLikedPostIDs(userid string) ([]string, error) {
+
+	query := `
+	SELECT DISTINCT post_id 
+	FROM post_likes 
+	WHERE user_id = ?
+`
+
+	rows, err := q.Db.Query(query, userid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query posts: %v", err)
+	}
+	defer rows.Close()
+
+	var postIDs []string
+	for rows.Next() {
+		var postID string
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("failed to scan post ID: %v", err)
+		}
+		postIDs = append(postIDs, postID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error after row iteration: %v", err)
+	}
+
+	return postIDs, nil
+}
+
+func (q *Query) GetallLikedCommentsPostIDs(userid string) ([]string, error) {
+	query := `
+	SELECT DISTINCT post_id 
+	FROM comment_likes 
+	WHERE user_id = ?
+	`
+
+	rows, err := q.Db.Query(query, userid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query posts: %v", err)
+	}
+	defer rows.Close()
+
+	var postIDs []string
+	for rows.Next() {
+		var postID string
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("failed to scan post ID: %v", err)
+		}
+		postIDs = append(postIDs, postID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error after row iteration: %v", err)
+	}
+
+	return postIDs, nil
+
 }
