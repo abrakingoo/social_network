@@ -25,7 +25,7 @@ func SetSessionCookie(w http.ResponseWriter, sessionID, csrfToken string) error 
 		Value:    sessionID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(24 * time.Hour),
 	}
@@ -37,7 +37,7 @@ func SetSessionCookie(w http.ResponseWriter, sessionID, csrfToken string) error 
 		Value:    csrfToken,
 		Path:     "/",
 		HttpOnly: false,
-		Secure:   true,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(24 * time.Hour),
 	}
