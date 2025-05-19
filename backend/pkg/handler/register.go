@@ -11,6 +11,7 @@ import (
 // Register handles user registration
 func (app *App) Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
+
 	code, msgs, err := model.ValidateUserDetails(w, r, &user)
 	if err != nil {
 		if len(msgs) > 0 {

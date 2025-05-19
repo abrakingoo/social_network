@@ -3,14 +3,13 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@/context/AuthContext";
 import { PostProvider } from "@/context/PostContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { useAuth } from "@/context/AuthContext";
 
 // Dynamic imports for non-critical components
 const LeftSidebar = dynamic(() => import("@/components/layout/LeftSidebar"), {
@@ -36,7 +35,6 @@ const queryClient = new QueryClient({
 // Component to wrap the authenticated content
 const AuthenticatedLayout = ({ children }) => {
   const pathname = usePathname();
-  const { currentUser } = useAuth();
   const isMessagesPage = pathname === '/messages';
   const [isMobile, setIsMobile] = useState(false);
 
@@ -59,8 +57,8 @@ const AuthenticatedLayout = ({ children }) => {
   // Check if on authentication pages (now handled by route groups)
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
 
-  // Show full layout only for authenticated users and non-auth pages
-  const showSidebars = currentUser && !isAuthPage;
+  // Show full layout only for non-auth pages
+  const showSidebars = !isAuthPage;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -88,11 +86,13 @@ export default function RootLayoutClient({ children }) {
   if (isAuthRoute) {
     return (
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <PostProvider>
-            {children}
-          </PostProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <PostProvider>
+              {children}
+            </PostProvider>
+          </AuthProvider>
+        </ToastProvider>
       </QueryClientProvider>
     );
   }

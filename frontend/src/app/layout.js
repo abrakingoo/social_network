@@ -19,9 +19,13 @@ export const metadata = {
   title: "Social App",
   description: "A social media application built with Next.js",
   // Add additional metadata for better SEO and performance
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-  themeColor: "#ffffff",
 };
+
+export const viewport = {
+  themeColor: "#ffffff",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+
 
 // Add performance optimization headers
 export const headers = () => {

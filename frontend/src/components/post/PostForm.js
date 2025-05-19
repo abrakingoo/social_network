@@ -9,7 +9,7 @@ import {
   RadioGroupItem
 } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/context/AuthContext';
+// Auth context dependency removed
 import { usePosts, PRIVACY_LEVELS } from '@/context/PostContext';
 
 const PostForm = () => {
@@ -19,7 +19,12 @@ const PostForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const { currentUser } = useAuth();
+  // Static data instead of context
+  const currentUser = {
+    id: '1',
+    firstName: 'Demo',
+    lastName: 'User'
+  };
   const { addPost } = usePosts();
 
   // Check if we're on mobile

@@ -11,7 +11,7 @@ const PostCard = lazy(() => import("@/components/post/PostCard"));
 
 // Extracting the content into a separate component for Suspense
 const HomeContent = () => {
-  const { currentUser, login } = useAuth();
+  const { currentUser, loading } = useAuth();
   const { posts, getVisiblePosts } = usePosts();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -31,13 +31,13 @@ const HomeContent = () => {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  // Auto-login as test user if no user is logged in
-  useEffect(() => {
-    if (!currentUser) {
-      // Use the test user credentials from context
-      login("john@example.com", "password123", true);
-    }
-  }, [currentUser, login]);
+
+  // Show loading state when checking authentication
+  if (loading) {
+    return <div className="h-screen flex items-center justify-center">
+      <Loading />
+    </div>;
+  }
 
   // Get the posts visible to the current user
   const visiblePosts = currentUser ? getVisiblePosts() : [];
