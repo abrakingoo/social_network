@@ -11,25 +11,7 @@ import (
 
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
-	// Extract JWT payload from context
-	payload := r.Context().Value(JWTUserKey)
-	if payload == nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: no token context", Error)
-		return
-	}
-
-	claims, ok := payload.(map[string]interface{})
-	if !ok {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: invalid token data", Error)
-		return
-	}
-
-	userID, ok := claims["sub"].(string)
-	if !ok || userID == "" {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: missing user ID", Error)
-		return
-	}
-
+	userID := "kjdsfldjfldjf"
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return

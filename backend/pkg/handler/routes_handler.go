@@ -52,7 +52,7 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/login", app.WithCORS(http.HandlerFunc(app.Login)))
 
 	// protected routes
-	mux.Handle("/api/addPost", app.WithCORS(app.JWTMiddleware(http.HandlerFunc(app.AddPost))))
-	mux.Handle("/api/getPosts", app.WithCORS(app.JWTMiddleware(http.HandlerFunc(app.GetPosts))))
+	mux.Handle("/api/addPost", app.WithCORS(http.HandlerFunc(app.AddPost)))
+	mux.Handle("/api/getPosts", app.WithCORS(http.HandlerFunc(app.GetPosts)))
 	return mux
 }

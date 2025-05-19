@@ -2,10 +2,10 @@ package handler
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"strings"
 
-	"social/pkg/middleware"
 	"social/pkg/util"
 )
 
@@ -43,18 +43,11 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println(userId)
+
 	// check password hash if it matches
 	if err := util.ValidatePassword(password, encryptedPassword); err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
 	}
-
-	// Generate jwt using userId and email/nickname
-	jwtToken, err := middleware.GenerateJWTToken(emailOrNickname, userId)
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusInternalServerError, "Oops! Something went wrong", Error)
-		return
-	}
-
-	app.JSONResponse(w, r, http.StatusOK, jwtToken, Token)
 }
