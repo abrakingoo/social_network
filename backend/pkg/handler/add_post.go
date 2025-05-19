@@ -11,7 +11,18 @@ import (
 
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
-	userID := "kjdsfldjfldjf"
+	sessionCookie, err := r.Cookie("session_id")
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session cookie missing", Error)
+		return
+	}
+
+	userID, err := app.Queries.FetchSessionUser(sessionCookie.Value)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session not found", Error)
+		return
+	}
+
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return
@@ -95,7 +106,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := app.Queries.InsertData("posts", []string{
+	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
 		"content",
