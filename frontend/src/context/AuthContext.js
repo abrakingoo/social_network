@@ -1,207 +1,166 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { toast } from "@/components/ui/sonner";
+'use client';
 
-export const AuthContext = createContext();
+import { createContext, useContext, useState, useEffect } from 'react';
 
-// Move mock data outside of component to prevent re-creation
-const MOCK_USERS = [
-  {
-    id: '1',
-    email: 'john@example.com',
-    password: 'password123',
-    firstName: 'John',
-    lastName: 'Doe',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    dateOfBirth: '1990-01-01',
-    nickname: 'Johnny',
-    about: 'Software developer and outdoor enthusiast',
-    isPublic: true,
-    followers: ['2'],
-    following: [],
-    posts: ['1', '2']
-  },
-  {
-    id: '2',
-    email: 'jane@example.com',
-    password: 'password123',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    dateOfBirth: '1992-05-15',
-    nickname: 'Janey',
-    about: 'Digital artist and coffee addict',
-    isPublic: false,
-    followers: [],
-    following: ['1'],
-    posts: ['3']
-  }
-];
+// Create context
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState(MOCK_USERS);
 
-  // Check if user is already logged in (from localStorage) only once on mount
-  useEffect(() => {
-    const loadUser = () => {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        try {
-          setCurrentUser(JSON.parse(storedUser));
-        } catch (e) {
-          localStorage.removeItem('currentUser');
+  // Function to check if user is authenticated
+  const checkAuth = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      
+      if (!token) {
+        setCurrentUser(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch user data with the token
+      const response = await fetch('http://localhost:8000/api/getPosts', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('logged in')
+        setCurrentUser(userData);
+      } else {
+        // Token is invalid
+        sessionStorage.removeItem('token');
+        document.cookie = 'token=; path=/; max-age=0';
+        setCurrentUser(null);
       }
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      setCurrentUser(null);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    loadUser();
+  // Check authentication status when component mounts
+  useEffect(() => {
+    checkAuth();
   }, []);
 
-  // Login function with memoization
-  const login = useCallback((email, password, rememberMe) => {
-    // Find user with matching email and password
-    const user = users.find(u => u.email === email && u.password === password);
-
-    if (user) {
-      // Remove password from stored user object
-      const { password, ...userWithoutPassword } = user;
-      setCurrentUser(userWithoutPassword);
-
-      // Store in localStorage if rememberMe is true
-      if (rememberMe) {
-        localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+  // Login function
+  const login = async (email, password, rememberMe) => {
+    try {
+      const credentials = btoa(`${email}:${password}`);
+      
+      const response = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Login failed');
       }
-
-      toast.success("Successfully logged in!");
+      
+      const data = await response.json();
+      
+      // Store token in both cookie and sessionStorage
+      document.cookie = `token=${data.token};path=/;max-age=${rememberMe ? 604800 : 86400}`; // 7 days or 1 day
+      sessionStorage.setItem('token', data.token);
+      
+      // Fetch user data
+      await checkAuth();
+      
       return true;
-    } else {
-      toast.error("Invalid email or password");
-      return false;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
     }
-  }, [users]);
+  };
 
-  // Register function with memoization
-  const register = useCallback((userData) => {
-    // Check if email already exists
-    if (users.some(user => user.email === userData.email)) {
-      toast.error("Email already in use");
-      return false;
-    }
-
-    // Create new user
-    const newUser = {
-      id: Date.now().toString(),
-      ...userData,
-      followers: [],
-      following: [],
-      posts: []
-    };
-
-    // Add to users array
-    setUsers(prevUsers => [...prevUsers, newUser]);
-
-    // Log user in
-    const { password, ...userWithoutPassword } = newUser;
-    setCurrentUser(userWithoutPassword);
-    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-
-    toast.success("Account created successfully!");
-    return true;
-  }, [users]);
-
-  // Logout function with memoization
-  const logout = useCallback(() => {
+  // Logout function
+  const logout = () => {
+    sessionStorage.removeItem('token');
+    document.cookie = 'token=; path=/; max-age=0';
     setCurrentUser(null);
-    localStorage.removeItem('currentUser');
-    toast.success("Successfully logged out");
-  }, []);
+  };
 
-  // Toggle profile visibility with memoization
-  const toggleProfileVisibility = useCallback(() => {
-    if (!currentUser) return;
-
-    const updatedUser = { ...currentUser, isPublic: !currentUser.isPublic };
-    setCurrentUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    // Update in users array
-    setUsers(prevUsers =>
-      prevUsers.map(user =>
-        user.id === currentUser.id ? { ...user, isPublic: !user.isPublic } : user
-      )
-    );
-
-    toast.success(`Profile visibility set to ${updatedUser.isPublic ? 'public' : 'private'}`);
-  }, [currentUser]);
-
-  // Change back to useCallback function since it's being called as a function
-  const getAllUsers = useCallback(() => {
-    return users.map(({ password, ...user }) => user);
-  }, [users]);
-
-  // Get user by ID with memoization
-  const getUserById = useCallback((userId) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
+  // Get user by ID
+  const getUserById = async (id) => {
+    try {
+      const token = sessionStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const response = await fetch(`http://localhost:8000/api/user/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get user failed:', error);
+      throw error;
     }
-    return null;
-  }, [users]);
+  };
 
-  // Update user profile with memoization
-  const updateUserProfile = useCallback((profileData) => {
-    if (!currentUser) return false;
+  // Get all users
+  const getAllUsers = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const response = await fetch('http://localhost:8000/api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get users failed:', error);
+      throw error;
+    }
+  };
 
-    const updatedUser = { ...currentUser, ...profileData };
-    setCurrentUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    // Update in users array
-    setUsers(prevUsers =>
-      prevUsers.map(user =>
-        user.id === currentUser.id ? { ...user, ...profileData } : user
-      )
-    );
-
-    toast.success("Profile updated successfully");
-    return true;
-  }, [currentUser]);
-
-  // Memoize the context value to prevent unnecessary re-renders
-  const value = useMemo(() => ({
+  const value = {
     currentUser,
     loading,
     login,
-    register,
     logout,
-    toggleProfileVisibility,
-    getAllUsers,
     getUserById,
-    updateUserProfile
-  }), [
-    currentUser,
-    loading,
-    login,
-    register,
-    logout,
-    toggleProfileVisibility,
     getAllUsers,
-    getUserById,
-    updateUserProfile
-  ]);
+    checkAuth
+  };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = React.useContext(AuthContext);
+  const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

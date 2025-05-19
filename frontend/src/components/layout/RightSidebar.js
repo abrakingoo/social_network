@@ -3,10 +3,20 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/context/AuthContext';
+// Auth context dependency removed
 
 const RightSidebar = () => {
-  const { currentUser, getAllUsers } = useAuth();
+  // Static data instead of context
+  const currentUser = {
+    id: '1',
+    firstName: 'Demo',
+    lastName: 'User'
+  };
+  // Static function instead of context
+  const getAllUsers = () => [
+    { id: '2', firstName: 'Jane', lastName: 'Doe', avatar: '' },
+    { id: '3', firstName: 'John', lastName: 'Smith', avatar: '' }
+  ];
 
   if (!currentUser) return null;
 

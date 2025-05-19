@@ -8,11 +8,10 @@ import (
 )
 
 var allowedRoutes = map[string][]string{
-	"/api/login":    {"POST"},
-	"/api/register": {"POST"},
-	"/api/addPost":  {"POST"},
-	"/api/getPosts": {"GET"},
-	"/api/profile":  {"GET"},
+	"/api/login":    {"POST", "OPTIONS"},
+	"/api/register": {"POST", "OPTIONS"},
+	"/api/addPost":  {"POST", "OPTIONS"},
+	"/api/getPosts": {"GET", "OPTIONS"},
 }
 
 type App struct {
@@ -48,12 +47,12 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/register", app.Register)
-	mux.HandleFunc("/api/login", app.Login)
+	// Public routes with CORS
+	mux.Handle("/api/register", app.WithCORS(http.HandlerFunc(app.Register)))
+	mux.Handle("/api/login", app.WithCORS(http.HandlerFunc(app.Login)))
 
 	// protected routes
-	mux.Handle("/api/addPost", app.JWTMiddleware(http.HandlerFunc(app.AddPost)))
-	mux.Handle("/api/getPosts", app.JWTMiddleware(http.HandlerFunc(app.GetPosts)))
-	mux.Handle("/api/profile", app.JWTMiddleware(http.HandlerFunc(app.Profile)))
+	mux.Handle("/api/addPost", app.WithCORS(app.JWTMiddleware(http.HandlerFunc(app.AddPost))))
+	mux.Handle("/api/getPosts", app.WithCORS(app.JWTMiddleware(http.HandlerFunc(app.GetPosts))))
 	return mux
 }
