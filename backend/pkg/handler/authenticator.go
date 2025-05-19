@@ -27,7 +27,7 @@ func (app App) AuthMiddleware(next http.Handler) http.Handler {
 		err = app.Queries.Db.QueryRow(`
 			SELECT expires_at FROM sessions 
 			WHERE session_token = ? AND csrf_token = ?`,
-			sessionCookie.Value, csrfToken).Scan(&expiresAt)
+			sessionCookie.Value, csrfToken.Value).Scan(&expiresAt)
 
 		if err == sql.ErrNoRows {
 			app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session not found", Error)
