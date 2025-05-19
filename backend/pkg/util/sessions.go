@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// generateCSRFToken creates a random, base64-encoded CSRF token
+// GenerateCSRFToken creates a random, base64-encoded CSRF token
 func GenerateCSRFToken() (string, error) {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
