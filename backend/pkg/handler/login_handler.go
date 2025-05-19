@@ -2,9 +2,9 @@ package handler
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"social/pkg/util"
 )
@@ -43,11 +43,42 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(userId)
-
 	// check password hash if it matches
 	if err := util.ValidatePassword(password, encryptedPassword); err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
 	}
+
+	sessionID := util.UUIDGen()
+	csrfToken, err := util.GenerateCSRFToken()
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Internal server error", Error)
+		return
+	}
+
+	err = util.SetSessionCookie(w, sessionID, csrfToken)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Internal server error", Error)
+		return
+	}
+
+	err = app.Queries.InsertData("sessions", []string{
+		"id",
+		"user_id",
+		"session_token",
+		"csrf_token",
+		"expires_at",
+	}, []any{
+		util.UUIDGen(),
+		userId,
+		sessionID,
+		csrfToken,
+		time.Now().Add(24 * time.Hour),
+	})
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Internal server error", Error)
+		return
+	}
+
+	app.JSONResponse(w, r, http.StatusOK, "Login successful", Success)
 }
