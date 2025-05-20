@@ -11,22 +11,15 @@ import (
 
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
-	// Extract JWT payload from context
-	payload := r.Context().Value(JWTUserKey)
-	if payload == nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: no token context", Error)
+	sessionCookie, err := r.Cookie("session_id")
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session cookie missing", Error)
 		return
 	}
 
-	claims, ok := payload.(map[string]interface{})
-	if !ok {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: invalid token data", Error)
-		return
-	}
-
-	userID, ok := claims["sub"].(string)
-	if !ok || userID == "" {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: missing user ID", Error)
+	userID, err := app.Queries.FetchSessionUser(sessionCookie.Value)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session not found", Error)
 		return
 	}
 
@@ -113,7 +106,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := app.Queries.InsertData("posts", []string{
+	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
 		"content",
