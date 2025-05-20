@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"social/pkg/model"
+	"strings"
 )
 
 
@@ -73,12 +74,55 @@ func (q *Query) GetUserLikedPost(userid string, user *model.UserData) error {
 
 func (q *Query) GetallLikedCommentsPostIDs(userid string) ([]string, error) {
 	query := `
-	SELECT DISTINCT post_id 
+	SELECT DISTINCT comment_id
 	FROM comment_likes 
 	WHERE user_id = ?
 	`
 
 	rows, err := q.Db.Query(query, userid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query posts: %v", err)
+	}
+	defer rows.Close()
+
+	var commentIds []string
+	for rows.Next() {
+		var postID string
+		if err := rows.Scan(&postID); err != nil {
+			return nil, fmt.Errorf("failed to scan post ID: %v", err)
+		}
+		commentIds = append(commentIds, postID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error after row iteration: %v", err)
+	}
+
+	return commentIds, nil
+
+}
+
+func (q *Query) PostIdsFromCommentsId(commentsid[] string) ([]string, error) {
+	if len(commentsid) == 0 {
+		return []string{}, nil // Early exit if no post IDs provided
+	}
+
+	placeholders := strings.Repeat("?,", len(commentsid))
+	placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
+
+
+	query := `
+	SELECT DISTINCT post_id
+	FROM comments 
+	WHERE comment_id IN (` + placeholders + `)`
+
+	// Convert postIDs ([]string) to []interface{} for Query
+	args := make([]interface{}, len(commentsid))
+	for i, id := range commentsid {
+		args[i] = id
+	}
+
+	rows, err := q.Db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query posts: %v", err)
 	}
