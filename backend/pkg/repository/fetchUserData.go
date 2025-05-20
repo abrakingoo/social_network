@@ -362,8 +362,13 @@ func (q *Query) getallLikedPostIDs(userid string) ([]string, error) {
 }
 
 func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
-	//get all the post where the user has commented
-	postIDs, err := q.GetallLikedCommentsPostIDs(userid)
+	//get all the comment ids
+	commentIDs, err := q.GetallLikedCommentsPostIDs(userid)
+	if err != nil {
+		return err
+	}
+
+	postIDs, err := q.PostIdsFromCommentsId(commentIDs)
 	if err != nil {
 		return err
 	}
