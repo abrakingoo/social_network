@@ -59,7 +59,7 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 		} else {
 			post.Media = []model.Media{}
 			if mediaID.Valid {
-				existingPost.Media = append(existingPost.Media, model.Media{
+				post.Media = append(post.Media, model.Media{
 					URL: mediaURL.String,
 				})
 			}
