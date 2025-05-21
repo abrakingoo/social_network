@@ -3,69 +3,84 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"social/pkg/model"
 	"strings"
+	"time"
+
+	"social/pkg/model"
 )
 
 func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 	query := `
-			SELECT 
-				p.id, p.group_id, p.content, 
-				p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-				m.id, m.url
-			FROM posts p
-			LEFT JOIN media m ON m.parent_id = p.id
-			ORDER BY p.created_at DESC
-		`
+		SELECT 
+			p.id, p.group_id, p.content, 
+			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
+			m.id, m.url
+		FROM posts p
+		LEFT JOIN media m ON m.parent_id = p.id
+		ORDER BY p.created_at DESC
+	`
 	rows, err := q.Db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
 	defer rows.Close()
 
-	var posts []model.Post
 	postsMap := make(map[string]*model.Post)
 
 	for rows.Next() {
 		var (
-			post     model.Post
-			groupID sql.NullString
-			mediaID  sql.NullString
-			mediaURL sql.NullString
+			postID        string
+			groupID       sql.NullString
+			content       string
+			likesCount    int
+			dislikesCount int
+			commentsCount int
+			privacy       string
+			createdAt     time.Time
+			mediaID       sql.NullString
+			mediaURL      sql.NullString
 		)
 
 		err := rows.Scan(
-			&post.ID, &groupID, &post.Content,
-			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
+			&postID, &groupID, &content,
+			&likesCount, &dislikesCount, &commentsCount, &privacy, &createdAt,
 			&mediaID, &mediaURL,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 
-		//if the post has a group id we assign it, else we put an empty string
-		if groupID.Valid {
-            post.GroupID = groupID.String
-        } else {
-            post.GroupID = ""
-        }
-
-		if existingPost, exists := postsMap[post.ID]; exists {
-			if mediaID.Valid {
-				existingPost.Media = append(existingPost.Media, model.Media{
-					URL: mediaURL.String,
-				})
+		// Get or create the post
+		post, exists := postsMap[postID]
+		if !exists {
+			post = &model.Post{
+				ID:            postID,
+				GroupID:       "",
+				Content:       content,
+				LikesCount:    likesCount,
+				DislikesCount: dislikesCount,
+				CommentsCount: commentsCount,
+				Privacy:       privacy,
+				CreatedAt:     createdAt,
+				Media:         []model.Media{},
 			}
-		} else {
-			post.Media = []model.Media{}
-			if mediaID.Valid {
-				post.Media = append(post.Media, model.Media{
-					URL: mediaURL.String,
-				})
+			if groupID.Valid {
+				post.GroupID = groupID.String
 			}
-			postsMap[post.ID] = &post
-			posts = append(posts, post)
+			postsMap[postID] = post
 		}
+
+		if mediaID.Valid && mediaURL.Valid {
+			post.Media = append(post.Media, model.Media{
+				URL: mediaURL.String,
+			})
+		}
+	}
+
+	// Convert map to slice
+	var posts []model.Post
+	for _, post := range postsMap {
+		posts = append(posts, *post)
 	}
 
 	return posts, nil
@@ -141,30 +156,29 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 	return commentsByPost, nil
 }
 
-
 func (q *Query) FetchAllPosts() ([]model.Post, error) {
-    // 1. Fetch posts with their media
-    posts, err := q.FetchPostWithMedia()
-    if err != nil {
-        return nil, fmt.Errorf("failed to get posts: %w", err)
-    }
+	// 1. Fetch posts with their media
+	posts, err := q.FetchPostWithMedia()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get posts: %w", err)
+	}
 
-    // 2. Get post IDs for comment fetching
-    postIDs := make([]string, len(posts))
-    for i, post := range posts {
-        postIDs[i] = post.ID
-    }
+	// 2. Get post IDs for comment fetching
+	postIDs := make([]string, len(posts))
+	for i, post := range posts {
+		postIDs[i] = post.ID
+	}
 
-    // 3. Fetch comments with their media
-    commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
-    if err != nil {
-        return nil, fmt.Errorf("failed to get comments: %w", err)
-    }
+	// 3. Fetch comments with their media
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get comments: %w", err)
+	}
 
-    // 4. Attach comments to posts
-    for i := range posts {
-        posts[i].Comments = commentsByPost[posts[i].ID]
-    }
+	// 4. Attach comments to posts
+	for i := range posts {
+		posts[i].Comments = commentsByPost[posts[i].ID]
+	}
 
-    return posts, nil
+	return posts, nil
 }
