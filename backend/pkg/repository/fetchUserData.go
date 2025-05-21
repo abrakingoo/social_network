@@ -170,14 +170,12 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 				})
 			}
 		} else {
+			post.Media = []model.Media{}
 			if mediaID.Valid {
-				post.Media = []model.Media{{
+				post.Media = append(post.Media , model.Media{
 					URL: mediaURL.String,
-				}}
-			} else {
-				post.Media = []model.Media{}
-			}
-			post.Comments = []model.Comment{}
+				})
+			} 
 			postsMap[post.ID] = &post
 			user.Post = append(user.Post, post)
 		}
@@ -280,15 +278,12 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 				})
 			}
 		} else {
-			// Initialize post media (if exists)
+			post.Media = []model.Media{}
 			if mediaID.Valid {
-				post.Media = []model.Media{{
+				existingPost.Media = append(existingPost.Media, model.Media{
 					URL: mediaURL.String,
-				}}
-			} else {
-				post.Media = []model.Media{}
+				})
 			}
-			post.Comments = []model.Comment{} // Initialize empty comments
 			postsMap[post.ID] = &post
 			Posts = append(Posts, post)
 		}

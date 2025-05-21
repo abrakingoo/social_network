@@ -57,14 +57,12 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 				})
 			}
 		} else {
+			post.Media = []model.Media{}
 			if mediaID.Valid {
-				post.Media = []model.Media{{
+				existingPost.Media = append(existingPost.Media, model.Media{
 					URL: mediaURL.String,
-				}}
-			} else {
-				post.Media = []model.Media{}
+				})
 			}
-			post.Comments = []model.Comment{}
 			postsMap[post.ID] = &post
 			posts = append(posts, post)
 		}
@@ -128,12 +126,11 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 				})
 			}
 		} else {
+			comment.Media = []model.Media{}
 			if mediaID.Valid {
-				comment.Media = []model.Media{{
+				comment.Media = append(comment.Media, model.Media{
 					URL: mediaURL.String,
-				}}
-			} else {
-				comment.Media = []model.Media{}
+				})
 			}
 
 			commentsMap[comment.ID] = &comment
