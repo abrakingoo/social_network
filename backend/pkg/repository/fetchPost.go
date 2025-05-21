@@ -115,7 +115,7 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 	}
 	defer rows.Close()
 
-	commentsByPost := make(map[string][]model.Comment)
+	commentsPostMap := make(map[string]string)
 	commentsMap := make(map[string]*model.Comment)
 
 	for rows.Next() {
@@ -133,6 +133,8 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan comment: %w", err)
 		}
+		// store the post id for this comment
+		commentsPostMap[comment.ID] = comment.PostID
 
 		if existingComment, exists := commentsMap[comment.ID]; exists {
 			if mediaID.Valid {
@@ -149,8 +151,13 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 			}
 
 			commentsMap[comment.ID] = &comment
-			commentsByPost[comment.PostID] = append(commentsByPost[comment.PostID], comment)
 		}
+	}
+
+	commentsByPost := make(map[string][]model.Comment)
+	for commentID, comment := range commentsMap {
+		postID := commentsPostMap[commentID]
+		commentsByPost[postID] = append(commentsByPost[postID], *comment)
 	}
 
 	return commentsByPost, nil

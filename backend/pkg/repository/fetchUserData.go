@@ -172,13 +172,17 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 		} else {
 			post.Media = []model.Media{}
 			if mediaID.Valid {
-				post.Media = append(post.Media , model.Media{
+				post.Media = append(post.Media, model.Media{
 					URL: mediaURL.String,
 				})
-			} 
+			}
 			postsMap[post.ID] = &post
 			user.Post = append(user.Post, post)
 		}
+	}
+	user.Post = []model.Post{} // Clear any existing posts
+	for _, post := range postsMap {
+		user.Post = append(user.Post, *post)
 	}
 
 	return nil
@@ -259,7 +263,7 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
 			&mediaID, &mediaURL,
 		); err != nil {
-			return []model.Post{},fmt.Errorf("failed to scan post: %w", err)
+			return []model.Post{}, fmt.Errorf("failed to scan post: %w", err)
 		}
 
 		// Handle NULL group_id
@@ -285,15 +289,18 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 				})
 			}
 			postsMap[post.ID] = &post
-			Posts = append(Posts, post)
 		}
+	}
+
+	for _, post := range postsMap {
+		Posts = append(Posts, *post)
 	}
 
 	return Posts, nil
 }
 
 func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
-	
+
 	//get all the post where the user has commented
 	postIDs, err := q.getallLikedPostIDs(userid)
 	if err != nil {
@@ -322,8 +329,6 @@ func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
 		user.LikedPost[i].Comments = commentsByPost[user.LikedPost[i].ID]
 	}
 
-	
-	
 	return nil
 }
 func (q *Query) getallLikedPostIDs(userid string) ([]string, error) {
@@ -390,8 +395,6 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 		user.LikedComments[i].Comments = commentsByPost[user.LikedComments[i].ID]
 	}
 
-	
-	
 	return nil
 }
 
@@ -410,4 +413,3 @@ func (q *Query) GetFollowers(userid string, user *model.UserData) error {
 
 	return nil
 }
-
