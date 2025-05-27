@@ -32,7 +32,7 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	dobStr := strings.TrimSpace(r.FormValue("date_of_birth"))
 	nickname := strings.TrimSpace(r.FormValue("nickname"))
 	aboutMe := strings.TrimSpace(r.FormValue("about"))
-	avatar := r.MultipartForm.File["media"]
+	avatar := r.MultipartForm.File["avatar"]
 
 	// Validate DOB
 	dob, err := time.Parse("02/01/2006", dobStr)
