@@ -14,7 +14,7 @@ const (
 )
 
 func (s Message) String() string {
-	return [...]string{"message", "error", "token", "data"}[s]
+	return [...]string{"message", "error", "data"}[s]
 }
 
 func (app *App) JSONResponse(w http.ResponseWriter, r *http.Request, status int, message any, messageType Message) {
