@@ -74,47 +74,49 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 		form_errors["media"] = []string{"Exactly one avatar image is required"}
 	}
 
-	file, err := avatar[0].Open()
-	if err != nil {
-		form_errors["media"] = []string{"Failed to open avatar file"}
-	}
+	if len(avatar) == 1 {
+		file, err := avatar[0].Open()
+		if err != nil {
+			form_errors["media"] = []string{"Failed to open avatar file"}
+		}
 
-	defer file.Close()
+		defer file.Close()
 
-	tempfile := "/tmp/" + avatar[0].Filename
-	out, err := os.Create(tempfile)
-	if err != nil {
-		form_errors["media"] = append(form_errors["media"], "Failed to save avatar file")
-	}
-	defer out.Close()
+		tempfile := "/tmp/" + avatar[0].Filename
+		out, err := os.Create(tempfile)
+		if err != nil {
+			form_errors["media"] = append(form_errors["media"], "Failed to save avatar file")
+		}
+		defer out.Close()
 
-	_, err = io.Copy(out, file)
-	if err != nil {
-		form_errors["media"] = append(form_errors["media"], "Failed to write avatar file")
-	}
+		_, err = io.Copy(out, file)
+		if err != nil {
+			form_errors["media"] = append(form_errors["media"], "Failed to write avatar file")
+		}
 
-	f, _ := os.Open(tempfile)
-	defer f.Close()
+		f, _ := os.Open(tempfile)
+		defer f.Close()
 
-	mimetype, err := util.IsValidMimeType(f)
-	if err != nil {
-		form_errors["media"] = append(form_errors["media"], "not a valid mimetype")
-	}
+		mimetype, err := util.IsValidMimeType(f)
+		if err != nil {
+			form_errors["media"] = append(form_errors["media"], "not a valid mimetype")
+		}
 
-	var errF error
-	switch mimetype {
-	case "image/jpeg":
-		path, errF = util.CompressJPEG(tempfile, 70)
-	case "image/png":
-		path, errF = util.CompressPNG(tempfile)
-	case "image/gif":
-		path, errF = util.CompressGIF(tempfile, true)
-	default:
-		path = "pkg/db/media/" + avatar[0].Filename
-	}
+		var errF error
+		switch mimetype {
+		case "image/jpeg":
+			path, errF = util.CompressJPEG(tempfile, 70)
+		case "image/png":
+			path, errF = util.CompressPNG(tempfile)
+		case "image/gif":
+			path, errF = util.CompressGIF(tempfile, true)
+		default:
+			path = "pkg/db/media/" + avatar[0].Filename
+		}
 
-	if errF != nil {
-		form_errors["media"] = append(form_errors["media"], "failed to compress file")
+		if errF != nil {
+			form_errors["media"] = append(form_errors["media"], "failed to compress file")
+		}
 	}
 
 	user.FirstName = first_name
