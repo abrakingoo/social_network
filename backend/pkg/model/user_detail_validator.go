@@ -9,13 +9,12 @@ import (
 	"time"
 
 	"social/pkg/util"
-
-	"github.com/gabriel-vasile/mimetype"
 )
 
 // ValidateUserDetails validates user details during registration
 func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (int, map[string][]string, error) {
 	form_errors := map[string][]string{}
+	path := ""
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		form_errors["form"] = []string{"Failed to parse form data"}
 	}
@@ -85,17 +84,38 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	tempfile := "/tmp/" + avatar[0].Filename
 	out, err := os.Create(tempfile)
 	if err != nil {
-		form_errors["media"] = []string{"Failed to save avatar file"}
+		form_errors["media"] = append(form_errors["media"], "Failed to save avatar file")
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, file)
 	if err != nil {
-		form_errors["media"] = []string{"Failed to write avatar file"}
+		form_errors["media"] = append(form_errors["media"], "Failed to write avatar file")
 	}
 
 	f, _ := os.Open(tempfile)
 	defer f.Close()
+
+	mimetype, err := util.IsValidMimeType(f)
+	if err != nil {
+		form_errors["media"] = append(form_errors["media"], "not a valid mimetype")
+	}
+
+	var errF error
+	switch mimetype {
+	case "image/jpeg":
+		path, errF = util.CompressJPEG(tempfile, 70)
+	case "image/png":
+		path, errF = util.CompressPNG(tempfile)
+	case "image/gif":
+		path, errF = util.CompressGIF(tempfile, true)
+	default:
+		path = "pkg/db/media/" + avatar[0].Filename
+	}
+
+	if errF != nil {
+		form_errors["media"] = append(form_errors["media"], "failed to compress file")
+	}
 
 	user.FirstName = first_name
 	user.LastName = last_name
@@ -104,7 +124,7 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	user.DateOfBirth = dob
 	user.Nickname = nickname
 	user.AboutMe = about_me
-	user.Avatar = avatar
+	user.Avatar = path
 
 	return http.StatusOK, nil, nil
 }
