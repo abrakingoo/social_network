@@ -10,7 +10,6 @@ type Message int
 const (
 	Success Message = iota
 	Error
-	Token
 	Data
 )
 
