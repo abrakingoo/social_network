@@ -23,9 +23,10 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	avatar := strings.TrimSpace(r.FormValue("avatar"))
 
 	dob, err := time.Parse("02/01/2006", date_of_birth)
-	if err != nil {
+	if err != nil && date_of_birth != "" {
+		fmt.Println(err)
 		form_errors["date_of_birth"] = append(form_errors["date_of_birth"], "Invalid date format. Use DD/MM/YYYY")
-	} else if time.Since(dob).Hours() < 13*365.25*24 {
+	} else if time.Since(dob).Hours() < 13*365.25*24 && date_of_birth != "" {
 		form_errors["date_of_birth"] = append(form_errors["date_of_birth"], "Must be 13+ years")
 	}
 
