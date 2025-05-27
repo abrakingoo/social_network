@@ -19,9 +19,9 @@
 package model
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,16 +30,18 @@ import (
 
 func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (int, map[string][]string, error) {
 	form_errors := map[string][]string{}
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		return http.StatusBadRequest, form_errors, fmt.Errorf("bad request")
-	}
+	first_name := strings.TrimSpace(r.FormValue("first_name"))
+	last_name := strings.TrimSpace(r.FormValue("last_name"))
+	email_address := strings.TrimSpace(r.FormValue("email"))
+	password := strings.TrimSpace(r.FormValue("password"))
+	confirm_password := strings.TrimSpace(r.FormValue("confirmed_password"))
+	date_of_birth := strings.TrimSpace(r.FormValue("date_of_birth"))
+	nickname := strings.TrimSpace(r.FormValue("nickname"))
 
-	email_address := strings.TrimSpace(user.Email)
-	first_name := strings.TrimSpace(user.FirstName)
-	last_name := strings.TrimSpace(user.LastName)
-	year_of_birth := user.DateOfBirth.Year()
-	password := strings.TrimSpace(user.Password)
-	confirm_password := strings.TrimSpace(user.ConfirmedPassword)
+	year_of_birth, err := strconv.Atoi(date_of_birth)
+	if err != nil {
+		form_errors["year_of_birth"] = append(form_errors["year_of_birth"], "Invalid year of birth")
+	}
 
 	// firstName validation
 	if first_name == "" {
@@ -59,7 +61,7 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	}
 
 	// nickname validation
-	if user.Nickname != "" {
+	if nickname != "" {
 		if err := util.ValidateNickname(user.Nickname); err != nil {
 			form_errors["nickname"] = append(form_errors["nickname"], err.Error())
 		}
