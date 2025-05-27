@@ -51,19 +51,19 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	}
 
 	if nickname != "" {
-		if err := util.ValidateNickname(user.Nickname); err != nil {
+		if err := util.ValidateNickname(nickname); err != nil {
 			form_errors["nickname"] = append(form_errors["nickname"], err.Error())
 		}
 	}
 
 	if password == "" {
 		form_errors["password"] = append(form_errors["password"], "Password is required")
+	} else if len(password) < 8 {
+		form_errors["password"] = append(form_errors["password"], "Password must be at least 8 characters long")
 	} else if confirm_password == "" {
 		form_errors["confirmed_password"] = append(form_errors["confirmed_password"], "Confirm Password is required")
 	} else if password != confirm_password {
 		form_errors["password"] = append(form_errors["password"], "Passwords do not match")
-	} else if len(password) < 8 {
-		form_errors["password"] = append(form_errors["password"], "Password must be at least 8 characters long")
 	}
 
 	if len(form_errors) != 0 {
