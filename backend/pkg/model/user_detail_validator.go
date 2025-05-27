@@ -2,16 +2,23 @@ package model
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"social/pkg/util"
+
+	"github.com/gabriel-vasile/mimetype"
 )
 
 // ValidateUserDetails validates user details during registration
 func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (int, map[string][]string, error) {
 	form_errors := map[string][]string{}
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		form_errors["form"] = []string{"Failed to parse form data"}
+	}
 	first_name := strings.TrimSpace(r.FormValue("first_name"))
 	last_name := strings.TrimSpace(r.FormValue("last_name"))
 	email_address := strings.TrimSpace(r.FormValue("email"))
@@ -20,7 +27,7 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	date_of_birth := strings.TrimSpace(r.FormValue("date_of_birth"))
 	nickname := strings.TrimSpace(r.FormValue("nickname"))
 	about_me := strings.TrimSpace(r.FormValue("about"))
-	avatar := strings.TrimSpace(r.FormValue("avatar"))
+	avatar := r.MultipartForm.File["media"]
 
 	dob, err := time.Parse("02/01/2006", date_of_birth)
 	if err != nil && date_of_birth != "" {
@@ -63,6 +70,32 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	if len(form_errors) != 0 {
 		return http.StatusNotAcceptable, form_errors, fmt.Errorf("form errors")
 	}
+
+	if len(avatar) > 1 {
+		form_errors["media"] = []string{"Exactly one avatar image is required"}
+	}
+
+	file, err := avatar[0].Open()
+	if err != nil {
+		form_errors["media"] = []string{"Failed to open avatar file"}
+	}
+
+	defer file.Close()
+
+	tempfile := "/tmp/" + avatar[0].Filename
+	out, err := os.Create(tempfile)
+	if err != nil {
+		form_errors["media"] = []string{"Failed to save avatar file"}
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, file)
+	if err != nil {
+		form_errors["media"] = []string{"Failed to write avatar file"}
+	}
+
+	f, _ := os.Open(tempfile)
+	defer f.Close()
 
 	user.FirstName = first_name
 	user.LastName = last_name
