@@ -10,6 +10,7 @@ export function middleware(request) {
   const token = request.cookies.get('social_network_auth')?.value;
   const isAuthenticated = !!token;
 
+
   if (!isAuthenticated && !isPublicPath) {
     const url = new URL('/login', request.url);
     // Add cache control headers to prevent caching of redirects

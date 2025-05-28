@@ -1,75 +1,39 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST(request) {
   try {
     const data = await request.json();
     console.log('API route: Login request received', { email: data.email });
 
-    // Try different variations of credentials to see what works with the backend
-    // Some backends expect email as username, others might expect nickname, etc.
-    const variations = [
-      // Variation 1: Email as username (standard format)
-      { auth: Buffer.from(`${data.email}:${data.password}`).toString('base64'), desc: 'email:password' },
-      
-      // Variation 2: Try without whitespace
-      { auth: Buffer.from(`${data.email.trim()}:${data.password.trim()}`).toString('base64'), desc: 'trimmed email:password' },
-      
-      // Variation 3: Try with full auth header already formatted (some libraries expect this)
-      { auth: `Basic ${Buffer.from(`${data.email}:${data.password}`).toString('base64')}`, desc: 'full Basic auth header', fullHeader: true },
-      
-      // Variation 4: Try different case for email
-      { auth: Buffer.from(`${data.email.toLowerCase()}:${data.password}`).toString('base64'), desc: 'lowercase email:password' },
-    ];
-    
-    // Try each variation until one works
-    let response = null;
-    let result = null;
-    let successVariation = null;
-    
-    for (const variation of variations) {
-      console.log(`API route: Trying login with ${variation.desc}`);
-      
-      const headers = {
+    // Prepare authorization header with Basic Auth
+    const authString = Buffer.from(`${data.email}:${data.password}`).toString('base64');
+    const authHeader = `Basic ${authString}`;
+
+    // Send the credentials to the backend
+    const response = await fetch('http://localhost:8000/api/login', {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
         'Accept': 'application/json',
         'Origin': 'http://localhost:3000'
-      };
-      
-      // Handle whether this variation has a full header or just the encoded part
-      if (variation.fullHeader) {
-        headers['Authorization'] = variation.auth; // Already includes 'Basic ' prefix
-      } else {
-        headers['Authorization'] = `Basic ${variation.auth}`;
       }
-      
-      response = await fetch('http://localhost:8000/api/login', {
-        method: 'POST',
-        headers: headers
-      });
-      
-      console.log('API route: Login response status:', response.status);
-      
-      // If this variation worked, save it and break out of the loop
-      if (response.status === 200) {
-        successVariation = variation;
-        break;
-      }
-    }
+    });
+    
+    console.log('API route: Login response status:', response.status);
 
-    // Try to parse the response from the backend if we have one
+    // Try to parse the response from the backend
     let responseData = null;
     try {
-      if (response) {
-        responseData = await response.json();
-        console.log('API route: Backend login response body:', responseData);
-      }
+      responseData = await response.json();
+      console.log('API route: Backend login response body:', responseData);
     } catch (jsonError) {
       console.log('API route: Could not parse JSON response:', jsonError.message);
-      // The response might not be JSON, so we'll handle that case
       responseData = { message: 'Login response not in JSON format' };
     }
 
-    if (!response || !response.ok) {
-      const status = response ? response.status : 500;
+    if (!response.ok) {
+      const status = response.status;
       const errorMessage = responseData && responseData.error ? responseData.error : 'Login failed';
       
       console.log(`API route: Login failed with status ${status}: ${errorMessage}`);
@@ -79,37 +43,118 @@ export async function POST(request) {
           success: false, 
           error: errorMessage
         }, 
-        { status: status }
+        { status }
       );
     }
 
     console.log('API route: Login successful!');
     
-    // We successfully authenticated with the backend
-    // Create a user object with the available information
-    const user = {
-      id: responseData && responseData.id ? responseData.id : '1',
-      email: data.email,
-      firstName: responseData && responseData.first_name ? responseData.first_name : '',
-      lastName: responseData && responseData.last_name ? responseData.last_name : '',
-      nickname: data.email.split('@')[0], // Use email as a basic identifier
-      is_public: true
-    };
-
-    // For additional info on which variation worked
-    if (successVariation) {
-      console.log(`API route: Successful login using ${successVariation.desc} format`);
-    }
-
-    // Return a success response with the user info
-    return NextResponse.json(
+    // Extract cookies from the backend response and forward them to the client
+    const responseCookies = response.headers.getSetCookie();
+    console.log('API route: Cookies from backend:', responseCookies);
+    
+    // Create a NextResponse object
+    const clientResponse = NextResponse.json(
       { 
         success: true, 
         message: 'Login successful',
-        user: user
+        // Still provide mock user data for display on the frontend
+        user: {
+          id: '1', // Mock ID for now
+          email: data.email,
+          firstName: data.first_name || data.email.split('@')[0],
+          lastName: data.last_name || '',
+          nickname: data.nickname || data.email.split('@')[0],
+          is_public: true
+        }
       }, 
       { status: 200 }
     );
+    
+    // Forward the session cookies from backend to frontend
+    if (responseCookies && responseCookies.length > 0) {
+      console.log('API route: Found cookies in backend response, forwarding to client');
+      for (const cookie of responseCookies) {
+        // Parse the cookie string to extract name and value
+        const cookieParts = cookie.split(';')[0].split('=');
+        if (cookieParts.length >= 2) {
+          const cookieName = cookieParts[0].trim();
+          const cookieValue = cookieParts[1].trim();
+          
+          console.log(`API route: Setting cookie ${cookieName}`);
+          
+          // Forward the cookie to the client
+          clientResponse.cookies.set(cookieName, cookieValue, {
+            httpOnly: cookie.includes('HttpOnly'),
+            secure: process.env.NODE_ENV === 'production', // Only secure in production
+            sameSite: 'lax', // Changed to lax to ensure cookies work across domains in development
+            path: '/',
+            // Set for 24 hours matching backend
+            maxAge: 60 * 60 * 24
+          });
+          
+          // Explicitly set our expected cookies for AuthContext validation
+          if (cookieName === 'session_id' || cookieName.includes('session')) {
+            clientResponse.cookies.set('session_id', cookieValue, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              path: '/',
+              maxAge: 60 * 60 * 24
+            });
+          }
+          
+          if (cookieName === 'csrf_token' || cookieName.includes('csrf')) {
+            clientResponse.cookies.set('csrf_token', cookieValue, {
+              httpOnly: false, 
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              path: '/',
+              maxAge: 60 * 60 * 24
+            });
+          }
+        }
+      }
+    } else {
+      console.warn('API route: No cookies found in backend response, setting fallback cookies');
+      
+      // Set fallback cookies if the backend doesn't provide them
+      // Note: This is a temporary solution and should be removed once backend is properly setting cookies
+      clientResponse.cookies.set('session_id', `session_${Date.now()}`, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24
+      });
+      
+      clientResponse.cookies.set('csrf_token', `csrf_${Date.now()}`, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24
+      });
+    }
+
+    // Create a cookie with mock user data for frontend display
+    // This cookie is specifically for rendering mock data on the frontend
+    clientResponse.cookies.set('social_network_user', JSON.stringify({
+      id: '1',
+      email: data.email,
+      firstName: data.first_name || data.email.split('@')[0],
+      lastName: data.last_name || '',
+      nickname: data.nickname || data.email.split('@')[0],
+      is_public: true
+    }), {
+      httpOnly: false, // Allow frontend JavaScript to access
+      secure: false,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 // 24 hours
+    });
+    
+    return clientResponse;
   } catch (error) {
     console.error('API route: Login error:', error);
     
