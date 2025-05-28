@@ -17,38 +17,31 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // For now, we'll use mock authentication
-      // In a real application, you'd validate credentials with the backend
-      
-      // Create a mock user based on login details
-      const userData = {
-        id: '1',
-        firstName: 'John',
-        lastName: 'Doe',
+      // Format credentials for backend
+      const credentials = {
         email: formData.email,
-        avatar: '', // No avatar during login - would come from backend in real app
-        nickname: formData.email.split('@')[0] || 'user',
-        date_of_birth: '1990-01-01',
-        about_me: 'This is a mock user profile',
-        is_public: true
+        password: formData.password
       };
-      
-      // Use the login function from AuthContext to set user data and cookies
-      login(userData);
-      
+
+      console.log('Logging in with credentials:', { email: credentials.email });
+
+      // Use the login function from AuthContext to authenticate with the backend
+      const result = await login(credentials);
+
       // Show success message
       toast({
-        title: "Success",
-        description: "You have successfully logged in",
+        title: "Logged in",
+        description: "You have been logged in successfully"
       });
 
-      // Redirect to home page
+      // Redirect to the home page
       router.push('/');
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Error",
-        description: error.message || 'Login failed',
-        variant: "destructive"
+        description: error.message || "Failed to login",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
