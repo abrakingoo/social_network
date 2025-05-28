@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"social/pkg/model"
 	"strings"
+
+	"social/pkg/model"
 )
 
 func (q *Query) FetchUserData(userid string) (model.UserData, error) {
@@ -16,27 +17,27 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		return model.UserData{}, err
 	}
 
-	//fetch all user created post
+	// fetch all user created post
 	if err := q.FetchUserPost(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
-	//fetch all user created comments
+	// fetch all user created comments
 	if err := q.FetchUserComments(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
-	//fetch liked post by the user
+	// fetch liked post by the user
 	if err := q.FetchLikedPost(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
-	//fetch liked comments (the whole post) by the user
+	// fetch liked comments (the whole post) by the user
 	if err := q.FetchLikedComments(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
-	//handle all followers logic
+	// handle all followers logic
 	if err := q.GetFollowers(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
@@ -60,13 +61,12 @@ func (q *Query) FetchUserPost(userid string, user *model.UserData) error {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
 
-	//attach comments to user post
+	// attach comments to user post
 	for i := range user.Post {
 		user.Post[i].Comments = commentsByPost[user.Post[i].ID]
 	}
 
 	return nil
-
 }
 
 func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
@@ -75,12 +75,12 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 		return err
 	}
 
-	//use all the ids to fetch the post
+	// use all the ids to fetch the post
 	if user.Comments, err = q.fetchPostsByIDs(postIDs); err != nil {
 		return err
 	}
 
-	//get all the post ids to fetch the comments( might refactor)
+	// get all the post ids to fetch the comments( might refactor)
 	postIDs = make([]string, len(user.Comments))
 	for i, post := range user.Comments {
 		postIDs[i] = post.ID
@@ -92,7 +92,7 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
 
-	//attach comments to user post
+	// attach comments to user post
 	for i := range user.Comments {
 		user.Comments[i].Comments = commentsByPost[user.Comments[i].ID]
 	}
@@ -104,14 +104,14 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
 	row := q.Db.QueryRow(`
         SELECT email, first_name, last_name, 
-		date_of_birth, avatar, nickname , about_me , 
+		date_of_birth, avatar, nickname , about_me, created_at , 
 		is_public 
         FROM users 
         WHERE id = ? 
         LIMIT 1
     `, userid)
 
-	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.IsPublic)
+	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.CreatedAt, &user.IsPublic)
 	if err == sql.ErrNoRows {
 		return errors.New("no user data found")
 	}
@@ -300,19 +300,18 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 }
 
 func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
-
-	//get all the post where the user has commented
+	// get all the post where the user has commented
 	postIDs, err := q.getallLikedPostIDs(userid)
 	if err != nil {
 		return err
 	}
 
-	//use all the ids to fetch the post
+	// use all the ids to fetch the post
 	if user.LikedPost, err = q.fetchPostsByIDs(postIDs); err != nil {
 		return err
 	}
 
-	//get all the post ids to fetch the comments( might refactor)
+	// get all the post ids to fetch the comments( might refactor)
 	postIDs = make([]string, len(user.LikedPost))
 	for i, post := range user.LikedPost {
 		postIDs[i] = post.ID
@@ -324,15 +323,15 @@ func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
 
-	//attach comments to user post
+	// attach comments to user post
 	for i := range user.LikedPost {
 		user.LikedPost[i].Comments = commentsByPost[user.LikedPost[i].ID]
 	}
 
 	return nil
 }
-func (q *Query) getallLikedPostIDs(userid string) ([]string, error) {
 
+func (q *Query) getallLikedPostIDs(userid string) ([]string, error) {
 	query := `
 	SELECT DISTINCT post_id 
 	FROM post_likes 
@@ -362,7 +361,7 @@ func (q *Query) getallLikedPostIDs(userid string) ([]string, error) {
 }
 
 func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
-	//get all the comment ids
+	// get all the comment ids
 	commentIDs, err := q.GetallLikedCommentsPostIDs(userid)
 	if err != nil {
 		return err
@@ -373,12 +372,12 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 		return err
 	}
 
-	//use all the ids to fetch the post
+	// use all the ids to fetch the post
 	if user.LikedComments, err = q.fetchPostsByIDs(postIDs); err != nil {
 		return err
 	}
 
-	//get all the post ids to fetch the comments( might refactor)
+	// get all the post ids to fetch the comments( might refactor)
 	postIDs = make([]string, len(user.LikedComments))
 	for i, post := range user.LikedComments {
 		postIDs[i] = post.ID
@@ -390,7 +389,7 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
 
-	//attach comments to user post
+	// attach comments to user post
 	for i := range user.LikedComments {
 		user.LikedComments[i].Comments = commentsByPost[user.LikedComments[i].ID]
 	}
