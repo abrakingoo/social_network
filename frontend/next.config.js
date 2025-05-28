@@ -7,6 +7,12 @@ const nextConfig = {
         source: '/',
         destination: '/login',
         permanent: false,
+        missing: [
+          {
+            type: 'cookie',
+            key: 'session_id',
+          },
+        ],
       },
     ]
   },
