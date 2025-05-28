@@ -8,10 +8,14 @@ import (
 )
 
 var allowedRoutes = map[string][]string{
-	"/api/login":    {"POST", "OPTIONS"},
-	"/api/register": {"POST", "OPTIONS"},
-	"/api/addPost":  {"POST", "OPTIONS"},
-	"/api/getPosts": {"GET", "OPTIONS"},
+	"/api/auth/login":    {"POST", "OPTIONS"},
+	// "/api/auth/logout":   {"POST", "OPTIONS"},
+	"/api/auth/check":    {"GET", "OPTIONS"},
+	"/api/auth/register": {"POST", "OPTIONS"},
+	"/api/users":         {"GET", "OPTIONS"},
+	"/api/users/":        {"GET", "OPTIONS"},
+	"/api/addPost":       {"POST", "OPTIONS"},
+	"/api/getPosts":      {"GET", "OPTIONS"},
 }
 
 type App struct {
@@ -48,10 +52,14 @@ func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Public routes with CORS
-	mux.Handle("/api/register", app.WithCORS(http.HandlerFunc(app.Register)))
-	mux.Handle("/api/login", app.WithCORS(http.HandlerFunc(app.Login)))
+	mux.Handle("/api/auth/register", app.WithCORS(http.HandlerFunc(app.Register)))
+	mux.Handle("/api/auth/login", app.WithCORS(http.HandlerFunc(app.Login)))
+	// mux.Handle("/api/auth/logout", app.WithCORS(http.HandlerFunc(app.Logout)))
+	mux.Handle("/api/auth/check", app.WithCORS(http.HandlerFunc(app.CheckAuth)))
 
-	// protected routes
+	// Protected routes
+	mux.Handle("/api/users", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetAllUsers))))
+	mux.Handle("/api/users/", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetUserById))))
 	mux.Handle("/api/addPost", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.AddPost))))
 	mux.Handle("/api/getPosts", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetPosts))))
 	return mux
