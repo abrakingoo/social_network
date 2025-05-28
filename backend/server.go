@@ -27,7 +27,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    ":8000",
-		Handler: app.RouteChecker(app.Routes()),
+		Handler: app.RouteChecker(app.WithCORS(app.Routes())),
 	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
