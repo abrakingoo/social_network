@@ -2,6 +2,7 @@
 
 import { useEffect, Suspense, lazy, useState } from "react";
 import Loading from "@/components/ui/loading";
+import { useAuth } from "@/context/AuthContext";
 
 // Lazy load components that aren't needed immediately
 const PostForm = lazy(() => import("@/components/post/PostForm"));
@@ -67,6 +68,7 @@ const mockUser = {
 // Main Home content component
 const HomeContent = () => {
   const [isMobile, setIsMobile] = useState(false);
+  const { user } = useAuth();
 
   // Check if we're on mobile
   useEffect(() => {
@@ -84,18 +86,21 @@ const HomeContent = () => {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
+  // Use authenticated user from context, or fallback to mockUser for safety
+  const currentUser = user || mockUser;
+
   return (
     <div className={`space-y-1 ${isMobile ? '-mx-4' : ''}`}>
       {/* Post Form */}
       <Suspense fallback={<div className={`h-32 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
-        <PostForm user={mockUser} />
+        <PostForm user={currentUser} />
       </Suspense>
 
       {/* Feed - Always show mock posts */}
       <div className="space-y-1">
         {mockPosts.map(post => (
           <Suspense key={post.id} fallback={<div className={`h-64 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
-            <PostCard post={post} currentUser={mockUser} />
+            <PostCard post={post} currentUser={currentUser} />
           </Suspense>
         ))}
       </div>
