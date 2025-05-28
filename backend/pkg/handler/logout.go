@@ -19,5 +19,11 @@ func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = app.Queries.DeleteSession(sessionCookie.Value)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Internal server error", Error)
+		return
+	}
+
 	util.ExpireSessionCookie(w)
 }
