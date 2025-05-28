@@ -62,5 +62,6 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/users/", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetUserById))))
 	mux.Handle("/api/addPost", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.AddPost))))
 	mux.Handle("/api/getPosts", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetPosts))))
+	mux.Handle("/api/profile", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.Profile))))
 	return mux
 }
