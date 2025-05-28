@@ -50,13 +50,13 @@ func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Public routes with CORS
-	mux.Handle("/api/register", app.WithCORS(http.HandlerFunc(app.Register)))
-	mux.Handle("/api/login", app.WithCORS(http.HandlerFunc(app.Login)))
+	mux.Handle("/api/register", http.HandlerFunc(app.Register))
+	mux.Handle("/api/login", http.HandlerFunc(app.Login))
 
 	// protected routes
-	mux.Handle("/api/addPost", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.AddPost))))
-	mux.Handle("/api/getPosts", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetPosts))))
-	mux.Handle("/api/profile", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.Profile))))
-	mux.Handle("/api/logout", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.Logout))))
+	mux.Handle("/api/addPost", app.AuthMiddleware(http.HandlerFunc(app.AddPost)))
+	mux.Handle("/api/getPosts", app.AuthMiddleware(http.HandlerFunc(app.GetPosts)))
+	mux.Handle("/api/profile", app.AuthMiddleware(http.HandlerFunc(app.Profile)))
+	mux.Handle("/api/logout", app.AuthMiddleware(http.HandlerFunc(app.Logout)))
 	return mux
 }
