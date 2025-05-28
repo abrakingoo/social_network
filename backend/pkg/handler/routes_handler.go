@@ -13,6 +13,7 @@ var allowedRoutes = map[string][]string{
 	"/api/addPost":  {"POST", "OPTIONS"},
 	"/api/getPosts": {"GET", "OPTIONS"},
 	"/api/profile":  {"GET", "OPTIONS"},
+	"/api/logout":   {"POST", "OPTIONS"},
 }
 
 type App struct {
@@ -56,5 +57,6 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/addPost", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.AddPost))))
 	mux.Handle("/api/getPosts", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.GetPosts))))
 	mux.Handle("/api/profile", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.Profile))))
+	mux.Handle("/api/logout", app.WithCORS(app.AuthMiddleware(http.HandlerFunc(app.Logout))))
 	return mux
 }
