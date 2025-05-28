@@ -11,13 +11,20 @@ export function middleware(request) {
   const isAuthenticated = !!token;
 
   if (!isAuthenticated && !isPublicPath) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const url = new URL('/login', request.url);
+    // Add cache control headers to prevent caching of redirects
+    const response = NextResponse.redirect(url);
+    response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    return response;
   }
 
   if (isAuthenticated && isPublicPath) {
-    // Redirect to home page
-    return NextResponse.redirect(new URL('/', request.url));
+    const url = new URL('/', request.url);
+    const response = NextResponse.redirect(url);
+    response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    return response;
   }
+  
   return NextResponse.next();
 }
 
