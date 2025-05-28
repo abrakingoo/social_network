@@ -15,55 +15,19 @@ export default function RegisterPage() {
     setIsLoading(true);
   
     try {
-      // Step 1: Add detailed console logging
-      console.log('Registering with original data:', formData);
+      // Log the registration data
+      console.log('Registering with data:', formData);
       
-      // Step 2: Transform frontend data to match backend expectations
-      const backendFormData = {
-        email: formData.email,
-        password: formData.password,
-        confirmed_password: formData.confirmed_password, // Add confirmed_password field
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        date_of_birth: formData.date_of_birth,
-        avatar: formData.avatar,
-        nickname: formData.nickname || formData.email.split('@')[0], // Use part of email as nickname if not provided
-        about_me: formData.about || '',
-        is_public: formData.is_public
-      };
-      
-      console.log('Sending to backend:', JSON.stringify(backendFormData));
-  
-      const response = await fetch('http://localhost:8000/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(backendFormData),
-      });
-  
-      if (!response.ok) {
-        console.log('Registration error status:', response.status);
-        const errorText = await response.text();
-        console.log('Registration error response:', errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (e) {
-          errorData = { error: errorText || 'Registration failed' };
-        }
-        throw new Error(errorData.error || 'Registration failed');
-      }
+      // Mock registration - no cookies or session storage
+      // Just simulate a successful registration without authentication
   
       toast({
         title: "Account created",
         description: "Your account has been created successfully",
       });
       
-      // Store the email to make login easier
-      sessionStorage.setItem('lastRegisteredEmail', formData.email);
-  
-      router.push('/login');
+      // Redirect to the home page
+      router.push('/');
     } catch (error) {
       console.error('Registration error:', error);
       toast({
@@ -76,9 +40,8 @@ export default function RegisterPage() {
     }
   };
   
-
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-md space-y-6 bg-white rounded-lg p-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Create an Account</h1>
         <p className="text-gray-500 mt-2">Enter your information to register</p>

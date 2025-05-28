@@ -1,12 +1,17 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
 import { toast } from "@/components/ui/sonner";
 
-// Use static dummy user data instead of context
-const dummyUser = {
+// Mock user data 
+const mockUser = {
   id: '1',
   email: 'user@example.com',
-  firstName: 'Demo',
-  lastName: 'User'
+  firstName: 'John',
+  lastName: 'Doe',
+  nickname: 'johndoe',
+  avatar: '/images/avatars/default.png',
+  date_of_birth: '1990-01-01',
+  is_public: true,
+  about_me: 'This is a mock user profile'
 };
 
 // Privacy levels
@@ -88,9 +93,11 @@ export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState(INITIAL_POSTS);
-  // Using static dummy user instead of AuthContext
-  const currentUser = dummyUser;
-  const getUserById = (id) => dummyUser;
+  // Using static mock user data
+  const currentUser = mockUser;
+  
+  // Mock function to get user by ID - always returns mockUser
+  const getUserById = (id) => mockUser;
 
   // Normalize post data to ensure consistent structure
   const normalizePost = useCallback((postData) => {

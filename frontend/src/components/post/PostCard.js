@@ -15,28 +15,44 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 
-// Auth context dependency removed
-import { usePosts } from '@/context/PostContext';
-
-const PostCard = ({ post }) => {
+// Accept the post and currentUser as props
+const PostCard = ({ post, currentUser }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  // Static data instead of context
-  const currentUser = {
+  
+  // Default mock user if none provided
+  const user = currentUser || {
     id: '1',
-    firstName: 'Demo',
-    lastName: 'User'
+    firstName: 'John',
+    lastName: 'Doe'
   };
   
-  // Static function for getting user data
+  // Mock function for getting user data by ID
   const getUserById = (id) => ({
     id,
-    firstName: id === '1' ? 'Demo' : 'User',
-    lastName: id === '1' ? 'User' : String(id),
+    firstName: id === '1' ? 'John' : 'User',
+    lastName: id === '1' ? 'Doe' : String(id),
     avatar: ''
   });
-  const { toggleLike, addComment, deletePost } = usePosts();
+  
+  // Mock functions instead of using PostContext
+  const toggleLike = () => {
+    console.log('Toggling like (mock)');
+    // In a real app, this would update the post in the database
+  };
+  
+  const addComment = (postId, commentText) => {
+    console.log('Adding comment (mock):', { postId, commentText });
+    // In a real app, this would add a comment to the post
+    alert('Comment added!');
+  };
+  
+  const deletePost = () => {
+    console.log('Deleting post (mock)');
+    // In a real app, this would delete the post
+    alert('Post deleted!');
+  };
 
   // Check if we're on mobile
   useEffect(() => {

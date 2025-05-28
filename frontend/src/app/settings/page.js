@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,18 @@ import {
 
 const Settings = () => {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  // Mock user data
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    nickname: 'johndoe',
+    avatar: '',
+    date_of_birth: '1990-01-01',
+    about_me: 'This is a mock user profile',
+    is_public: true
+  };
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('account');
 
@@ -61,32 +72,29 @@ const Settings = () => {
     reducedMotion: false
   });
 
-  // Redirect to login if not authenticated
+  // Initialize form data from mock user
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-      return;
-    }
+    // Load user data once on component mount
+    setProfile({
+      firstName: currentUser.firstName || '',
+      lastName: currentUser.lastName || '',
+      email: currentUser.email || '',
+      phone: currentUser.phone || '',
+      location: currentUser.location || '',
+      about: currentUser.about || ''
+    });
+    setPrivacy({
+      isPublic: currentUser.isPublic !== undefined ? currentUser.isPublic : true,
+      showEmail: currentUser.showEmail !== undefined ? currentUser.showEmail : false,
+      showPhone: currentUser.showPhone !== undefined ? currentUser.showPhone : false,
+      showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
+    });
+  }, []);
 
-    // Load user data
-    if (currentUser) {
-      setProfile({
-        firstName: currentUser.firstName || '',
-        lastName: currentUser.lastName || '',
-        email: currentUser.email || '',
-        phone: currentUser.phone || '',
-        location: currentUser.location || '',
-        about: currentUser.about || ''
-      });
-
-      setPrivacy({
-        isPublic: currentUser.isPublic !== undefined ? currentUser.isPublic : true,
-        showEmail: currentUser.showEmail !== undefined ? currentUser.showEmail : false,
-        showPhone: currentUser.showPhone !== undefined ? currentUser.showPhone : false,
-        showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
-      });
-    }
-  }, [currentUser, router]);
+  // We don't need to check for authentication as we're using mock data
+  useEffect(() => {
+    // Empty effect for now
+  }, []);
 
   // Don't render if user is not authenticated
   if (!currentUser) {

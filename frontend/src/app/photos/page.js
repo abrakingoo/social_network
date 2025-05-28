@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,17 +12,22 @@ import { Image, Upload, FolderPlus, Filter, Search } from 'lucide-react';
 
 const Photos = () => {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  // Mock user data
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    avatar: ''
+  };
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Redirect to login if not authenticated
+  // Initialize any data needed on component mount
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, router]);
+    // We can initialize data here if needed
+  }, []);
 
   // Don't render if user is not authenticated
   if (!currentUser) {

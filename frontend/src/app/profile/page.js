@@ -7,42 +7,109 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import PostCard from '@/components/post/PostCard';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed
 import { usePosts } from '@/context/PostContext';
 
 const Profile = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, getUserById, getAllUsers } = useAuth();
-  const { getUserPosts } = usePosts();
+  // Mock user data instead of using AuthContext
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    nickname: 'johndoe',
+    avatar: '',
+    date_of_birth: '1990-01-01',
+    about_me: 'This is a mock user profile',
+    is_public: true
+  };
+
+  // Mock function to get user by ID
+  const getUserById = (id) => {
+    // Return mock user data
+    return {
+      id: id,
+      firstName: 'User',
+      lastName: id,
+      email: `user${id}@example.com`,
+      nickname: `user${id}`,
+      avatar: '',
+      date_of_birth: '1990-01-01',
+      about_me: 'This is another mock user profile',
+      is_public: true
+    };
+  };
+
+  // Mock function to get all users
+  const getAllUsers = () => {
+    return [
+      currentUser,
+      getUserById('2'),
+      getUserById('3')
+    ];
+  };
+
+  // Mock function to get user posts
+  const getUserPosts = (userId) => {
+    return [
+      {
+        id: '1',
+        authorId: userId,
+        content: 'This is a mock post by the user',
+        images: [],
+        privacy: 'public',
+        createdAt: new Date().toISOString(),
+        likes: [],
+        comments: []
+      },
+      {
+        id: '2',
+        authorId: userId,
+        content: 'Another mock post',
+        images: ['https://images.unsplash.com/photo-1682687221080-5cb261c645cb'],
+        privacy: 'public',
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+        likes: [],
+        comments: []
+      }
+    ];
+  };
+  
   const [activeTab, setActiveTab] = useState('posts');
   const [profileUser, setProfileUser] = useState(null);
 
-  // Extract username from pathname if available
+  // Extract username from pathname if available - only run once on mount
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-      return;
-    }
+    // Define the users list inside the effect to avoid dependency issues
+    const allUsers = [
+      currentUser,
+      getUserById('2'),
+      getUserById('3')
+    ];
 
     // Check if we're on a specific user's profile or the current user's profile
     const pathParts = pathname.split('/');
     const username = pathParts.length > 2 ? pathParts[2] : null;
 
     if (username) {
-      const foundUser = getAllUsers().find(
+      const foundUser = allUsers.find(
         u => `${u.firstName.toLowerCase()}-${u.lastName.toLowerCase()}` === username.toLowerCase()
       );
 
       if (foundUser) {
         setProfileUser(foundUser);
       } else {
-        router.push('/not-found');
+        // Set to current user instead of navigating away
+        setProfileUser(currentUser);
       }
     } else {
       setProfileUser(currentUser);
     }
-  }, [currentUser, pathname, router, getAllUsers]);
+    // Only run this effect once when the component mounts
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Don't render if user not authenticated or profile user not found
   if (!currentUser || !profileUser) {

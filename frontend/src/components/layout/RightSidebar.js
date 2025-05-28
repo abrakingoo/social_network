@@ -56,7 +56,7 @@ const RightSidebar = () => {
   };
 
   return (
-    <div className="hidden lg:block w-64 pl-2 flex-shrink-0 space-y-3">
+    <div className="block w-64 pl-2 flex-shrink-0 space-y-3">
       {/* Online Friends */}
       <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <h3 className="font-medium mb-3">Online Friends</h3>

@@ -1,18 +1,71 @@
 "use client";
 
 import { useEffect, Suspense, lazy, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { usePosts } from "@/context/PostContext";
 import Loading from "@/components/ui/loading";
 
 // Lazy load components that aren't needed immediately
 const PostForm = lazy(() => import("@/components/post/PostForm"));
 const PostCard = lazy(() => import("@/components/post/PostCard"));
 
-// Extracting the content into a separate component for Suspense
+// Mock posts for the feed page
+const mockPosts = [
+  {
+    id: '1',
+    authorId: '1',
+    content: 'Welcome to the social network! This is your feed page.',
+    images: [],
+    privacy: 'public',
+    createdAt: new Date().toISOString(),
+    likes: ['2'],
+    comments: [
+      {
+        id: '1',
+        authorId: '2',
+        content: 'Great to see you here!',
+        createdAt: new Date().toISOString()
+      }
+    ]
+  },
+  {
+    id: '2',
+    authorId: '2',
+    content: 'This is a sample post with an image!',
+    images: ['https://images.unsplash.com/photo-1682687221080-5cb261c645cb'],
+    privacy: 'public',
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+    likes: ['1'],
+    comments: []
+  },
+  {
+    id: '3',
+    authorId: '3',
+    content: 'Check out this amazing view from my trip!',
+    images: ['https://images.unsplash.com/photo-1682685797366-715d29e33f9d'],
+    privacy: 'public',
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+    likes: ['1', '2'],
+    comments: [
+      {
+        id: '2',
+        authorId: '1',
+        content: 'Looks fantastic! Where is this?',
+        createdAt: new Date(Date.now() - 3600000).toISOString()
+      }
+    ]
+  }
+];
+
+// Mock user data to use in place of AuthContext
+const mockUser = {
+  id: '1',
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'user@example.com',
+  avatar: ''
+};
+
+// Main Home content component
 const HomeContent = () => {
-  const { currentUser, loading } = useAuth();
-  const { posts, getVisiblePosts } = usePosts();
   const [isMobile, setIsMobile] = useState(false);
 
   // Check if we're on mobile
@@ -31,42 +84,20 @@ const HomeContent = () => {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-
-  // Show loading state when checking authentication
-  if (loading) {
-    return <div className="h-screen flex items-center justify-center">
-      <Loading />
-    </div>;
-  }
-
-  // Get the posts visible to the current user
-  const visiblePosts = currentUser ? getVisiblePosts() : [];
-
   return (
     <div className={`space-y-1 ${isMobile ? '-mx-4' : ''}`}>
       {/* Post Form */}
       <Suspense fallback={<div className={`h-32 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
-        <PostForm />
+        <PostForm user={mockUser} />
       </Suspense>
 
-      {/* Feed */}
+      {/* Feed - Always show mock posts */}
       <div className="space-y-1">
-        {visiblePosts.length > 0 ? (
-          visiblePosts.map(post => (
-            <Suspense key={post.id} fallback={<div className={`h-64 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
-              <PostCard post={post} />
-            </Suspense>
-          ))
-        ) : (
-          <div className={`text-center p-8 bg-white ${isMobile ? 'shadow-none rounded-none border-x-0' : 'rounded-lg shadow-sm'}`}>
-            <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
-            <p className="text-gray-500 mt-2">
-              {currentUser
-                ? "Posts from you and people you follow will appear here."
-                : "Please log in to see posts."}
-            </p>
-          </div>
-        )}
+        {mockPosts.map(post => (
+          <Suspense key={post.id} fallback={<div className={`h-64 bg-gray-100 animate-pulse rounded-lg ${isMobile ? 'rounded-none' : ''}`}></div>}>
+            <PostCard post={post} currentUser={mockUser} />
+          </Suspense>
+        ))}
       </div>
     </div>
   );

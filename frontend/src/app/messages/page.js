@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,14 @@ import { Send, Search, ArrowLeft } from 'lucide-react';
 const Messages = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser } = useAuth();
+  // Mock user data
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    avatar: ''
+  };
   const { toast } = useToast();
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState('');
@@ -81,12 +88,10 @@ const Messages = () => {
     ]
   };
 
-  // Redirect to login if not authenticated
+  // Initialize any data needed on component mount
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, router]);
+    // We can initialize data here if needed
+  }, []);
 
   // Don't render if user is not authenticated
   if (!currentUser) {

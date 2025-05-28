@@ -9,23 +9,28 @@ import {
   RadioGroupItem
 } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-// Auth context dependency removed
-import { usePosts, PRIVACY_LEVELS } from '@/context/PostContext';
 
-const PostForm = () => {
+// Define privacy levels directly in the component
+const PRIVACY_LEVELS = {
+  PUBLIC: 'public',
+  FOLLOWERS: 'followers',
+  SELECTED: 'selected'
+};
+
+// Accept user as a prop instead of using AuthContext
+const PostForm = ({ user }) => {
   const [content, setContent] = useState('');
   const [privacy, setPrivacy] = useState(PRIVACY_LEVELS.PUBLIC);
   const [images, setImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Static data instead of context
-  const currentUser = {
+  // Use the user prop or fallback to default mock user if not provided
+  const currentUser = user || {
     id: '1',
     firstName: 'Demo',
     lastName: 'User'
   };
-  const { addPost } = usePosts();
 
   // Check if we're on mobile
   useEffect(() => {
@@ -42,8 +47,6 @@ const PostForm = () => {
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
-
-  if (!currentUser) return null;
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -65,17 +68,27 @@ const PostForm = () => {
     setIsSubmitting(true);
 
     try {
-      addPost({
+      // Mock post creation - just log it instead of using addPost
+      console.log('Creating mock post:', {
+        authorId: currentUser.id,
         content: content.trim(),
         images: [...images], // Clone the array
         privacy
       });
 
-      // Reset form
-      setContent('');
-      setPrivacy(PRIVACY_LEVELS.PUBLIC);
-      setImages([]);
-    } finally {
+      // Show a fake delay for UX feedback
+      setTimeout(() => {
+        // Reset form
+        setContent('');
+        setPrivacy(PRIVACY_LEVELS.PUBLIC);
+        setImages([]);
+        setIsSubmitting(false);
+        
+        // Optional: Show a toast message here if you have a toast system
+        alert('Post created successfully!');
+      }, 500);
+    } catch (error) {
+      console.error('Error creating post:', error);
       setIsSubmitting(false);
     }
   };

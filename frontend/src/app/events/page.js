@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,14 @@ import {
 
 export default function Events() {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  // Mock user data
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    avatar: ''
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [events, setEvents] = useState([
@@ -62,12 +69,10 @@ export default function Events() {
     }
   ]);
 
-  // Redirect to login if not authenticated
+  // Initialize any data needed on component mount
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, router]);
+    // We can initialize data here if needed
+  }, []);
 
   // Stop rendering if user is not authenticated
   if (!currentUser) {

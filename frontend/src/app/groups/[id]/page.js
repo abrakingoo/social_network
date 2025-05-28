@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed
 import PostForm from '@/components/post/PostForm';
 import PostCard from '@/components/post/PostCard';
 import EventForm from '@/components/group/EventForm';
@@ -26,7 +26,14 @@ const GroupDetail = () => {
   const router = useRouter();
   const params = useParams();
   const groupId = params.id;
-  const { currentUser } = useAuth();
+  // Mock user data
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    avatar: ''
+  };
   const { toast } = useToast();
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
@@ -94,12 +101,10 @@ const GroupDetail = () => {
     }
   ];
 
-  // Redirect to login if not authenticated
+  // Initialize any data needed on component mount
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, router]);
+    // We can initialize data here if needed
+  }, []);
 
   // Don't render if user not authenticated
   if (!currentUser) {

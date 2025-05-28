@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostProvider } from "@/context/PostContext";
-import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import dynamic from 'next/dynamic';
@@ -14,12 +13,12 @@ import { useState, useEffect } from 'react';
 // Dynamic imports for non-critical components
 const LeftSidebar = dynamic(() => import("@/components/layout/LeftSidebar"), {
   ssr: false,
-  loading: () => <div className="w-64 hidden md:block" />
+  loading: () => <div className="w-64" />
 });
 
 const RightSidebar = dynamic(() => import("@/components/layout/RightSidebar"), {
   ssr: false,
-  loading: () => <div className="w-64 hidden lg:block" />
+  loading: () => <div className="w-64" />
 });
 
 // Create QueryClient outside of component to prevent re-initialization
@@ -32,8 +31,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Component to wrap the authenticated content
-const AuthenticatedLayout = ({ children }) => {
+// Component to wrap the content
+const MainLayout = ({ children }) => {
   const pathname = usePathname();
   const isMessagesPage = pathname === '/messages';
   const [isMobile, setIsMobile] = useState(false);
@@ -54,61 +53,40 @@ const AuthenticatedLayout = ({ children }) => {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  // Check if on authentication pages (now handled by route groups)
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
-
-  // Show full layout only for non-auth pages
-  const showSidebars = !isAuthPage;
+  // Always show sidebars - removed authentication checks
+  const showSidebars = true;
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <div className="flex flex-1 bg-gray-100 pt-4">
         <div className="container mx-auto flex max-w-7xl">
-          {showSidebars && !isMessagesPage && <LeftSidebar />}
-          <main className={`flex-1 ${isMobile ? 'px-0' : 'px-4'}`}>
+          {/* Always show left sidebar except on messages page */}
+          {!isMessagesPage && <LeftSidebar />}
+          <main className="flex-1 px-4">
             {children}
           </main>
-          {showSidebars && <RightSidebar />}
+          {/* Always show right sidebar */}
+          <RightSidebar />
         </div>
       </div>
     </div>
   );
 };
 
+
+
 export default function RootLayoutClient({ children }) {
-  const pathname = usePathname();
-
-  // Check if current route is in the (auth) group
-  const isAuthRoute = pathname.includes('/login') || pathname.includes('/register');
-
-  // Don't wrap auth routes with the layout - they use their own layout
-  if (isAuthRoute) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <AuthProvider>
-            <PostProvider>
-              {children}
-            </PostProvider>
-          </AuthProvider>
-        </ToastProvider>
-      </QueryClientProvider>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ToastProvider>
-          <AuthProvider>
-            <PostProvider>
-              <Sonner />
-              <AuthenticatedLayout>
-                {children}
-              </AuthenticatedLayout>
-            </PostProvider>
-          </AuthProvider>
+          <PostProvider>
+            <Sonner />
+            <MainLayout>
+              {children}
+            </MainLayout>
+          </PostProvider>
         </ToastProvider>
       </TooltipProvider>
     </QueryClientProvider>

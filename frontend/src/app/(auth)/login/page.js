@@ -15,34 +15,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const credentials = btoa(`${formData.email}:${formData.password}`);
+      // Mock login - just show success message without setting cookies
+      // This simulates a successful login without any authentication
+      
+      // Show success message
+      toast({
+        title: "Success",
+        description: "You have successfully logged in",
+      });
 
-
-      const response = await fetch('http://localhost:8000/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${credentials}`,
-        },
-      })
-
-      if (!response.ok) {
-        console.log(response);
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Failed to login: ${errorData.error || response.statusText}`);
-      }
-
-      const data = await response.json();
-      // Store token in both cookie and sessionStorage
-      document.cookie = `token=${data.token};path=/;max-age=86400`; // 24 hours
-      sessionStorage.setItem('token', data.token);
-
+      // Redirect to home page
       router.push('/');
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to login",
-        variant: "destructive",
+        description: error.message || 'Login failed',
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
@@ -50,7 +38,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-md space-y-6 bg-white rounded-lg p-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Login</h1>
         <p className="text-gray-500 mt-2">Welcome back! Please login to your account</p>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
+// Auth context removed - using mock data instead
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,18 @@ import { Users, Search, Plus, UserPlus } from 'lucide-react';
 
 const Groups = () => {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  // Mock user data instead of using AuthContext
+  const currentUser = {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@example.com',
+    nickname: 'johndoe',
+    avatar: '',
+    date_of_birth: '1990-01-01',
+    about_me: 'This is a mock user profile',
+    is_public: true
+  };
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
@@ -72,12 +83,10 @@ const Groups = () => {
     }
   ];
 
-  // Redirect to login if not authenticated
+  // Initialize any data needed on component mount
   React.useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, router]);
+    // We can initialize data here if needed
+  }, []);
 
   // Don't render content if user is not authenticated
   if (!currentUser) {
