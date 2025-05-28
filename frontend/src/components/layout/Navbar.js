@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import {
   Bell,
   MessageSquare,
@@ -30,9 +31,10 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, logout, isAuthenticated } = useAuth();
   
-  // Mock user data - always present
-  const currentUser = {
+  // Use authenticated user from context or fallback to mock user
+  const currentUser = user || {
     id: '1',
     firstName: 'Demo',
     lastName: 'User',
@@ -120,6 +122,13 @@ const Navbar = () => {
                     </div>
                   </DropdownMenuItem>
                 </Link>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-500 focus:text-red-500 focus:bg-red-50">
+                  <div className="flex items-center">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </div>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
