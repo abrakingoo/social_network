@@ -37,7 +37,10 @@ func CompressJPEG(path string, quality int) (string, error) {
 		return "", err
 	}
 
-	outPath := filepath.Join(mediaPath, "compressed_"+filepath.Base(path))
+	id := UUIDGen()
+	filename := id + "_" + filepath.Base(path)
+
+	outPath := filepath.Join(mediaPath, "compressed_"+filename)
 	out, err := os.Create(outPath)
 	if err != nil {
 		return outPath, err
@@ -67,7 +70,10 @@ func CompressPNG(path string) (string, error) {
 		return "", err
 	}
 
-	outPath := filepath.Join(mediaPath, "compressed_"+filepath.Base(path))
+	id := UUIDGen()
+	filename := id + "_" + filepath.Base(path)
+
+	outPath := filepath.Join(mediaPath, "compressed_"+filename)
 	out, err := os.Create(outPath)
 	if err != nil {
 		return outPath, err
@@ -112,7 +118,10 @@ func CompressGIF(path string, useWebSafe bool) (string, error) {
 		return "", err
 	}
 
-	outPath := filepath.Join(mediaPath, "compressed_"+filepath.Base(path))
+	id := UUIDGen()
+	filename := id + "_" + filepath.Base(path)
+
+	outPath := filepath.Join(mediaPath, "compressed_"+filename)
 	out, err := os.Create(outPath)
 	if err != nil {
 		return outPath, err
