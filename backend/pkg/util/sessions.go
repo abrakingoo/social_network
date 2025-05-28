@@ -44,6 +44,7 @@ func SetSessionCookie(w http.ResponseWriter, sessionID, csrfToken string) {
 	http.SetCookie(w, &csrfCookie)
 }
 
+// ExpireSessionCookie expires the session and CSRF token cookies
 func ExpireSessionCookie(w http.ResponseWriter) {
 	sessionCookie := http.Cookie{
 		Name:     "session_id",
