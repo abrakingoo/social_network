@@ -25,7 +25,7 @@ func (app App) AuthMiddleware(next http.Handler) http.Handler {
 		// Check session validity in the database
 		var expiresAt time.Time
 		err = app.Queries.Db.QueryRow(`
-			SELECT expires_at FROM sessions 
+			SELECT expires_at FROM sessions
 			WHERE session_token = ? AND csrf_token = ?`,
 			sessionCookie.Value, csrfToken.Value).Scan(&expiresAt)
 
