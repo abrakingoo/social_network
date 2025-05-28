@@ -1,6 +1,10 @@
 package handler
 
-import "net/http"
+import (
+	"net/http"
+
+	"social/pkg/util"
+)
 
 func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 	sessionCookie, err := r.Cookie("session_id")
@@ -14,4 +18,6 @@ func (app *App) Logout(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session not found", Error)
 		return
 	}
+
+	util.ExpireSessionCookie(w)
 }
