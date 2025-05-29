@@ -22,7 +22,7 @@ func main() {
 		Queries: repository.Query{
 			Db: db,
 		},
-		User:    &model.User{},
+		User: &model.User{},
 	}
 
 	server := http.Server{

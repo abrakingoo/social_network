@@ -5,39 +5,28 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import LoginForm from '@/components/auth/LoginForm';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (formData) => {
     setIsLoading(true);
 
     try {
-      const credentials = btoa(`${formData.email}:${formData.password}`);
+      const success = await login(formData.email, formData.password, formData.rememberMe);
 
-
-      const response = await fetch('http://localhost:8000/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${credentials}`,
-        },
-      })
-
-      if (!response.ok) {
-        console.log(response);
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Failed to login: ${errorData.error || response.statusText}`);
+      if (success) {
+        toast({
+          title: "Success",
+          description: "You have been logged in successfully",
+        });
+        console.log('Login successful, attempting to redirect to /');
+        router.push('/');
       }
-
-      const data = await response.json();
-      // Store token in both cookie and sessionStorage
-      document.cookie = `token=${data.token};path=/;max-age=86400`; // 24 hours
-      sessionStorage.setItem('token', data.token);
-
-      router.push('/');
     } catch (error) {
       toast({
         title: "Error",
@@ -53,7 +42,7 @@ export default function LoginPage() {
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Login</h1>
-        <p className="text-gray-500 mt-2">Welcome back! Please login to your account</p>
+        <p className="text-gray-500 mt-2">Enter your credentials to continue</p>
       </div>
 
       <LoginForm onSubmit={handleLogin} isLoading={isLoading} />

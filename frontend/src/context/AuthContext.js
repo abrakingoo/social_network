@@ -5,6 +5,9 @@ import { createContext, useContext, useState, useEffect } from 'react';
 // Create context
 const AuthContext = createContext();
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,29 +15,27 @@ export const AuthProvider = ({ children }) => {
   // Function to check if user is authenticated
   const checkAuth = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      
-      if (!token) {
-        setCurrentUser(null);
-        setLoading(false);
-        return;
-      }
-      
-      // Fetch user data with the token
-      const response = await fetch('http://localhost:8000/api/getPosts', {
+      // Check session validity and get user data
+      console.log('Checking session validity with backend...'); // Updated log
+      const response = await fetch(`${API_BASE_URL}/api/auth/check`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Accept': 'application/json',
+        },
       });
-      
+
+      console.log('Backend check response status:', response.status);
+
       if (response.ok) {
-        const userData = await response.json();
-        console.log('logged in')
+        const data = await response.json();
+        console.log('Backend check successful, full data:', data); // Log the full data object
+        // Access user data from nested structure
+        const userData = data.message ? data.message.user : undefined; // Correctly access nested user data
+        console.log('Backend check successful, user data:', userData);
         setCurrentUser(userData);
       } else {
-        // Token is invalid
-        sessionStorage.removeItem('token');
-        document.cookie = 'token=; path=/; max-age=0';
+        // Session is invalid or expired on backend
+        console.log('Backend session check failed (status not OK), setting currentUser to null');
         setCurrentUser(null);
       }
     } catch (error) {
@@ -42,6 +43,7 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(null);
     } finally {
       setLoading(false);
+      console.log('Authentication check finished, loading set to false');
     }
   };
 
@@ -54,29 +56,32 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password, rememberMe) => {
     try {
       const credentials = btoa(`${email}:${password}`);
-      
-      const response = await fetch('http://localhost:8000/api/login', {
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Basic ${credentials}`
-        }
+        },
+        credentials: 'include',
       });
-      
+
       if (!response.ok) {
-        throw new Error('Login failed');
+        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+        throw new Error(errorData.error || 'Login failed');
       }
-      
+
       const data = await response.json();
-      
-      // Store token in both cookie and sessionStorage
-      document.cookie = `token=${data.token};path=/;max-age=${rememberMe ? 604800 : 86400}`; // 7 days or 1 day
-      sessionStorage.setItem('token', data.token);
-      
-      // Fetch user data
-      await checkAuth();
-      
-      return true;
+      console.log('Login response:', data);
+
+      // Set user data from the response
+      if (data.message && data.message.user) {
+        setCurrentUser(data.message.user);
+        return true;
+      } else {
+        throw new Error('Invalid response format from server');
+      }
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -84,32 +89,42 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Logout function
-  const logout = () => {
-    sessionStorage.removeItem('token');
-    document.cookie = 'token=; path=/; max-age=0';
-    setCurrentUser(null);
+  const logout = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setCurrentUser(null);
+      } else {
+        console.error('Logout failed');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   // Get user by ID
   const getUserById = async (id) => {
     try {
-      const token = sessionStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      const response = await fetch(`http://localhost:8000/api/user/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Accept': 'application/json',
+        },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch user');
       }
-      
-      return await response.json();
+
+      const data = await response.json();
+      return data.user;
     } catch (error) {
       console.error('Get user failed:', error);
       throw error;
@@ -119,41 +134,35 @@ export const AuthProvider = ({ children }) => {
   // Get all users
   const getAllUsers = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      const response = await fetch('http://localhost:8000/api/users', {
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Accept': 'application/json',
+        },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
-      
-      return await response.json();
+
+      const data = await response.json();
+      return data.users;
     } catch (error) {
       console.error('Get users failed:', error);
       throw error;
     }
   };
 
-  const value = {
-    currentUser,
-    loading,
-    login,
-    logout,
-    getUserById,
-    getAllUsers,
-    checkAuth
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{
+      currentUser,
+      loading,
+      login,
+      logout,
+      getUserById,
+      getAllUsers,
+      checkAuth
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -161,7 +170,7 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
