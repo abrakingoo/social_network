@@ -12,6 +12,7 @@ type AddGroupData struct {
 	Description string `json:"description"`
 }
 
+// AddGroup handles the addition of a new group
 func (app *App) AddGroup(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
 	if err != nil {
@@ -23,6 +24,11 @@ func (app *App) AddGroup(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&addGroupData)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid JSON data", Error)
+		return
+	}
+
+	if addGroupData.Title == "" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Title cannot be empty", Error)
 		return
 	}
 
