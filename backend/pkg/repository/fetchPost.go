@@ -113,11 +113,12 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 
 	query := fmt.Sprintf(`
 			SELECT 
-				c.id, c.post_id, c.group_id, c.content,
+				c.id, c.post_id, c.content,
 				c.likes_count, c.dislikes_count, c.created_at,
-				m.id, m.url
+				m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 			FROM comments c
 			LEFT JOIN media m ON m.parent_id = c.id
+			LEFT JOIN users u ON u.id = c.user_id
 			WHERE c.post_id IN (%s)
 			ORDER BY c.created_at ASC
 		`, strings.Join(placeholders, ","))
@@ -133,19 +134,34 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 
 	for rows.Next() {
 		var (
-			comment  model.Comment
-			mediaID  sql.NullString
-			mediaURL sql.NullString
+			comment   model.Comment
+			mediaID   sql.NullString
+			mediaURL  sql.NullString
+			userID    sql.NullString
+			firstname sql.NullString
+			lastname  sql.NullString
+			nickname  sql.NullString
+			avatar    sql.NullString
 		)
 
 		err := rows.Scan(
-			&comment.ID, &comment.PostID, &comment.GroupID, &comment.Content,
+			&comment.ID, &comment.PostID, &comment.Content,
 			&comment.LikesCount, &comment.DislikesCount, &comment.CreatedAt,
-			&mediaID, &mediaURL,
+			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan comment: %w", err)
 		}
+		user := model.Creator{}
+		if userID.Valid {
+			user.ID = userID.String
+			user.FirstName = firstname.String
+			user.LastName = lastname.String
+			user.Nickname = nickname.String
+			user.Avatar = avatar.String
+		}
+
+		comment.User = user
 		// store the post id for this comment
 		commentsPostMap[comment.ID] = comment.PostID
 
