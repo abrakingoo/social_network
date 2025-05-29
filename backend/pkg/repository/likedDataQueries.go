@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-
 func (q *Query) GetUserLikedPost(userid string, user *model.UserData) error {
 	query := `
 		SELECT 
@@ -102,14 +101,13 @@ func (q *Query) GetallLikedCommentsPostIDs(userid string) ([]string, error) {
 
 }
 
-func (q *Query) PostIdsFromCommentsId(commentsid[] string) ([]string, error) {
+func (q *Query) PostIdsFromCommentsId(commentsid []string) ([]string, error) {
 	if len(commentsid) == 0 {
 		return []string{}, nil // Early exit if no post IDs provided
 	}
 
 	placeholders := strings.Repeat("?,", len(commentsid))
 	placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
-
 
 	query := `
 	SELECT DISTINCT post_id
