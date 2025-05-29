@@ -13,35 +13,37 @@ export default function RegisterPage() {
 
   const handleRegister = async (formData) => {
     setIsLoading(true);
-  
+
     try {
       // Step 1: Add detailed console logging
       console.log('Registering with original data:', formData);
-      
+
       // Step 2: Transform frontend data to match backend expectations
       const backendFormData = {
         email: formData.email,
         password: formData.password,
-        confirmed_password: formData.confirmed_password, // Add confirmed_password field
+        confirmed_password: formData.confirmed_password,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        date_of_birth: formData.date_of_birth,
+        date_of_birth: formData.date_of_birth.split('T')[0], // Convert ISO date to yyyy-MM-dd
         avatar: formData.avatar,
-        nickname: formData.nickname || formData.email.split('@')[0], // Use part of email as nickname if not provided
+        nickname: formData.nickname || formData.email.split('@')[0],
         about_me: formData.about || '',
         is_public: formData.is_public
       };
-      
+
       console.log('Sending to backend:', JSON.stringify(backendFormData));
-  
-      const response = await fetch('http://localhost:8000/api/register', {
+
+      const response = await fetch('http://localhost:8000/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(backendFormData),
       });
-  
+
       if (!response.ok) {
         console.log('Registration error status:', response.status);
         const errorText = await response.text();
@@ -54,15 +56,15 @@ export default function RegisterPage() {
         }
         throw new Error(errorData.error || 'Registration failed');
       }
-  
+
       toast({
         title: "Account created",
         description: "Your account has been created successfully",
       });
-      
+
       // Store the email to make login easier
       sessionStorage.setItem('lastRegisteredEmail', formData.email);
-  
+
       router.push('/login');
     } catch (error) {
       console.error('Registration error:', error);
@@ -75,7 +77,7 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
-  
+
 
   return (
     <div className="space-y-6">

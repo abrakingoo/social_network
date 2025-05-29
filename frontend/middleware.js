@@ -3,21 +3,22 @@ import { NextResponse } from 'next/server';
 export function middleware(request) {
   // Get the pathname of the request
   const path = request.nextUrl.pathname;
-  
+
   const isPublicPath = path === '/login' || path === '/register';
-  
-  const token = request.cookies.get('token')?.value || '';
-  
-  if (path === '/' && !token) {
+
+  // Check for session cookie instead of token
+  const hasSession = request.cookies.has('session_id');
+
+  if (path === '/' && !hasSession) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
-  
-  if (isPublicPath && token) {
+
+  if (isPublicPath && hasSession) {
     return NextResponse.redirect(new URL('/', request.url));
   }
-  
-  // If the user is not on a public path and doesn't have a token, redirect to login
-  if (!isPublicPath && !token) {
+
+  // If the user is not on a public path and doesn't have a session, redirect to login
+  if (!isPublicPath && !hasSession) {
     // Store the original URL they were trying to access for potential redirect after login
     const url = new URL('/login', request.url);
     url.searchParams.set('callbackUrl', path);
