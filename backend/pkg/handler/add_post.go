@@ -11,15 +11,10 @@ import (
 
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
-	sessionCookie, err := r.Cookie("session_id")
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session cookie missing", Error)
-		return
-	}
+	userID, err := app.GetSessionData(r)
 
-	userID, err := app.Queries.FetchSessionUser(sessionCookie.Value)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session not found", Error)
+		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
 	}
 
