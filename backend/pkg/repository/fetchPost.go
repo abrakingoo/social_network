@@ -12,11 +12,13 @@ import (
 func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 	query := `
 		SELECT 
-			p.id, p.group_id, p.content, 
+			p.id, p.content, 
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
+		LEFT JOIN users u ON u.id = p.user_id
+		WHERE p.group_id IS NULL
 		ORDER BY p.created_at DESC
 	`
 	rows, err := q.Db.Query(query)
@@ -30,7 +32,6 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 	for rows.Next() {
 		var (
 			postID        string
-			groupID       sql.NullString
 			content       string
 			likesCount    int
 			dislikesCount int
@@ -39,12 +40,17 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 			createdAt     time.Time
 			mediaID       sql.NullString
 			mediaURL      sql.NullString
+			userID        sql.NullString
+			firstname     sql.NullString
+			lastname      sql.NullString
+			nickname      sql.NullString
+			avatar        sql.NullString
 		)
 
 		err := rows.Scan(
-			&postID, &groupID, &content,
+			&postID, &content,
 			&likesCount, &dislikesCount, &commentsCount, &privacy, &createdAt,
-			&mediaID, &mediaURL,
+			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
@@ -53,8 +59,18 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 		// Get or create the post
 		post, exists := postsMap[postID]
 		if !exists {
+			user := &model.Creator{}
+			if userID.Valid {
+				user.ID = userID.String
+				user.FirstName = firstname.String
+				user.LastName = lastname.String
+				user.Nickname = nickname.String
+				user.Avatar = avatar.String
+			}
+
 			post = &model.Post{
 				ID:            postID,
+				User:          *user,
 				GroupID:       "",
 				Content:       content,
 				LikesCount:    likesCount,
@@ -63,9 +79,6 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 				Privacy:       privacy,
 				CreatedAt:     createdAt,
 				Media:         []model.Media{},
-			}
-			if groupID.Valid {
-				post.GroupID = groupID.String
 			}
 			postsMap[postID] = post
 		}
