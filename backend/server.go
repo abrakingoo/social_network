@@ -22,12 +22,12 @@ func main() {
 		Queries: repository.Query{
 			Db: db,
 		},
-		User:    &model.User{},
+		User: &model.User{},
 	}
 
 	server := http.Server{
 		Addr:    ":8000",
-		Handler: app.RouteChecker(app.Routes()),
+		Handler: app.WithCORS(app.RouteChecker(app.Routes())),
 	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil {

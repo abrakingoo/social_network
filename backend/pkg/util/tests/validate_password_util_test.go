@@ -3,8 +3,8 @@ package test
 import (
 	"testing"
 
-	"social/pkg/util"
 	"golang.org/x/crypto/bcrypt"
+	"social/pkg/util"
 )
 
 func TestValidatePassword(t *testing.T) {

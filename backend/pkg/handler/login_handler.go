@@ -56,11 +56,7 @@ func (app *App) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = util.SetSessionCookie(w, sessionID, csrfToken)
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusInternalServerError, "Internal server error", Error)
-		return
-	}
+	util.SetSessionCookie(w, sessionID, csrfToken)
 
 	err = app.Queries.InsertData("sessions", []string{
 		"id",

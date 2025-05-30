@@ -18,7 +18,7 @@ func GenerateCSRFToken() (string, error) {
 }
 
 // SetSessionCookie sets the session cookie and a CSRF token cookie
-func SetSessionCookie(w http.ResponseWriter, sessionID, csrfToken string) error {
+func SetSessionCookie(w http.ResponseWriter, sessionID, csrfToken string) {
 	// Set the session cookie
 	sessionCookie := http.Cookie{
 		Name:     "session_id",
@@ -42,6 +42,30 @@ func SetSessionCookie(w http.ResponseWriter, sessionID, csrfToken string) error 
 		Expires:  time.Now().Add(24 * time.Hour),
 	}
 	http.SetCookie(w, &csrfCookie)
+}
 
-	return nil
+// ExpireSessionCookie expires the session and CSRF token cookies
+func ExpireSessionCookie(w http.ResponseWriter) {
+	sessionCookie := http.Cookie{
+		Name:     "session_id",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Unix(0, 0),
+	}
+
+	csrfCookie := http.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: false,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Unix(0, 0),
+	}
+
+	http.SetCookie(w, &sessionCookie)
+	http.SetCookie(w, &csrfCookie)
 }
