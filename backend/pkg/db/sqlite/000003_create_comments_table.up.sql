@@ -2,7 +2,6 @@ CREATE TABLE IF NOT EXISTS comments (
     id TEXT PRIMARY KEY NOT NULL UNIQUE,
     post_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
-    group_id TEXT,
     content TEXT,
     likes_count INTEGER DEFAULT 0,  
     dislikes_count INTEGER DEFAULT 0, 
