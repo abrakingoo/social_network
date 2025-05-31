@@ -25,33 +25,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-// Auth context dependency removed
+import { useAuth } from '@/context/AuthContext';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Static data instead of context
-  const currentUser = {
-    id: '1',
-    firstName: 'Demo',
-    lastName: 'User',
-    avatar: ''
-  };
-  
-  // Static logout function
-  const logout = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('token');
-    }
-  };
+  const { currentUser, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   // Check if on authentication pages
   const isAuthPage = pathname.includes('/login') || pathname.includes('/register');
 
-  const handleLogout = () => {
-    logout();
-    router.push('/');
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
   };
 
   const navItems = [
@@ -75,6 +62,11 @@ const Navbar = () => {
       </header>
     );
   }
+
+  const displayName = currentUser?.nickname || `${currentUser?.firstName} ${currentUser?.lastName}`;
+  const initials = currentUser?.firstName && currentUser?.lastName
+    ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
+    : '??';
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -128,14 +120,14 @@ const Navbar = () => {
                   <Button variant="ghost" className="rounded-full p-0 hover:bg-transparent focus:bg-transparent">
                     <Avatar className="h-8 w-8 cursor-default">
                       <AvatarImage src={currentUser.avatar} />
-                      <AvatarFallback>{currentUser.firstName[0]}{currentUser.lastName[0]}</AvatarFallback>
+                      <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <div className="flex items-center p-2">
                     <div className="ml-2 text-sm font-medium">
-                      {currentUser.firstName} {currentUser.lastName}
+                      {displayName}
                     </div>
                   </div>
                   <DropdownMenuSeparator />

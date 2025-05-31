@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 
 const RegisterForm = ({ onSubmit, isLoading }) => {
   const [maxDate, setMaxDate] = useState('');
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,7 +20,7 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
     is_public: true,
     avatar: null
   });
-  
+
   // Set max date to today's date when component mounts
   useEffect(() => {
     const today = new Date();
@@ -40,13 +40,13 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    
+
     // Clear field error when user starts typing
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
-  
+
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -67,7 +67,7 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
     e.preventDefault();
     setError('');
     setFieldErrors({});
-    
+
     const newFieldErrors = {};
     let hasErrors = false;
 
@@ -79,32 +79,32 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
         newFieldErrors.first_name = 'First name is required';
         hasErrors = true;
       }
-      
+
       if (!last_name) {
         newFieldErrors.last_name = 'Last name is required';
         hasErrors = true;
       }
-      
+
       if (!email) {
         newFieldErrors.email = 'Email is required';
         hasErrors = true;
       }
-      
+
       if (!password) {
         newFieldErrors.password = 'Password is required';
         hasErrors = true;
       }
-      
+
       if (!confirmed_password) {
         newFieldErrors.confirmed_password = 'Please confirm your password';
         hasErrors = true;
       }
-      
+
       if (!date_of_birth) {
         newFieldErrors.date_of_birth = 'Date of birth is required';
         hasErrors = true;
       }
-      
+
       if (hasErrors) {
         setFieldErrors(newFieldErrors);
         throw new Error('Please fill in all required fields');
@@ -149,14 +149,18 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
 
       // Call the provided onSubmit handler
       if (onSubmit) {
+        // Create a copy of formData for submission (don't mutate original)
+        const submissionData = { ...formData };
+
         // Add default avatar if none provided
-        if (!formData.avatar) {
-          formData.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name + ' ' + last_name)}&background=random`;
+        if (!submissionData.avatar) {
+          submissionData.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name + ' ' + last_name)}&background=random`;
         }
 
-        formData.date_of_birth = birthDate.toISOString();
+        // Convert date to ISO format for backend, but don't mutate original formData
+        submissionData.date_of_birth = birthDate.toISOString();
 
-        onSubmit(formData);
+        onSubmit(submissionData);
       }
     } catch (err) {
       setError(err.message);

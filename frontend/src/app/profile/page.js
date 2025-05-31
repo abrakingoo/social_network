@@ -17,14 +17,10 @@ const Profile = () => {
   const { getUserPosts } = usePosts();
   const [activeTab, setActiveTab] = useState('posts');
   const [profileUser, setProfileUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Extract username from pathname if available
   useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-      return;
-    }
-
     // Check if we're on a specific user's profile or the current user's profile
     const pathParts = pathname.split('/');
     const username = pathParts.length > 2 ? pathParts[2] : null;
@@ -42,16 +38,29 @@ const Profile = () => {
     } else {
       setProfileUser(currentUser);
     }
+    setIsLoading(false);
   }, [currentUser, pathname, router, getAllUsers]);
 
-  // Don't render if user not authenticated or profile user not found
-  if (!currentUser || !profileUser) {
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Don't render if profile user not found
+  if (!profileUser) {
     return null;
   }
 
   const isOwnProfile = currentUser.id === profileUser.id;
   const userPosts = getUserPosts(profileUser.id);
   const displayName = profileUser.nickname || `${profileUser.firstName} ${profileUser.lastName}`;
+  const initials = profileUser.firstName && profileUser.lastName
+    ? `${profileUser.firstName[0]}${profileUser.lastName[0]}`
+    : '??';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -77,7 +86,7 @@ const Profile = () => {
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-default">
               <AvatarImage src={profileUser.avatar} alt={displayName} />
-              <AvatarFallback>{profileUser.firstName[0]}{profileUser.lastName[0]}</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
             {isOwnProfile && (
