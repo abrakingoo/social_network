@@ -6,17 +6,23 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import RegisterForm from '@/components/auth/RegisterForm';
 
-// Helper function to ensure date is in yyyy-MM-dd format
+// Helper function to ensure date is in DD/MM/YYYY format
 const formatDateForInput = (dateValue) => {
   if (!dateValue) return '';
   if (typeof dateValue === 'string') {
-    // If it's already in yyyy-MM-dd format, return as is
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue;
-    // If it's ISO format, extract date part
-    return dateValue.split('T')[0];
+    // If it's already in DD/MM/YYYY format, return as is
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateValue)) return dateValue;
+    // If it's in YYYY-MM-DD format, convert to DD/MM/YYYY
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      const [year, month, day] = dateValue.split('-');
+      return `${day}/${month}/${year}`;
+    }
   }
   if (dateValue instanceof Date) {
-    return dateValue.toISOString().split('T')[0];
+    const day = String(dateValue.getDate()).padStart(2, '0');
+    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+    const year = dateValue.getFullYear();
+    return `${day}/${month}/${year}`;
   }
   return '';
 };
@@ -49,14 +55,30 @@ export default function RegisterPage() {
 
       console.log('Sending to backend:', JSON.stringify(backendFormData));
 
+      // Create FormData object
+      const multipartFormData = new FormData();
+      multipartFormData.append('email', backendFormData.email);
+      multipartFormData.append('password', backendFormData.password);
+      multipartFormData.append('confirmed_password', backendFormData.confirmed_password);
+      multipartFormData.append('first_name', backendFormData.first_name);
+      multipartFormData.append('last_name', backendFormData.last_name);
+      multipartFormData.append('date_of_birth', backendFormData.date_of_birth);
+      multipartFormData.append('nickname', backendFormData.nickname);
+      multipartFormData.append('about', backendFormData.about_me);
+      multipartFormData.append('is_public', backendFormData.is_public);
+
+      // Handle avatar
+      if (backendFormData.avatar instanceof File) {
+        multipartFormData.append('avatar', backendFormData.avatar);
+      } else if (typeof backendFormData.avatar === 'string') {
+        // If it's a URL string, we'll use it directly
+        multipartFormData.append('avatar_url', backendFormData.avatar);
+      }
+
       const response = await fetch('http://localhost:8000/api/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
         credentials: 'include',
-        body: JSON.stringify(backendFormData),
+        body: multipartFormData,
       });
 
       if (!response.ok) {
@@ -78,7 +100,7 @@ export default function RegisterPage() {
       });
 
       // Store the email to make login easier
-      sessionStorage.setItem('lastRegisteredEmail', formData.email);
+      sessionStorage.setItem('lastRegisteredEmail', backendFormData.email);
 
       router.push('/login');
     } catch (error) {
