@@ -75,56 +75,62 @@ func ValidateUserDetails(w http.ResponseWriter, r *http.Request, user *User) (in
 	}
 
 	// Handle avatar
-	if len(formErrors) == 0 && len(avatar) == 1 {
-		fileHeader := avatar[0]
+	if len(formErrors) == 0 {
+		// Check for avatar URL first
+		avatarURL := strings.TrimSpace(r.FormValue("avatar_url"))
+		if avatarURL != "" {
+			avatarPath = avatarURL
+		} else if len(avatar) == 1 {
+			fileHeader := avatar[0]
 
-		file, err := fileHeader.Open()
-		if err != nil {
-			formErrors["media"] = append(formErrors["media"], "Failed to open avatar file.")
-			return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
-		}
-		defer file.Close()
+			file, err := fileHeader.Open()
+			if err != nil {
+				formErrors["media"] = append(formErrors["media"], "Failed to open avatar file.")
+				return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
+			}
+			defer file.Close()
 
-		tempfile := filepath.Join("/tmp", fileHeader.Filename)
-		out, err := os.Create(tempfile)
-		if err != nil {
-			formErrors["media"] = append(formErrors["media"], "Failed to save avatar file.")
-			return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
-		}
-		defer out.Close()
+			tempfile := filepath.Join("/tmp", fileHeader.Filename)
+			out, err := os.Create(tempfile)
+			if err != nil {
+				formErrors["media"] = append(formErrors["media"], "Failed to save avatar file.")
+				return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
+			}
+			defer out.Close()
 
-		if _, err := io.Copy(out, file); err != nil {
-			formErrors["media"] = append(formErrors["media"], "Failed to write avatar file.")
-			return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
-		}
+			if _, err := io.Copy(out, file); err != nil {
+				formErrors["media"] = append(formErrors["media"], "Failed to write avatar file.")
+				return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
+			}
 
-		f, err := os.Open(tempfile)
-		if err != nil {
-			formErrors["media"] = append(formErrors["media"], "Failed to re-open temp file.")
-			return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
-		}
-		defer f.Close()
+			f, err := os.Open(tempfile)
+			if err != nil {
+				formErrors["media"] = append(formErrors["media"], "Failed to re-open temp file.")
+				return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
+			}
+			defer f.Close()
 
-		mimetype, err := util.IsValidMimeType(f)
-		if err != nil {
-			formErrors["media"] = append(formErrors["media"], "Not a valid image MIME type.")
-			return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
-		}
+			mimetype, err := util.IsValidMimeType(f)
+			if err != nil {
+				formErrors["media"] = append(formErrors["media"], "Not a valid image MIME type.")
+				return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
+			}
 
-		switch mimetype {
-		case "image/jpeg":
-			avatarPath, err = util.CompressJPEG(tempfile, 70)
-		case "image/png":
-			avatarPath, err = util.CompressPNG(tempfile)
-		case "image/gif":
-			avatarPath, err = util.CompressGIF(tempfile, true)
-		default:
-			formErrors["media"] = append(formErrors["media"], "Unsupported image format.")
-			return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
-		}
+			switch mimetype {
+			case "image/jpeg":
+				avatarPath, err = util.CompressJPEG(tempfile, 70)
+			case "image/png":
+				avatarPath, err = util.CompressPNG(tempfile)
+			case "image/gif":
+				avatarPath, err = util.CompressGIF(tempfile, true)
+			default:
+				formErrors["media"] = append(formErrors["media"], "Unsupported image format.")
+				return http.StatusNotAcceptable, formErrors, fmt.Errorf("form errors")
+			}
 
-		if err != nil {
-			formErrors["media"] = append(formErrors["media"], "Failed to compress avatar.")
+			if err != nil {
+				formErrors["media"] = append(formErrors["media"], "Failed to compress avatar.")
+			}
 		}
 	}
 
