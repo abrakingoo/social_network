@@ -6,6 +6,21 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import RegisterForm from '@/components/auth/RegisterForm';
 
+// Helper function to ensure date is in yyyy-MM-dd format
+const formatDateForInput = (dateValue) => {
+  if (!dateValue) return '';
+  if (typeof dateValue === 'string') {
+    // If it's already in yyyy-MM-dd format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue;
+    // If it's ISO format, extract date part
+    return dateValue.split('T')[0];
+  }
+  if (dateValue instanceof Date) {
+    return dateValue.toISOString().split('T')[0];
+  }
+  return '';
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -25,7 +40,7 @@ export default function RegisterPage() {
         confirmed_password: formData.confirmed_password,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        date_of_birth: formData.date_of_birth.split('T')[0], // Convert ISO date to yyyy-MM-dd
+        date_of_birth: formatDateForInput(formData.date_of_birth), // Use helper function
         avatar: formData.avatar,
         nickname: formData.nickname || formData.email.split('@')[0],
         about_me: formData.about || '',
@@ -34,7 +49,7 @@ export default function RegisterPage() {
 
       console.log('Sending to backend:', JSON.stringify(backendFormData));
 
-      const response = await fetch('http://localhost:8000/api/auth/register', {
+      const response = await fetch('http://localhost:8000/api/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
