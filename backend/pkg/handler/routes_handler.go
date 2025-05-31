@@ -14,6 +14,7 @@ var allowedRoutes = map[string][]string{
 	"/api/getPosts": {"GET", "OPTIONS"},
 	"/api/profile":  {"GET", "OPTIONS"},
 	"/api/logout":   {"POST", "OPTIONS"},
+	"/api/addGroup": {"POST", "OPTIONS"},
 }
 
 type App struct {
@@ -21,6 +22,7 @@ type App struct {
 	User    *model.User
 }
 
+// RouteChecker is a middleware that checks if the requested route and method are allowed.
 func (app *App) RouteChecker(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -46,10 +48,11 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 		})
 }
 
+// Routes sets up the application routes and returns an http.Handler.
 func (app *App) Routes() http.Handler {
 	mux := http.NewServeMux()
 
-	// Public routes with CORS
+	// Public routes
 	mux.Handle("/api/register", http.HandlerFunc(app.Register))
 	mux.Handle("/api/login", http.HandlerFunc(app.Login))
 
@@ -58,5 +61,6 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/getPosts", app.AuthMiddleware(http.HandlerFunc(app.GetPosts)))
 	mux.Handle("/api/profile", app.AuthMiddleware(http.HandlerFunc(app.Profile)))
 	mux.Handle("/api/logout", app.AuthMiddleware(http.HandlerFunc(app.Logout)))
+	mux.Handle("/api/addGroup", app.AuthMiddleware(http.HandlerFunc(app.AddGroup)))
 	return mux
 }

@@ -6,15 +6,9 @@ import (
 )
 
 func (app *App) Profile(w http.ResponseWriter, r *http.Request) {
-	sessionCookie, err := r.Cookie("session_id")
+	userID, err := app.GetSessionData(r)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session cookie missing", Error)
-		return
-	}
-
-	userID, err := app.Queries.FetchSessionUser(sessionCookie.Value)
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized: session not found", Error)
+		app.JSONResponse(w, r, http.StatusUnauthorized, "unauthorized", Error)
 		return
 	}
 

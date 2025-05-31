@@ -45,3 +45,16 @@ func (app App) AuthMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+func (app *App) GetSessionData(r *http.Request) (string, error) {
+	sessionCookie, err := r.Cookie("session_id")
+	if err != nil {
+		return "", err
+	}
+
+	userID, err := app.Queries.FetchSessionUser(sessionCookie.Value)
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
+}
