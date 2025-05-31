@@ -127,9 +127,10 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 		SELECT 
 			p.id, p.group_id, p.content, 
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar 
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
+		LEFT JOIN users u ON u.id = p.user_id
 		WHERE p.user_id = ?
 		ORDER BY p.created_at DESC
 	`
@@ -144,16 +145,21 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 
 	for rows.Next() {
 		var (
-			post     model.Post
-			groupID  sql.NullString
-			mediaID  sql.NullString
-			mediaURL sql.NullString
+			post      model.Post
+			groupID   sql.NullString
+			mediaID   sql.NullString
+			mediaURL  sql.NullString
+			userID    sql.NullString
+			firstname sql.NullString
+			lastname  sql.NullString
+			nickname  sql.NullString
+			avatar    sql.NullString
 		)
 
 		if err := rows.Scan(
 			&post.ID, &groupID, &post.Content,
 			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
-			&mediaID, &mediaURL,
+			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
 		); err != nil {
 			return fmt.Errorf("failed to scan user post: %w", err)
 		}
@@ -162,6 +168,17 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 		if groupID.Valid {
 			post.GroupID = groupID.String
 		}
+
+		creator := &model.Creator{}
+		if userID.Valid {
+			creator.ID = userID.String
+			creator.FirstName = firstname.String
+			creator.LastName = lastname.String
+			creator.Nickname = nickname.String
+			creator.Avatar = avatar.String
+		}
+
+		post.User = *creator
 
 		if existingPost, exists := postsMap[post.ID]; exists {
 			if mediaID.Valid {
@@ -177,10 +194,9 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 				})
 			}
 			postsMap[post.ID] = &post
-			user.Post = append(user.Post, post)
 		}
 	}
-	user.Post = []model.Post{} // Clear any existing posts
+	user.Post = make([]model.Post, 0, len(postsMap))
 	for _, post := range postsMap {
 		user.Post = append(user.Post, *post)
 	}
@@ -229,9 +245,10 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
         SELECT 
             p.id, p.group_id, p.content, 
             p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-            m.id, m.url
+            m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
         FROM posts p
         LEFT JOIN media m ON m.parent_id = p.id
+		LEFT JOIN users u ON u.id = p.user_id
         WHERE p.id IN (` + placeholders + `)
         ORDER BY p.created_at DESC
     `
@@ -252,16 +269,21 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 	var Posts []model.Post
 	for rows.Next() {
 		var (
-			post     model.Post
-			groupID  sql.NullString
-			mediaID  sql.NullString
-			mediaURL sql.NullString
+			post      model.Post
+			groupID   sql.NullString
+			mediaID   sql.NullString
+			mediaURL  sql.NullString
+			userID    sql.NullString
+			firstname sql.NullString
+			lastname  sql.NullString
+			nickname  sql.NullString
+			avatar    sql.NullString
 		)
 
 		if err := rows.Scan(
 			&post.ID, &groupID, &post.Content,
 			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
-			&mediaID, &mediaURL,
+			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
 		); err != nil {
 			return []model.Post{}, fmt.Errorf("failed to scan post: %w", err)
 		}
@@ -273,6 +295,16 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 			post.GroupID = ""
 		}
 
+		creator := &model.Creator{}
+		if userID.Valid {
+			creator.ID = userID.String
+			creator.FirstName = firstname.String
+			creator.LastName = lastname.String
+			creator.Nickname = nickname.String
+			creator.Avatar = avatar.String
+		}
+
+		post.User = *creator
 		// Check if post already exists in the map (due to LEFT JOIN media)
 		if existingPost, exists := postsMap[post.ID]; exists {
 			// Append media if it exists
