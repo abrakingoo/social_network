@@ -15,27 +15,17 @@ export const AuthProvider = ({ children }) => {
   // Function to check if user is authenticated
   const checkAuth = async () => {
     try {
-      // Check session validity and get user data
-      console.log('Checking session validity with backend...'); // Updated log
-      const response = await fetch(`${API_BASE_URL}/api/auth/check`, {
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
         },
       });
 
-      console.log('Backend check response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('Backend check successful, full data:', data); // Log the full data object
-        // Access user data from nested structure
-        const userData = data.message ? data.message.user : undefined; // Correctly access nested user data
-        console.log('Backend check successful, user data:', userData);
-        setCurrentUser(userData);
+        setCurrentUser(data.message);
       } else {
-        // Session is invalid or expired on backend
-        console.log('Backend session check failed (status not OK), setting currentUser to null');
         setCurrentUser(null);
       }
     } catch (error) {
@@ -43,7 +33,6 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(null);
     } finally {
       setLoading(false);
-      console.log('Authentication check finished, loading set to false');
     }
   };
 
@@ -57,7 +46,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const credentials = btoa(`${email}:${password}`);
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,16 +61,8 @@ export const AuthProvider = ({ children }) => {
         throw new Error(errorData.error || 'Login failed');
       }
 
-      const data = await response.json();
-      console.log('Login response:', data);
-
-      // Set user data from the response
-      if (data.message && data.message.user) {
-        setCurrentUser(data.message.user);
-        return true;
-      } else {
-        throw new Error('Invalid response format from server');
-      }
+      await checkAuth();
+      return true;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
