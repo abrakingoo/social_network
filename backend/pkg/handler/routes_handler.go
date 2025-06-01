@@ -56,6 +56,10 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/register", http.HandlerFunc(app.Register))
 	mux.Handle("/api/login", http.HandlerFunc(app.Login))
 
+	// Serve media files
+	fs := http.FileServer(http.Dir("backend/pkg/db/media"))
+	mux.Handle("/pkg/db/media/", http.StripPrefix("/pkg/db/media/", fs))
+
 	// protected routes
 	mux.Handle("/api/addPost", app.AuthMiddleware(http.HandlerFunc(app.AddPost)))
 	mux.Handle("/api/getPosts", app.AuthMiddleware(http.HandlerFunc(app.GetPosts)))
