@@ -31,7 +31,7 @@ func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
         SELECT g.id, g.title, g.description, 
 		g.created_at, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM groups g
-		LEFT JOIN users u ON u.id = g.creator_id
+		JOIN users u ON u.id = g.creator_id
         WHERE g.id = ? 
     `, groupid)
 
@@ -51,6 +51,34 @@ func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
 }
 
 func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error {
+	rows, err := q.Db.Query(`
+		SELECT 
+			u.id, u.first_name, u.last_name, u.nickname, u.avatar, gm.role
+		FROM group_members gm
+		JOIN users u ON u.id = gm.user_id
+		WHERE gm.group_id = ?
+	`, groupid)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var member model.Creator
+
+		err := rows.Scan(
+			&member.ID, &member.FirstName, &member.LastName, &member.Nickname,
+			&member.Avatar, &member.Role)
+		if err != nil {
+			return err
+		}
+
+		group.Members = append(group.Members, member)
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
 
 	return nil
 }
