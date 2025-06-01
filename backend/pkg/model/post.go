@@ -37,4 +37,5 @@ type Creator struct {
 	LastName  string `json:"last_name"`
 	Nickname  string `json:"nickname"`
 	Avatar    string `json:"avatar"`
+	Role      string `json:"role"`
 }
