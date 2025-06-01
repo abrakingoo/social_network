@@ -34,54 +34,6 @@ const DEFAULT_COMMENT_STRUCTURE = {
   createdAt: ''
 };
 
-// Mock posts data
-const INITIAL_POSTS = [
-  {
-    id: '1',
-    authorId: '1',
-    content: 'Just launched my new website! Check it out and let me know what you think.',
-    images: [],
-    privacy: PRIVACY_LEVELS.PUBLIC,
-    createdAt: '2023-09-15T10:30:00Z',
-    likes: ['2'],
-    comments: [
-      {
-        id: '1',
-        authorId: '2',
-        content: 'Looks great! Congrats on the launch!',
-        createdAt: '2023-09-15T11:45:00Z'
-      }
-    ]
-  },
-  {
-    id: '2',
-    authorId: '1',
-    content: 'Beautiful sunset at the beach today. Nature is amazing! 🌅',
-    images: ['https://images.unsplash.com/photo-1500673922987-e212871fec22'],
-    privacy: PRIVACY_LEVELS.FOLLOWERS,
-    createdAt: '2023-09-14T18:20:00Z',
-    likes: [],
-    comments: []
-  },
-  {
-    id: '3',
-    authorId: '2',
-    content: 'Working on some new artwork. Will share more details soon!',
-    images: [],
-    privacy: PRIVACY_LEVELS.PUBLIC,
-    createdAt: '2023-09-13T14:10:00Z',
-    likes: ['1'],
-    comments: [
-      {
-        id: '2',
-        authorId: '1',
-        content: 'Can\'t wait to see it!',
-        createdAt: '2023-09-13T15:30:00Z'
-      }
-    ]
-  }
-];
-
 export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
