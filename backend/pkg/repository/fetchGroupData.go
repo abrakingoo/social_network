@@ -211,7 +211,81 @@ func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error 
 	return nil
 }
 
-func (q *Query) fetchGroupEvents(groupid string, group *model.GroupData) error {
+func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
+	rows, err := q.Db.Query(`
+		SELECT
+			e.id, e.title, e.description, e.event_time, e.created_at,
+			ec.id, ec.first_name, ec.last_name, ec.nickname, ec.avatar,
+			u.id, u.first_name, u.last_name, u.nickname, u.avatar, ea.status
+		FROM events e
+		JOIN users ec ON ec.id = e.creator_id
+		LEFT JOIN (
+			SELECT * FROM event_attendance WHERE status = 'going'
+		) ea ON ea.event_id = e.id
+		LEFT JOIN users u ON u.id = ea.user_id
+		WHERE e.group_id = ?
+		ORDER BY e.event_time
+	`, groupID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
 
+	eventsMap := make(map[string]*model.Events)
+
+	for rows.Next() {
+		var (
+			eventID, title, description string
+			eventTime, createdAt        time.Time
+
+			creator model.Creator
+			attendee model.Creator
+
+			nullAttendeeID sql.NullString
+			nullFirstName  sql.NullString
+			nullLastName   sql.NullString
+			nullNickname   sql.NullString
+			nullAvatar     sql.NullString
+			nullStatus     sql.NullString
+		)
+
+		err := rows.Scan(
+			&eventID, &title, &description, &eventTime, &createdAt,
+			&creator.ID, &creator.FirstName, &creator.LastName, &creator.Nickname, &creator.Avatar,
+			&nullAttendeeID, &nullFirstName, &nullLastName, &nullNickname, &nullAvatar, &nullStatus,
+		)
+		if err != nil {
+			return err
+		}
+
+		event, exists := eventsMap[eventID]
+		if !exists {
+			event = &model.Events{
+				ID:          eventID,
+				Title:       title,
+				Description: description,
+				EventTime:   eventTime,
+				CreatedAt:   createdAt,
+				Creator:     creator,
+				Attendees:   []model.Creator{},
+			}
+			eventsMap[eventID] = event
+		}
+
+		if nullAttendeeID.Valid {
+			attendee.ID = nullAttendeeID.String
+			attendee.FirstName = nullFirstName.String
+			attendee.LastName = nullLastName.String
+			attendee.Nickname = nullNickname.String
+			attendee.Avatar = nullAvatar.String
+			attendee.Role = nullStatus.String 
+			event.Attendees = append(event.Attendees, attendee)
+		}
+	}
+
+	// Collect all events into the group
+	for _, e := range eventsMap {
+		group.Events = append(group.Events, *e)
+	}
 	return nil
 }
