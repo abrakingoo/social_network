@@ -1,8 +1,12 @@
 package repository
 
-import "social/pkg/model"
+import (
+	"database/sql"
+	"errors"
+	"social/pkg/model"
+)
 
-func(q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
+func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 	var group model.GroupData
 
 	// fetch available group info
@@ -19,13 +23,31 @@ func(q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 		return model.GroupData{}, err
 	}
 
-
 	return group, nil
 }
 
 func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
+	row := q.Db.QueryRow(`
+        SELECT g.id, g.title, g.description, 
+		g.created_at, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+		FROM groups g
+		LEFT JOIN users u ON u.id = g.creator_id
+        WHERE g.id = ? 
+    `, groupid)
 
+	var user = model.Creator{}
+
+	err := row.Scan(&group.ID, &group.Title, &group.About, &group.CreatedAt, &user.ID, &user.FirstName, &user.LastName, &user.Nickname, &user.Avatar)
+	if err == sql.ErrNoRows {
+		return errors.New("no group data found")
+	}
+	if err != nil {
+		return err
+	}
+
+	group.Creator = user
 	return nil
+
 }
 
 func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error {
