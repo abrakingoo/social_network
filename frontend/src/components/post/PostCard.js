@@ -15,27 +15,18 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 
-// Auth context dependency removed
 import { usePosts } from '@/context/PostContext';
+import { useAuth } from '@/context/AuthContext';
+
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const PostCard = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  // Static data instead of context
-  const currentUser = {
-    id: '1',
-    firstName: 'Demo',
-    lastName: 'User'
-  };
-  
-  // Static function for getting user data
-  const getUserById = (id) => ({
-    id,
-    firstName: id === '1' ? 'Demo' : 'User',
-    lastName: id === '1' ? 'User' : String(id),
-    avatar: ''
-  });
+  // Get the current user from context
+  const { currentUser } = useAuth();
   const { toggleLike, addComment, deletePost } = usePosts();
 
   // Check if we're on mobile
@@ -47,14 +38,12 @@ const PostCard = ({ post }) => {
     // Initial check
     checkIfMobile();
 
-    // Add event listener
     window.addEventListener('resize', checkIfMobile);
 
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  // Ensure post is properly formatted regardless of source
   const normalizePost = (inputPost) => {
     // Return null if post is missing or not an object
     if (!inputPost || typeof inputPost !== 'object') {
@@ -64,12 +53,15 @@ const PostCard = ({ post }) => {
     // Create a normalized post with default values for missing properties
     return {
       id: inputPost.id || `post-${Math.random().toString(36).substring(2, 9)}`,
-      authorId: inputPost.authorId || (inputPost.author?.id || 'unknown-user'),
+      author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
       createdAt: inputPost.createdAt || inputPost.timestamp || new Date().toISOString(),
-      likes: Array.isArray(inputPost.likes) ? inputPost.likes : [],
+      likesCount: inputPost.likesCount || 0,
+      dislikesCount: inputPost.dislikesCount || 0,
+      commentsCount: inputPost.commentsCount || 0,
       comments: Array.isArray(inputPost.comments) ? inputPost.comments : [],
-      images: Array.isArray(inputPost.images) ? inputPost.images : []
+      media: Array.isArray(inputPost.media) ? inputPost.media.map(m => m.URL || m.url) : [],
+      privacy: inputPost.privacy || 'public'
     };
   };
 
@@ -81,36 +73,14 @@ const PostCard = ({ post }) => {
     return null;
   }
 
-  // Get author details with fallbacks
-  const getAuthor = (authorId) => {
-    let author = getUserById(authorId);
+  const author = normalizedPost.author;
+  const isAuthor = currentUser && currentUser.id === author.id;
+  // Likes handling will need to be updated once backend supports it
+  const hasLiked = false;
 
-    // If author not found in the users list, create a fallback author
-    if (!author) {
-      // Use any author name from the post or default values
-      const authorNameParts = post.author && typeof post.author === 'string'
-        ? post.author.split(' ')
-        : ['Unknown', 'User'];
-
-      author = {
-        id: authorId,
-        firstName: authorNameParts[0] || 'Unknown',
-        lastName: authorNameParts[1] || 'User',
-        avatar: null,
-        nickname: null
-      };
-    }
-
-    return author;
-  };
-
-  const author = getAuthor(normalizedPost.authorId);
-  const isAuthor = currentUser && currentUser.id === normalizedPost.authorId;
-  const hasLiked = currentUser && normalizedPost.likes.includes(currentUser.id);
-
-  // Author data access with fallbacks
-  const firstName = author.firstName || 'Unknown';
-  const lastName = author.lastName || 'User';
+  // Author data access with fallbacks from backend format
+  const firstName = author.first_name || author.firstName || 'Unknown';
+  const lastName = author.last_name || author.lastName || 'User';
   const authorName = author.nickname || `${firstName} ${lastName}`;
 
   const formattedDate = formatDistanceToNow(new Date(normalizedPost.createdAt), { addSuffix: true });
@@ -194,9 +164,9 @@ const PostCard = ({ post }) => {
         <CardHeader className="pt-4 pb-0">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <Avatar>
+              <Avatar className="h-10 w-10">
                 <AvatarImage src={author.avatar} alt={authorName} />
-                <AvatarFallback>{firstName[0]}{lastName[0]}</AvatarFallback>
+                <AvatarFallback>{firstName?.[0] || ''}{lastName?.[0] || ''}</AvatarFallback>
               </Avatar>
               <div>
                 <div className="font-semibold">{authorName}</div>
@@ -226,12 +196,12 @@ const PostCard = ({ post }) => {
         <CardContent className="pt-3">
           <p className="whitespace-pre-wrap">{normalizedPost.content}</p>
 
-          {normalizedPost.images.length > 0 && (
+          {normalizedPost.media && normalizedPost.media.length > 0 && (
             <div className="mt-3 rounded-md overflow-hidden">
-              {normalizedPost.images.map((image, index) => (
+              {normalizedPost.media.map((image, index) => (
                 <img
                   key={index}
-                  src={image}
+                  src={`${API_BASE_URL}/${image}`}
                   alt={`Post image ${index + 1}`}
                   className="w-full h-auto max-h-96 object-cover"
                 />
@@ -241,12 +211,12 @@ const PostCard = ({ post }) => {
 
           <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
             <div>
-              {normalizedPost.likes.length > 0 ?
-                `${normalizedPost.likes.length} ${normalizedPost.likes.length === 1 ? 'like' : 'likes'}` : ''}
+              {normalizedPost.likesCount > 0 ?
+                `${normalizedPost.likesCount} ${normalizedPost.likesCount === 1 ? 'like' : 'likes'}` : ''}
             </div>
             <div>
-              {normalizedPost.comments.length > 0 ?
-                `${normalizedPost.comments.length} ${normalizedPost.comments.length === 1 ? 'comment' : 'comments'}` : ''}
+              {normalizedPost.commentsCount > 0 ?
+                `${normalizedPost.commentsCount} ${normalizedPost.commentsCount === 1 ? 'comment' : 'comments'}` : ''}
             </div>
           </div>
         </CardContent>
