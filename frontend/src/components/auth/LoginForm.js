@@ -10,22 +10,21 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
-  const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
 
   const handleEmailChange = useCallback((e) => {
     setEmail(e.target.value);
     if (fieldErrors.email) {
-      setFieldErrors(prev => ({ ...prev, email: '' }));
+      setFieldErrors(prev => ({ ...prev, email: null }));
     }
-  }, [fieldErrors]);
+  }, [fieldErrors.email]);
 
   const handlePasswordChange = useCallback((e) => {
     setPassword(e.target.value);
-    if (fieldErrors.password) {
-      setFieldErrors(prev => ({ ...prev, password: '' }));
+    if (fieldErrors.credentials) {
+      setFieldErrors(prev => ({ ...prev, credentials: null }));
     }
-  }, [fieldErrors]);
+  }, [fieldErrors.credentials]);
 
   const handleRememberMeChange = useCallback((checked) => {
     setRememberMe(checked);
@@ -33,44 +32,40 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    setError('');
     setFieldErrors({});
-    
-    const newFieldErrors = {};
-    let hasErrors = false;
+
+    // Client-side validation
+    const errors = {};
+    if (!email.trim()) errors.email = 'Email or nickname is required';
+    if (!password) errors.password = 'Password is required';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
 
     try {
-      // Validate form
-      if (!email.trim()) {
-        newFieldErrors.email = 'Email or nickname is required';
-        hasErrors = true;
+      await onSubmit({
+        email: email.trim(),
+        password,
+        rememberMe
+      });
+    } catch (error) {
+      // Handle server validation errors
+      if (error.type === 'validation' && error.field === 'credentials') {
+        setFieldErrors({ credentials: error.message });
+      } else if (error.type === 'rate_limit') {
+        setFieldErrors({ general: error.message });
       }
-
-      if (!password) {
-        newFieldErrors.password = 'Password is required';
-        hasErrors = true;
-      }
-      
-      if (hasErrors) {
-        setFieldErrors(newFieldErrors);
-        throw new Error('Please fill in all required fields');
-      }
-
-      // Call the provided onSubmit handler
-      if (onSubmit) {
-        onSubmit({ email, password, rememberMe });
-      }
-
-    } catch (err) {
-      setError(err.message);
+      // Other errors are handled by parent component
     }
   }, [email, password, rememberMe, onSubmit]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <div className="p-3 rounded-md bg-red-50 text-red-500 text-sm">
-          {error}
+      {fieldErrors.general && (
+        <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
+          {fieldErrors.general}
         </div>
       )}
 
@@ -82,28 +77,33 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
           placeholder="Enter nickname or email address"
           value={email}
           onChange={handleEmailChange}
-          className={fieldErrors.email ? "border-red-500" : ""}
+          className={fieldErrors.email ? "border-red-500 focus:border-red-500" : ""}
+          disabled={isLoading}
           required
         />
         {fieldErrors.email && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+          <p className="text-red-500 text-xs mt-1">
+            {fieldErrors.email}
+          </p>
         )}
       </div>
 
       <div className="space-y-2">
-        <div>
-          <Label htmlFor="password">Password</Label>
-        </div>
+        <Label htmlFor="password">Password</Label>
         <Input
           id="password"
           type="password"
+          placeholder="Enter your password"
           value={password}
           onChange={handlePasswordChange}
-          className={fieldErrors.password ? "border-red-500" : ""}
+          className={fieldErrors.password || fieldErrors.credentials ? "border-red-500 focus:border-red-500" : ""}
+          disabled={isLoading}
           required
         />
-        {fieldErrors.password && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>
+        {(fieldErrors.password || fieldErrors.credentials) && (
+          <p className="text-red-500 text-xs mt-1">
+            {fieldErrors.password || fieldErrors.credentials}
+          </p>
         )}
       </div>
 
@@ -112,19 +112,18 @@ const LoginForm = memo(({ onSubmit, isLoading }) => {
           id="remember-me"
           checked={rememberMe}
           onCheckedChange={handleRememberMeChange}
+          disabled={isLoading}
         />
         <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
       </div>
 
       <Button
         type="submit"
-        className="w-full bg-social hover:bg-social-dark"
+        className="w-full bg-social hover:bg-social-dark disabled:opacity-50"
         disabled={isLoading}
       >
         {isLoading ? 'Logging in...' : 'Login'}
       </Button>
-
-
     </form>
   );
 });
