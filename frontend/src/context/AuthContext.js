@@ -8,6 +8,17 @@ const AuthContext = createContext();
 // API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Custom error class for authentication
+class AuthError extends Error {
+  constructor(message, type = 'general', field = null, status = null) {
+    super(message);
+    this.name = 'AuthError';
+    this.type = type;
+    this.field = field;
+    this.status = status;
+  }
+}
+
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +40,6 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser(null);
       }
     } catch (error) {
-      console.error('Authentication check failed:', error);
       setCurrentUser(null);
     } finally {
       setLoading(false);
@@ -41,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Login function
+  // Login function with structured error handling
   const login = async (email, password, rememberMe) => {
     try {
       const credentials = btoa(`${email}:${password}`);
@@ -57,15 +67,49 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
-        throw new Error(errorData.error || 'Login failed');
+        const errorData = await response.json().catch(() => ({}));
+
+        switch (response.status) {
+          case 401:
+            throw new AuthError(
+              'Invalid email/nickname or password',
+              'validation',
+              'credentials',
+              401
+            );
+          case 500:
+            throw new AuthError(
+              'Server error. Please try again later.',
+              'server',
+              null,
+              500
+            );
+          case 429:
+            throw new AuthError(
+              'Too many login attempts. Please wait and try again.',
+              'rate_limit',
+              null,
+              429
+            );
+          default:
+            throw new AuthError(
+              errorData.error || 'Login failed. Please try again.',
+              'general',
+              null,
+              response.status
+            );
+        }
       }
 
       await checkAuth();
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
+      if (error instanceof AuthError) {
+        throw error;
+      } else {
+        console.error('Unexpected login error:', error);
+        throw new AuthError('Network error. Please check your connection.', 'network');
+      }
     }
   };
 
@@ -82,8 +126,6 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         setCurrentUser(null);
-      } else {
-        console.error('Logout failed');
       }
     } catch (error) {
       console.error('Logout error:', error);
@@ -107,7 +149,6 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
       return data.user;
     } catch (error) {
-      console.error('Get user failed:', error);
       throw error;
     }
   };
@@ -129,7 +170,6 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
       return data.users;
     } catch (error) {
-      console.error('Get users failed:', error);
       throw error;
     }
   };
