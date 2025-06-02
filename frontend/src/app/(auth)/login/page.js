@@ -17,22 +17,27 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(formData.email, formData.password, formData.rememberMe);
+      await login(formData.email, formData.password, formData.rememberMe);
 
-      if (success) {
-        toast({
-          title: "Success",
-          description: "You have been logged in successfully",
-        });
-        console.log('Login successful, attempting to redirect to /');
-        router.push('/');
-      }
-    } catch (error) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to login",
-        variant: "destructive",
+        title: "Success",
+        description: "You have been logged in successfully",
       });
+
+      router.push('/');
+    } catch (error) {
+      // AuthError objects have structured properties
+      if (error.type === 'validation' || error.type === 'rate_limit') {
+        // Let the form handle these validation errors
+        throw error;
+      } else {
+        // Show system errors as toast
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,4 +63,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
