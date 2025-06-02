@@ -161,24 +161,7 @@ const Navbar = () => {
                 )}
               </Button>
             </div>
-          ) : (
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/login')}
-              >
-                Login
-              </Button>
-              <Button
-                className="bg-social hover:bg-social-dark"
-                size="sm"
-                onClick={() => router.push('/register')}
-              >
-                Register
-              </Button>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
 
