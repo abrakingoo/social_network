@@ -9,7 +9,7 @@ type GroupTitle struct {
 	Title string `json:"title"`
 }
 
-func GetGroupData(app *App) (w http.ResponseWriter, r *http.Request) {
+func (app *App) GetGroupData(w http.ResponseWriter, r *http.Request) {
 	var groupTitle GroupTitle
 	userID, err := app.GetSessionData(r)
 	if err != nil {
