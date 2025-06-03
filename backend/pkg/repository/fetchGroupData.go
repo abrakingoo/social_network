@@ -3,10 +3,11 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"social/pkg/model"
 	"fmt"
-	"time"
 	"strings"
+	"time"
+
+	"social/pkg/model"
 )
 
 func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
@@ -19,7 +20,7 @@ func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 	}
 
 	// fetch group post
-	group.Posts, err = q.fetchGroupPosts(groupid); 
+	group.Posts, err = q.fetchGroupPosts(groupid)
 	if err != nil {
 		return model.GroupData{}, err
 	}
@@ -46,7 +47,7 @@ func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
         WHERE g.id = ? 
     `, groupid)
 
-	var user = model.Creator{}
+	user := model.Creator{}
 
 	err := row.Scan(&group.ID, &group.Title, &group.About, &group.CreatedAt, &user.ID, &user.FirstName, &user.LastName, &user.Nickname, &user.Avatar)
 	if err == sql.ErrNoRows {
@@ -58,7 +59,6 @@ func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
 
 	group.Creator = user
 	return nil
-
 }
 
 func (q *Query) fetchGroupPosts(groupid string) ([]model.Post, error) {
@@ -178,7 +178,6 @@ func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 	return posts, nil
 }
 
-
 func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error {
 	rows, err := q.Db.Query(`
 		SELECT 
@@ -223,7 +222,6 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 		WHERE e.group_id = ?
 		ORDER BY e.event_time
 	`, groupID)
-	
 	if err != nil {
 		return err
 	}
@@ -231,23 +229,23 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 
 	var events []model.Events
 	var eventIDs []string
-	
+
 	for eventRows.Next() {
 		var event model.Events
 		err := eventRows.Scan(
 			&event.ID, &event.Title, &event.Description, &event.EventTime, &event.CreatedAt,
-			&event.Creator.ID, &event.Creator.FirstName, &event.Creator.LastName, 
+			&event.Creator.ID, &event.Creator.FirstName, &event.Creator.LastName,
 			&event.Creator.Nickname, &event.Creator.Avatar,
 		)
 		if err != nil {
 			return err
 		}
-		
+
 		event.Attendees = []model.Creator{}
 		events = append(events, event)
 		eventIDs = append(eventIDs, event.ID)
 	}
-	
+
 	if err = eventRows.Err(); err != nil {
 		return err
 	}
@@ -261,7 +259,7 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 			placeholders[i] = "?"
 			args[i] = id
 		}
-		
+
 		attendeeQuery := fmt.Sprintf(`
 			SELECT ea.event_id, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 			FROM event_attendance ea
@@ -269,36 +267,36 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 			WHERE ea.event_id IN (%s) AND ea.status = 'going'
 			ORDER BY ea.event_id, u.first_name
 		`, strings.Join(placeholders, ","))
-		
+
 		attendeeRows, err := q.Db.Query(attendeeQuery, args...)
 		if err != nil {
 			return err
 		}
 		defer attendeeRows.Close()
-		
+
 		// Create map for quick event lookup
 		eventMap := make(map[string]*model.Events)
 		for i := range events {
 			eventMap[events[i].ID] = &events[i]
 		}
-		
+
 		for attendeeRows.Next() {
 			var eventID string
 			var attendee model.Creator
-			
+
 			err := attendeeRows.Scan(
-				&eventID, &attendee.ID, &attendee.FirstName, 
+				&eventID, &attendee.ID, &attendee.FirstName,
 				&attendee.LastName, &attendee.Nickname, &attendee.Avatar,
 			)
 			if err != nil {
 				return err
 			}
-			
+
 			if event, exists := eventMap[eventID]; exists {
 				event.Attendees = append(event.Attendees, attendee)
 			}
 		}
-		
+
 		if err = attendeeRows.Err(); err != nil {
 			return err
 		}
@@ -306,4 +304,25 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 
 	group.Events = events
 	return nil
+}
+
+func (q *Query) FetchGroupId(userid, title string) (string, error) {
+	var id string
+	row := q.Db.QueryRow(`
+		SELECT id
+		FROM groups
+		WHERE title = ? AND creator_id = ?
+		LIMIT 1
+	`, title, userid)
+
+	err := row.Scan(&id)
+	if err == sql.ErrNoRows {
+		return "", errors.New("the group does not exist")
+	}
+
+	if err != nil {
+		return "", fmt.Errorf("database error: %v", err)
+	}
+
+	return id, nil
 }
