@@ -22,4 +22,3 @@ type Events struct {
 	CreatedAt   time.Time `json:"created_at"`
 	Attendees   []Creator `json:"attendees"`
 }
-
