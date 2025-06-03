@@ -11,18 +11,14 @@ type GroupTitle struct {
 
 func (app *App) GetGroupData(w http.ResponseWriter, r *http.Request) {
 	var groupTitle GroupTitle
-	userID, err := app.GetSessionData(r)
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusUnauthorized, "unauthorized", Error)
-	}
 
-	err = json.NewDecoder(r.Body).Decode(&groupTitle)
+	err := json.NewDecoder(r.Body).Decode(&groupTitle)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid JSON data", Error)
 		return
 	}
 
-	id, err := app.Queries.FetchGroupId(groupTitle.Title, userID)
+	id, err := app.Queries.FetchGroupId(groupTitle.Title)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusConflict, "Error fetching group ID", Error)
 		return
