@@ -3,9 +3,15 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-
-	"social/pkg/model"
+	"time"
 )
+
+type AddEventData struct {
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	EventTime   time.Time `json:"event_time"`
+	GroupTitle  string    `json:"group_title"`
+}
 
 func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
@@ -14,9 +20,15 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event := &model.Events{}
+	event := AddEventData{}
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "invalid request body", Error)
+		return
+	}
+
+	groupId, err := app.Queries.FetchGroupId(event.GroupTitle)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusNotFound, "group not found", Error)
 		return
 	}
 
@@ -33,6 +45,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 	}, []any{
 		event.Title,
 		userID,
+		groupId,
 		event.EventTime,
 	})
 	if err != nil {
