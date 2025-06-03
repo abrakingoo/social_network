@@ -306,14 +306,14 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 	return nil
 }
 
-func (q *Query) FetchGroupId(userid, title string) (string, error) {
+func (q *Query) FetchGroupId(title string) (string, error) {
 	var id string
 	row := q.Db.QueryRow(`
 		SELECT id
 		FROM groups
-		WHERE title = ? AND creator_id = ?
+		WHERE title = ? 
 		LIMIT 1
-	`, title, userid)
+	`, title)
 
 	err := row.Scan(&id)
 	if err == sql.ErrNoRows {
