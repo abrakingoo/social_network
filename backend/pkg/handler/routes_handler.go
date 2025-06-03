@@ -17,13 +17,6 @@ var allowedRoutes = map[string][]string{
 	"/api/logout":       {"POST", "OPTIONS"},
 	"/api/addGroup":     {"POST", "OPTIONS"},
 	"/api/getGroupData": {"GET", "OPTIONS"},
-	"/api/login":     {"POST", "OPTIONS"},
-	"/api/register":  {"POST", "OPTIONS"},
-	"/api/addPost":   {"POST", "OPTIONS"},
-	"/api/getPosts":  {"GET", "OPTIONS"},
-	"/api/profile":   {"GET", "OPTIONS"},
-	"/api/logout":    {"POST", "OPTIONS"},
-	"/api/addGroup":  {"POST", "OPTIONS"},
 	"/pkg/db/media/": {"GET", "OPTIONS"},
 }
 
