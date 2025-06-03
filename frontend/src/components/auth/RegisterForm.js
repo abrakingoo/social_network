@@ -4,10 +4,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Eye, EyeOff } from 'lucide-react';
 
-const RegisterForm = ({ onSubmit, isLoading }) => {
+const RegisterForm = ({ onSubmit, isLoading, backendErrors = {}, onClearBackendErrors }) => {
   const [maxDate, setMaxDate] = useState('');
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,7 +23,6 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
     avatar: null
   });
 
-  // Set max date to today's date when component mounts
   useEffect(() => {
     const today = new Date();
     const year = today.getFullYear();
@@ -34,6 +35,17 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
   const [fieldErrors, setFieldErrors] = useState({});
   const fileInputRef = useRef(null);
 
+  // Clear client errors when backend errors arrive
+  useEffect(() => {
+    if (Object.keys(backendErrors).length > 0) {
+      setError('');
+      setFieldErrors({});
+    }
+  }, [backendErrors]);
+
+  // Merge client-side and backend errors, prioritizing backend errors
+  const displayErrors = { ...fieldErrors, ...backendErrors };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -41,26 +53,30 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
       [name]: type === 'checkbox' ? checked : value
     }));
 
-    // Clear field error when user starts typing
-    if (fieldErrors[name]) {
+    // Clear errors when user starts typing
+    if (displayErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: '' }));
+
+      // Clear backend error for this field
+      if (backendErrors[name] && onClearBackendErrors) {
+        onClearBackendErrors(name);
+      }
+    }
+
+    // Clear generic error when user starts typing
+    if (error) {
+      setError('');
     }
   };
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setFormData(prev => ({
-        ...prev,
-        avatar: file
-      }));
+      setFormData(prev => ({ ...prev, avatar: e.target.files[0] }));
     }
   };
 
   const validatePassword = (password) => {
-    // At least 8 characters, one uppercase, one lowercase, one number
-    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    return regex.test(password);
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
   };
 
   const handleSubmit = (e) => {
@@ -68,235 +84,175 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
     setError('');
     setFieldErrors({});
 
-    const newFieldErrors = {};
-    let hasErrors = false;
-
-    try {
-      let { email, password, confirmed_password, first_name, last_name, date_of_birth } = formData;
-
-      // Validate required fields with specific error messages
-      if (!first_name) {
-        newFieldErrors.first_name = 'First name is required';
-        hasErrors = true;
-      }
-
-      if (!last_name) {
-        newFieldErrors.last_name = 'Last name is required';
-        hasErrors = true;
-      }
-
-      if (!email) {
-        newFieldErrors.email = 'Email is required';
-        hasErrors = true;
-      }
-
-      if (!password) {
-        newFieldErrors.password = 'Password is required';
-        hasErrors = true;
-      }
-
-      if (!confirmed_password) {
-        newFieldErrors.confirmed_password = 'Please confirm your password';
-        hasErrors = true;
-      }
-
-      if (!date_of_birth) {
-        newFieldErrors.date_of_birth = 'Date of birth is required';
-        hasErrors = true;
-      }
-
-      if (hasErrors) {
-        setFieldErrors(newFieldErrors);
-        throw new Error('Please fill in all required fields');
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        newFieldErrors.email = 'Please enter a valid email address';
-        setFieldErrors(newFieldErrors);
-        throw new Error('Please enter a valid email address');
-      }
-
-      // Validate password strength
-      if (!validatePassword(password)) {
-        newFieldErrors.password = 'Password must be at least 8 characters and include uppercase, lowercase, and numbers';
-        setFieldErrors(newFieldErrors);
-        throw new Error('Password must be at least 8 characters and include uppercase, lowercase, and numbers');
-      }
-
-      // Check if passwords match
-      if (password !== confirmed_password) {
-        newFieldErrors.confirmed_password = 'Passwords do not match';
-        setFieldErrors(newFieldErrors);
-        throw new Error('Passwords do not match');
-      }
-
-      // Check age (must be at least 13)
-      const birthDate = new Date(date_of_birth);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDifference = today.getMonth() - birthDate.getMonth();
-      if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-
-      if (age < 13) {
-        newFieldErrors.date_of_birth = 'You must be at least 13 years old to register';
-        setFieldErrors(newFieldErrors);
-        throw new Error('You must be at least 13 years old to register');
-      }
-
-      // Call the provided onSubmit handler
-      if (onSubmit) {
-        // Create a copy of formData for submission (don't mutate original)
-        const submissionData = { ...formData };
-
-        // Add default avatar if none provided
-        if (!submissionData.avatar) {
-          submissionData.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name + ' ' + last_name)}&background=random`;
-        }
-
-        // Convert date to ISO format for backend, but don't mutate original formData
-        submissionData.date_of_birth = birthDate.toISOString();
-
-        onSubmit(submissionData);
-      }
-    } catch (err) {
-      setError(err.message);
+    // Clear any previous backend errors since we're resubmitting
+    if (Object.keys(backendErrors).length > 0) {
+      // Don't show generic error when we have specific field errors
+      return;
     }
+
+    const newFieldErrors = {};
+    const { email, password, confirmed_password, first_name, last_name, date_of_birth } = formData;
+
+    // Client-side validation
+    if (!first_name) newFieldErrors.first_name = 'First name is required';
+    if (!last_name) newFieldErrors.last_name = 'Last name is required';
+    if (!email) newFieldErrors.email = 'Email is required';
+    if (!password) newFieldErrors.password = 'Password is required';
+    if (!confirmed_password) newFieldErrors.confirmed_password = 'Please confirm your password';
+    if (!date_of_birth) newFieldErrors.date_of_birth = 'Date of birth is required';
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newFieldErrors.email = 'Please enter a valid email address';
+      setFieldErrors(newFieldErrors);
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      newFieldErrors.password = 'Password must be at least 8 characters and include uppercase, lowercase, and numbers';
+      setFieldErrors(newFieldErrors);
+      setError('Password must be at least 8 characters and include uppercase, lowercase, and numbers');
+      return;
+    }
+
+    if (password !== confirmed_password) {
+      newFieldErrors.confirmed_password = 'Passwords do not match';
+      setFieldErrors(newFieldErrors);
+      setError('Passwords do not match');
+      return;
+    }
+
+    // Age validation
+    const birthDate = new Date(date_of_birth);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 13) {
+      newFieldErrors.date_of_birth = 'You must be at least 13 years old to register';
+      setFieldErrors(newFieldErrors);
+      setError('You must be at least 13 years old to register');
+      return;
+    }
+
+    const submissionData = { ...formData };
+    if (!submissionData.avatar) {
+      submissionData.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(first_name + ' ' + last_name)}&background=random`;
+    }
+    submissionData.date_of_birth = birthDate.toISOString();
+
+    // Clear any backend errors when making a new submission
+    if (onClearBackendErrors && Object.keys(backendErrors).length > 0) {
+      Object.keys(backendErrors).forEach(field => onClearBackendErrors(field));
+    }
+
+    onSubmit?.(submissionData);
+  };
+
+  const renderField = (id, label, type = 'text', required = false, extraProps = {}) => {
+    if (type === 'password') {
+      return (
+        <div className="space-y-2">
+          <Label htmlFor={id}>
+            {label} {required && <span className="text-red-500">*</span>}
+          </Label>
+          <div className="relative">
+            <Input
+              id={id}
+              name={id}
+              type={id === 'password' ? (showPassword ? 'text' : 'password') : (showConfirmPassword ? 'text' : 'password')}
+              value={formData[id]}
+              onChange={handleChange}
+              className={`pr-10 ${displayErrors[id] ? "border-red-500" : ""}`}
+              required={required}
+              {...extraProps}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              onClick={() => id === 'password' ? setShowPassword(!showPassword) : setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {id === 'password' ? (
+                showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />
+              ) : (
+                showConfirmPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />
+              )}
+              <span className="sr-only">{id === 'password' ? (showPassword ? 'Hide password' : 'Show password') : (showConfirmPassword ? 'Hide password' : 'Show password')}</span>
+            </Button>
+          </div>
+          {displayErrors[id] && (
+            <p className="text-red-500 text-xs mt-1">{displayErrors[id]}</p>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={id}>
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+        <Input
+          id={id}
+          name={id}
+          type={type}
+          value={formData[id]}
+          onChange={handleChange}
+          className={displayErrors[id] ? "border-red-500" : ""}
+          required={required}
+          {...extraProps}
+        />
+        {displayErrors[id] && (
+          <p className="text-red-500 text-xs mt-1">{displayErrors[id]}</p>
+        )}
+      </div>
+    );
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
+      {error && Object.keys(backendErrors).length === 0 && (
         <div className="p-3 rounded-md bg-red-50 text-red-500 text-sm">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="first_name">First Name <span className="text-red-500">*</span></Label>
-          <Input
-            id="first_name"
-            name="first_name"
-            value={formData.first_name}
-            onChange={handleChange}
-            className={fieldErrors.first_name ? "border-red-500" : ""}
-            required
-          />
-          {fieldErrors.first_name && (
-            <p className="text-red-500 text-xs mt-1">{fieldErrors.first_name}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="last_name">Last Name <span className="text-red-500">*</span></Label>
-          <Input
-            id="last_name"
-            name="last_name"
-            value={formData.last_name}
-            onChange={handleChange}
-            className={fieldErrors.last_name ? "border-red-500" : ""}
-            required
-          />
-          {fieldErrors.last_name && (
-            <p className="text-red-500 text-xs mt-1">{fieldErrors.last_name}</p>
-          )}
-        </div>
+        {renderField('first_name', 'First Name', 'text', true)}
+        {renderField('last_name', 'Last Name', 'text', true)}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          className={fieldErrors.email ? "border-red-500" : ""}
-          required
-        />
-        {fieldErrors.email && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
-        )}
-      </div>
+      {renderField('email', 'Email', 'email', true)}
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={handleChange}
-          className={fieldErrors.password ? "border-red-500" : ""}
-          required
-        />
+        {renderField('password', 'Password', 'password', true)}
         <p className="text-xs text-gray-500">
           Password must be at least 8 characters and include uppercase, lowercase, and numbers
         </p>
-        {fieldErrors.password && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.password}</p>
-        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="confirmed_password">Confirm Password <span className="text-red-500">*</span></Label>
-        <Input
-          id="confirmed_password"
-          name="confirmed_password"
-          type="password"
-          value={formData.confirmed_password}
-          onChange={handleChange}
-          className={fieldErrors.confirmed_password ? "border-red-500" : ""}
-          required
-        />
-        {fieldErrors.confirmed_password && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.confirmed_password}</p>
-        )}
-      </div>
+      {renderField('confirmed_password', 'Confirm Password', 'password', true)}
 
       <div className="space-y-2">
-        <Label htmlFor="date_of_birth">Date of Birth <span className="text-red-500">*</span></Label>
-        <Input
-          id="date_of_birth"
-          name="date_of_birth"
-          type="date"
-          value={formData.date_of_birth}
-          onChange={handleChange}
-          max={maxDate}
-          className={fieldErrors.date_of_birth ? "border-red-500" : ""}
-          required
-        />
+        {renderField('date_of_birth', 'Date of Birth', 'date', true, { max: maxDate })}
         <p className="text-xs text-gray-500">
           You must be at least 13 years old to register
         </p>
-        {fieldErrors.date_of_birth && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.date_of_birth}</p>
-        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="nickname">Nickname (Optional)</Label>
-        <Input
-          id="nickname"
-          name="nickname"
-          value={formData.nickname}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="about">About Me (Optional)</Label>
-        <Input
-          id="about"
-          name="about"
-          value={formData.about}
-          onChange={handleChange}
-        />
-      </div>
+      {renderField('nickname', 'Nickname (Optional)')}
+      {renderField('about', 'About Me (Optional)')}
 
       <div className="space-y-2">
         <Label htmlFor="avatar">Avatar/Image (Optional)</Label>
@@ -326,11 +282,7 @@ const RegisterForm = ({ onSubmit, isLoading }) => {
         </div>
       </div>
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
+      <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? 'Creating Account...' : 'Create Account'}
       </Button>
     </form>

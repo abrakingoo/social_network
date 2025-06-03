@@ -6,13 +6,10 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import RegisterForm from '@/components/auth/RegisterForm';
 
-// Helper function to ensure date is in DD/MM/YYYY format
 const formatDateForInput = (dateValue) => {
   if (!dateValue) return '';
   if (typeof dateValue === 'string') {
-    // If it's already in DD/MM/YYYY format, return as is
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateValue)) return dateValue;
-    // If it's in YYYY-MM-DD format, convert to DD/MM/YYYY
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       const [year, month, day] = dateValue.split('-');
       return `${day}/${month}/${year}`;
@@ -31,49 +28,46 @@ export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [backendErrors, setBackendErrors] = useState({});
+
+  const handleClearBackendErrors = (fieldName) => {
+    setBackendErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+  };
 
   const handleRegister = async (formData) => {
     setIsLoading(true);
+    setBackendErrors({});
 
     try {
-      // Step 1: Add detailed console logging
-      console.log('Registering with original data:', formData);
-
-      // Step 2: Transform frontend data to match backend expectations
       const backendFormData = {
         email: formData.email,
         password: formData.password,
         confirmed_password: formData.confirmed_password,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        date_of_birth: formatDateForInput(formData.date_of_birth), // Use helper function
+        date_of_birth: formatDateForInput(formData.date_of_birth),
         avatar: formData.avatar,
         nickname: formData.nickname || formData.email.split('@')[0],
         about_me: formData.about || '',
         is_public: formData.is_public
       };
 
-      console.log('Sending to backend:', JSON.stringify(backendFormData));
-
-      // Create FormData object
       const multipartFormData = new FormData();
-      multipartFormData.append('email', backendFormData.email);
-      multipartFormData.append('password', backendFormData.password);
-      multipartFormData.append('confirmed_password', backendFormData.confirmed_password);
-      multipartFormData.append('first_name', backendFormData.first_name);
-      multipartFormData.append('last_name', backendFormData.last_name);
-      multipartFormData.append('date_of_birth', backendFormData.date_of_birth);
-      multipartFormData.append('nickname', backendFormData.nickname);
-      multipartFormData.append('about', backendFormData.about_me);
-      multipartFormData.append('is_public', backendFormData.is_public);
-
-      // Handle avatar
-      if (backendFormData.avatar instanceof File) {
-        multipartFormData.append('avatar', backendFormData.avatar);
-      } else if (typeof backendFormData.avatar === 'string') {
-        // If it's a URL string, we'll use it directly
-        multipartFormData.append('avatar_url', backendFormData.avatar);
-      }
+      Object.entries(backendFormData).forEach(([key, value]) => {
+        if (key === 'avatar' && value instanceof File) {
+          multipartFormData.append('avatar', value);
+        } else if (key === 'avatar' && typeof value === 'string') {
+          multipartFormData.append('avatar_url', value);
+        } else if (key === 'about_me') {
+          multipartFormData.append('about', value);
+        } else {
+          multipartFormData.append(key, value);
+        }
+      });
 
       const response = await fetch('http://localhost:8000/api/register', {
         method: 'POST',
@@ -81,17 +75,30 @@ export default function RegisterPage() {
         body: multipartFormData,
       });
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        console.log('Registration error status:', response.status);
-        const errorText = await response.text();
-        console.log('Registration error response:', errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch (e) {
-          errorData = { error: errorText || 'Registration failed' };
+        if (response.status === 406) {
+          // Parse validation errors from backend
+          try {
+            const validationErrors = JSON.parse(responseText);
+            setBackendErrors(validationErrors);
+            throw new Error('Please fix the form errors below');
+          } catch (parseError) {
+            throw new Error(responseText || 'Validation failed');
+          }
+        } else if (response.status === 500) {
+          // Handle server errors (like duplicate email)
+          if (responseText.includes('Failed to register user')) {
+            // Most likely a duplicate email error
+            setBackendErrors({ email: 'This email is already registered. Please login if you have an account.' });
+            throw new Error('Email already exists');
+          } else {
+            throw new Error(responseText || 'Server error occurred');
+          }
+        } else {
+          throw new Error(responseText || 'Registration failed');
         }
-        throw new Error(errorData.error || 'Registration failed');
       }
 
       toast({
@@ -99,15 +106,13 @@ export default function RegisterPage() {
         description: "Your account has been created successfully",
       });
 
-      // Store the email to make login easier
       sessionStorage.setItem('lastRegisteredEmail', backendFormData.email);
-
       router.push('/login');
+
     } catch (error) {
-      console.error('Registration error:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to create account",
+        title: "Registration failed",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -115,15 +120,18 @@ export default function RegisterPage() {
     }
   };
 
-
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Create an Account</h1>
-        <p className="text-gray-500 mt-2">Enter your information to register</p>
       </div>
 
-      <RegisterForm onSubmit={handleRegister} isLoading={isLoading} />
+      <RegisterForm
+        onSubmit={handleRegister}
+        isLoading={isLoading}
+        backendErrors={backendErrors}
+        onClearBackendErrors={handleClearBackendErrors}
+      />
 
       <div className="text-center text-sm">
         <p>
