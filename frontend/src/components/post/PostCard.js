@@ -197,15 +197,52 @@ const PostCard = ({ post }) => {
           <p className="whitespace-pre-wrap">{normalizedPost.content}</p>
 
           {normalizedPost.media && normalizedPost.media.length > 0 && (
-            <div className="mt-3 rounded-md overflow-hidden">
-              {normalizedPost.media.map((image, index) => (
-                <img
-                  key={index}
-                  src={`${API_BASE_URL}/${image}`}
-                  alt={`Post image ${index + 1}`}
-                  className="w-full h-auto max-h-96 object-cover"
-                />
-              ))}
+            <div className={`mt-3 rounded-xl overflow-hidden ${normalizedPost.media.length > 1 ? 'grid gap-1' : ''
+              } ${normalizedPost.media.length === 2 ? 'grid-cols-2' :
+                normalizedPost.media.length === 3 ? 'grid-cols-2' :
+                  normalizedPost.media.length >= 4 ? 'grid-cols-2' : ''
+              }`}>
+              {normalizedPost.media.map((image, index) => {
+                // Calculate aspect ratio and row spans for different image counts
+                let aspectRatio = '';
+                let rowSpan = '';
+
+                if (normalizedPost.media.length === 1) {
+                  aspectRatio = 'aspect-auto max-h-[500px]';
+                } else if (normalizedPost.media.length === 2) {
+                  aspectRatio = 'aspect-square';
+                } else if (normalizedPost.media.length === 3) {
+                  if (index === 0) {
+                    aspectRatio = 'aspect-video';
+                    rowSpan = 'row-span-2';
+                  } else {
+                    aspectRatio = 'aspect-square';
+                  }
+                } else if (normalizedPost.media.length >= 4) {
+                  aspectRatio = 'aspect-square';
+                }
+
+                return (
+                  <div
+                    key={index}
+                    className={`relative ${rowSpan} group cursor-pointer`}
+                    onClick={() => {/* Add lightbox functionality here if desired */ }}
+                  >
+                    <img
+                      src={`${API_BASE_URL}/${image}`}
+                      alt={`Post image ${index + 1}`}
+                      className={`w-full h-full object-cover ${aspectRatio} transition-transform group-hover:scale-105`}
+                    />
+                    {normalizedPost.media.length > 4 && index === 3 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <span className="text-white text-2xl font-bold">
+                          +{normalizedPost.media.length - 4}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
