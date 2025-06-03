@@ -1,7 +1,24 @@
 package handler
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+)
+
+type GroupTitle struct {
+	Title string `json:"title"`
+}
 
 func GetGroupData(app *App) (w http.ResponseWriter, r *http.Request) {
-	return
+	var groupTitle GroupTitle
+	userID, err := app.GetSessionData(r)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnauthorized, "unauthorized", Error)
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&groupTitle)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid JSON data", Error)
+		return
+	}
 }
