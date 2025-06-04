@@ -13,6 +13,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { usePosts, PRIVACY_LEVELS } from '@/context/PostContext';
 import { useAuth } from '@/context/AuthContext';
+import { formatAvatarUrl } from '@/lib/utils';
 
 const PostForm = () => {
   const [content, setContent] = useState('');
@@ -47,7 +48,7 @@ const PostForm = () => {
       // Store the actual file objects for upload
       const files = Array.from(e.target.files).slice(0, 4 - imageFiles.length);
       setImageFiles(prev => [...prev, ...files].slice(0, 4)); // Limit to 4 images
-      
+
       // Create preview URLs for display
       const newImages = files.map(file => URL.createObjectURL(file));
       setImages(prev => [...prev, ...newImages].slice(0, 4)); // Limit to 4 images
@@ -99,7 +100,7 @@ const PostForm = () => {
           <CardContent className="pt-4">
             <div className="flex space-x-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={currentUser.avatar} alt={displayName} />
+                <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={displayName} />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <Textarea
