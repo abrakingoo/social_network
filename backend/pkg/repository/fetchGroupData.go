@@ -215,7 +215,7 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 	// First query: Get all events
 	eventRows, err := q.Db.Query(`
 		SELECT
-			e.id, e.title, e.description, e.event_time, e.created_at,
+			e.id, e.title, e.description, e.event_time, e.created_at, e.location,
 			ec.id, ec.first_name, ec.last_name, ec.nickname, ec.avatar
 		FROM events e
 		JOIN users ec ON ec.id = e.creator_id
@@ -233,7 +233,7 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 	for eventRows.Next() {
 		var event model.Events
 		err := eventRows.Scan(
-			&event.ID, &event.Title, &event.Description, &event.EventTime, &event.CreatedAt,
+			&event.ID, &event.Title, &event.Description, &event.EventTime, &event.CreatedAt, &event.Location,
 			&event.Creator.ID, &event.Creator.FirstName, &event.Creator.LastName,
 			&event.Creator.Nickname, &event.Creator.Avatar,
 		)
