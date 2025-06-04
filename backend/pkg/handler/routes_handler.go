@@ -17,7 +17,8 @@ var allowedRoutes = map[string][]string{
 	"/api/logout":       {"POST", "OPTIONS"},
 	"/api/addGroup":     {"POST", "OPTIONS"},
 	"/api/getGroupData": {"GET", "OPTIONS"},
-	"/pkg/db/media/": {"GET", "OPTIONS"},
+	"/pkg/db/media/":    {"GET", "OPTIONS"},
+	"/api/addEvent":     {"POST", "OPTIONS"},
 }
 
 type App struct {
