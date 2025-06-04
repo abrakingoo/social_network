@@ -120,8 +120,13 @@ export const PostProvider = ({ children }) => {
   
   // Fetch posts when component mounts
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    if (currentUser) {
+      fetchPosts();
+    } else {
+      setPosts([]);
+      setLoading(false);
+    }
+  }, [fetchPosts, currentUser]);
 
   // Add new post
   const addPost = useCallback(async (postData) => {
