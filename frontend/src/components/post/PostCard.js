@@ -15,28 +15,24 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 
-// Auth context dependency removed
 import { usePosts } from '@/context/PostContext';
+import { useAuth } from '@/context/AuthContext';
+import PostCardLightbox from './PostCardLightbox';
+
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const PostCard = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isMobile, setIsMobile] = useState(false);
-  // Static data instead of context
-  const currentUser = {
-    id: '1',
-    firstName: 'Demo',
-    lastName: 'User'
-  };
-  
-  // Static function for getting user data
-  const getUserById = (id) => ({
-    id,
-    firstName: id === '1' ? 'Demo' : 'User',
-    lastName: id === '1' ? 'User' : String(id),
-    avatar: ''
-  });
+  // Get the current user from context
+  const { currentUser } = useAuth();
   const { toggleLike, addComment, deletePost } = usePosts();
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -47,14 +43,12 @@ const PostCard = ({ post }) => {
     // Initial check
     checkIfMobile();
 
-    // Add event listener
     window.addEventListener('resize', checkIfMobile);
 
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  // Ensure post is properly formatted regardless of source
   const normalizePost = (inputPost) => {
     // Return null if post is missing or not an object
     if (!inputPost || typeof inputPost !== 'object') {
@@ -64,12 +58,15 @@ const PostCard = ({ post }) => {
     // Create a normalized post with default values for missing properties
     return {
       id: inputPost.id || `post-${Math.random().toString(36).substring(2, 9)}`,
-      authorId: inputPost.authorId || (inputPost.author?.id || 'unknown-user'),
+      author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
       createdAt: inputPost.createdAt || inputPost.timestamp || new Date().toISOString(),
-      likes: Array.isArray(inputPost.likes) ? inputPost.likes : [],
+      likesCount: inputPost.likesCount || 0,
+      dislikesCount: inputPost.dislikesCount || 0,
+      commentsCount: inputPost.commentsCount || 0,
       comments: Array.isArray(inputPost.comments) ? inputPost.comments : [],
-      images: Array.isArray(inputPost.images) ? inputPost.images : []
+      media: Array.isArray(inputPost.media) ? inputPost.media.map(m => m.URL || m.url) : [],
+      privacy: inputPost.privacy || 'public'
     };
   };
 
@@ -81,36 +78,14 @@ const PostCard = ({ post }) => {
     return null;
   }
 
-  // Get author details with fallbacks
-  const getAuthor = (authorId) => {
-    let author = getUserById(authorId);
+  const author = normalizedPost.author;
+  const isAuthor = currentUser && currentUser.id === author.id;
+  // Likes handling will need to be updated once backend supports it
+  const hasLiked = false;
 
-    // If author not found in the users list, create a fallback author
-    if (!author) {
-      // Use any author name from the post or default values
-      const authorNameParts = post.author && typeof post.author === 'string'
-        ? post.author.split(' ')
-        : ['Unknown', 'User'];
-
-      author = {
-        id: authorId,
-        firstName: authorNameParts[0] || 'Unknown',
-        lastName: authorNameParts[1] || 'User',
-        avatar: null,
-        nickname: null
-      };
-    }
-
-    return author;
-  };
-
-  const author = getAuthor(normalizedPost.authorId);
-  const isAuthor = currentUser && currentUser.id === normalizedPost.authorId;
-  const hasLiked = currentUser && normalizedPost.likes.includes(currentUser.id);
-
-  // Author data access with fallbacks
-  const firstName = author.firstName || 'Unknown';
-  const lastName = author.lastName || 'User';
+  // Author data access with fallbacks from backend format
+  const firstName = author.first_name || author.firstName || 'Unknown';
+  const lastName = author.last_name || author.lastName || 'User';
   const authorName = author.nickname || `${firstName} ${lastName}`;
 
   const formattedDate = formatDistanceToNow(new Date(normalizedPost.createdAt), { addSuffix: true });
@@ -190,13 +165,22 @@ const PostCard = ({ post }) => {
 
   return (
     <div className={`max-w-4xl mx-auto ${isMobile ? '-mx-4' : ''}`}>
+      {/* Lightbox for images */}
+      <PostCardLightbox
+        open={lightboxOpen}
+        images={normalizedPost.media.map(img => `${API_BASE_URL}/${img}`)}
+        index={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+        onPrev={() => setLightboxIndex((prev) => (prev - 1 + normalizedPost.media.length) % normalizedPost.media.length)}
+        onNext={() => setLightboxIndex((prev) => (prev + 1) % normalizedPost.media.length)}
+      />
       <Card className={`mb-1 bg-white ${isMobile ? 'shadow-none rounded-none border-x-0' : 'shadow-sm'}`}>
         <CardHeader className="pt-4 pb-0">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
-              <Avatar>
+              <Avatar className="h-10 w-10">
                 <AvatarImage src={author.avatar} alt={authorName} />
-                <AvatarFallback>{firstName[0]}{lastName[0]}</AvatarFallback>
+                <AvatarFallback>{firstName?.[0] || ''}{lastName?.[0] || ''}</AvatarFallback>
               </Avatar>
               <div>
                 <div className="font-semibold">{authorName}</div>
@@ -226,27 +210,67 @@ const PostCard = ({ post }) => {
         <CardContent className="pt-3">
           <p className="whitespace-pre-wrap">{normalizedPost.content}</p>
 
-          {normalizedPost.images.length > 0 && (
-            <div className="mt-3 rounded-md overflow-hidden">
-              {normalizedPost.images.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Post image ${index + 1}`}
-                  className="w-full h-auto max-h-96 object-cover"
-                />
-              ))}
+          {normalizedPost.media && normalizedPost.media.length > 0 && (
+            <div className={`mt-3 rounded-xl overflow-hidden ${normalizedPost.media.length > 1 ? 'grid gap-1' : ''
+              } ${normalizedPost.media.length === 2 ? 'grid-cols-2' :
+                normalizedPost.media.length === 3 ? 'grid-cols-2' :
+                  normalizedPost.media.length >= 4 ? 'grid-cols-2' : ''
+              }`}>
+              {normalizedPost.media.map((image, index) => {
+                // Calculate aspect ratio and row spans for different image counts
+                let aspectRatio = '';
+                let rowSpan = '';
+
+                if (normalizedPost.media.length === 1) {
+                  aspectRatio = 'aspect-auto max-h-[500px]';
+                } else if (normalizedPost.media.length === 2) {
+                  aspectRatio = 'aspect-square';
+                } else if (normalizedPost.media.length === 3) {
+                  if (index === 0) {
+                    aspectRatio = 'aspect-video';
+                    rowSpan = 'row-span-2';
+                  } else {
+                    aspectRatio = 'aspect-square';
+                  }
+                } else if (normalizedPost.media.length >= 4) {
+                  aspectRatio = 'aspect-square';
+                }
+
+                return (
+                  <div
+                    key={index}
+                    className={`relative ${rowSpan} group cursor-pointer`}
+                    onClick={() => {
+                      setLightboxIndex(index);
+                      setLightboxOpen(true);
+                    }}
+                  >
+                    <img
+                      src={`${API_BASE_URL}/${image}`}
+                      alt={`Post image ${index + 1}`}
+                      className={`w-full h-full object-cover ${aspectRatio} transition-transform group-hover:scale-105`}
+                    />
+                    {normalizedPost.media.length > 4 && index === 3 && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <span className="text-white text-2xl font-bold">
+                          +{normalizedPost.media.length - 4}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
           <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
             <div>
-              {normalizedPost.likes.length > 0 ?
-                `${normalizedPost.likes.length} ${normalizedPost.likes.length === 1 ? 'like' : 'likes'}` : ''}
+              {normalizedPost.likesCount > 0 ?
+                `${normalizedPost.likesCount} ${normalizedPost.likesCount === 1 ? 'like' : 'likes'}` : ''}
             </div>
             <div>
-              {normalizedPost.comments.length > 0 ?
-                `${normalizedPost.comments.length} ${normalizedPost.comments.length === 1 ? 'comment' : 'comments'}` : ''}
+              {normalizedPost.commentsCount > 0 ?
+                `${normalizedPost.commentsCount} ${normalizedPost.commentsCount === 1 ? 'comment' : 'comments'}` : ''}
             </div>
           </div>
         </CardContent>

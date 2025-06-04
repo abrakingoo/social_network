@@ -1,13 +1,11 @@
-import React, { createContext, useState, useContext, useCallback } from 'react';
-import { toast } from "@/components/ui/sonner";
+'use client';
 
-// Use static dummy user data instead of context
-const dummyUser = {
-  id: '1',
-  email: 'user@example.com',
-  firstName: 'Demo',
-  lastName: 'User'
-};
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import { toast } from "@/components/ui/sonner";
+import { useAuth } from '@/context/AuthContext';
+
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Privacy levels
 export const PRIVACY_LEVELS = {
@@ -36,71 +34,37 @@ const DEFAULT_COMMENT_STRUCTURE = {
   createdAt: ''
 };
 
-// Mock posts data
-const INITIAL_POSTS = [
-  {
-    id: '1',
-    authorId: '1',
-    content: 'Just launched my new website! Check it out and let me know what you think.',
-    images: [],
-    privacy: PRIVACY_LEVELS.PUBLIC,
-    createdAt: '2023-09-15T10:30:00Z',
-    likes: ['2'],
-    comments: [
-      {
-        id: '1',
-        authorId: '2',
-        content: 'Looks great! Congrats on the launch!',
-        createdAt: '2023-09-15T11:45:00Z'
-      }
-    ]
-  },
-  {
-    id: '2',
-    authorId: '1',
-    content: 'Beautiful sunset at the beach today. Nature is amazing! 🌅',
-    images: ['https://images.unsplash.com/photo-1500673922987-e212871fec22'],
-    privacy: PRIVACY_LEVELS.FOLLOWERS,
-    createdAt: '2023-09-14T18:20:00Z',
-    likes: [],
-    comments: []
-  },
-  {
-    id: '3',
-    authorId: '2',
-    content: 'Working on some new artwork. Will share more details soon!',
-    images: [],
-    privacy: PRIVACY_LEVELS.PUBLIC,
-    createdAt: '2023-09-13T14:10:00Z',
-    likes: ['1'],
-    comments: [
-      {
-        id: '2',
-        authorId: '1',
-        content: 'Can\'t wait to see it!',
-        createdAt: '2023-09-13T15:30:00Z'
-      }
-    ]
-  }
-];
-
 export const PostContext = createContext();
 
 export const PostProvider = ({ children }) => {
-  const [posts, setPosts] = useState(INITIAL_POSTS);
-  // Using static dummy user instead of AuthContext
-  const currentUser = dummyUser;
-  const getUserById = (id) => dummyUser;
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
 
   // Normalize post data to ensure consistent structure
   const normalizePost = useCallback((postData) => {
+    if (!postData) return null;
+    
+    console.log('Normalizing post data:', postData);
+    
     // Return a post with all required fields, using default values for missing ones
     return {
       ...DEFAULT_POST_STRUCTURE,
       id: postData.id || Date.now().toString(),
-      authorId: postData.authorId || (currentUser?.id || ''),
-      createdAt: postData.createdAt || new Date().toISOString(),
-      ...postData
+      content: postData.content || '',
+      privacy: postData.privacy || PRIVACY_LEVELS.PUBLIC,
+      createdAt: postData.createdAt || postData.created_at || new Date().toISOString(),
+      likesCount: postData.likesCount || postData.likes || 0,
+      dislikesCount: postData.dislikesCount || postData.dislikes || 0,
+      commentsCount: postData.commentsCount || (postData.comments ? postData.comments.length : 0),
+      comments: Array.isArray(postData.comments) ? postData.comments : [],
+      media: Array.isArray(postData.media) ? postData.media : [],
+      // Handle different ways the author/user info might be provided
+      author: postData.user || postData.author || {
+        id: currentUser?.id || '',
+        first_name: currentUser?.firstName || '',
+        last_name: currentUser?.lastName || ''
+      }
     };
   }, [currentUser]);
 
@@ -114,23 +78,112 @@ export const PostProvider = ({ children }) => {
       ...commentData
     };
   }, [currentUser]);
+  
+  // Function to handle fetching posts from API
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching posts from:', `${API_BASE_URL}/api/getPosts`);
+      const response = await fetch(`${API_BASE_URL}/api/getPosts`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      console.log('Fetch response:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No error details available');
+        console.error('Error response body:', errorText);
+        throw new Error(`Failed to fetch posts: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Posts data received:', data);
+      
+      // The backend returns posts in the 'data' field based on the JSONResponse handler
+      const fetchedPosts = Array.isArray(data) ? data : 
+                           (data.data && Array.isArray(data.data) ? data.data : []);
+      
+      console.log('Processed posts:', fetchedPosts);
+      setPosts(fetchedPosts.map(post => normalizePost(post)));
+      return fetchedPosts;
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      toast.error(`Failed to load posts: ${error.message}`);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [normalizePost]);
+  
+  // Fetch posts when component mounts
+  useEffect(() => {
+    if (currentUser) {
+      fetchPosts();
+    } else {
+      setPosts([]);
+      setLoading(false);
+    }
+  }, [fetchPosts, currentUser]);
 
   // Add new post
-  const addPost = useCallback((postData) => {
+  const addPost = useCallback(async (postData) => {
     if (!currentUser) {
       toast.error("You must be logged in to create a post");
       return false;
     }
 
-    const newPost = normalizePost({
-      authorId: currentUser.id,
-      ...postData
-    });
-
-    setPosts(prevPosts => [newPost, ...prevPosts]);
-    toast.success("Post created successfully");
-    return true;
-  }, [currentUser, normalizePost]);
+    try {
+      const formData = new FormData();
+      formData.append('content', postData.content);
+      formData.append('privacy', postData.privacy);
+      
+      // Add images 
+      if (postData.images && postData.images.length > 0) {
+        // Convert URLs back to File objects if needed
+        for (const imageUrl of postData.images) {
+          // Check if this is a File object or URL string
+          if (imageUrl instanceof File) {
+            formData.append('media', imageUrl);
+          }
+        }
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/api/addPost`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (response.ok) {
+        toast.success('Post created successfully!');
+        console.log('Post created successfully, refreshing posts...');
+        
+        // Refresh the posts list after successful creation
+        setTimeout(async () => {
+          console.log('Fetching posts after timeout...');
+          await fetchPosts();
+        }, 500);
+        
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('Error response from server:', errorText);
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || 'Failed to create post');
+        } catch (jsonError) {
+          throw new Error('Failed to create post: ' + response.status);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast.error(error.message || 'Failed to create post');
+      return false;
+    }
+  }, [currentUser, fetchPosts]);
 
   // Delete post
   const deletePost = useCallback((postId) => {
@@ -209,15 +262,15 @@ export const PostProvider = ({ children }) => {
     const post = posts.find(p => p.id === postId);
     if (!post) return false;
 
-    const comment = post.comments.find(c => c.id === commentId);
-    if (!comment || comment.authorId !== currentUser.id) {
+    const comment = post.comments && post.comments.find(c => c.id === commentId);
+    if (!comment || (comment.authorId !== currentUser.id && comment.author?.id !== currentUser.id)) {
       toast.error("You can only delete your own comments");
       return false;
     }
 
     setPosts(prevPosts =>
       prevPosts.map(post => {
-        if (post.id === postId) {
+        if (post.id === postId && post.comments) {
           return {
             ...post,
             comments: post.comments.filter(c => c.id !== commentId)
@@ -226,95 +279,64 @@ export const PostProvider = ({ children }) => {
         return post;
       })
     );
-
+    
     return true;
   }, [currentUser, posts]);
 
-  // Fetch user's visible posts
-  const getVisiblePosts = useCallback(() => {
+
+
+  // Get filtered posts (simplified to only show public posts for now)
+  const getFilteredPosts = useCallback(() => {
+    console.log('getFilteredPosts called with posts:', posts);
+    console.log('Current user:', currentUser);
+    
     if (!currentUser) return [];
 
-    return posts.filter(post => {
-      // If user is post author, they can see it
-      if (post.authorId === currentUser.id) return true;
+    const filteredPosts = posts.filter(post => {
+      // Skip null posts (shouldn't happen, but just in case)
+      if (!post) return false;
+      
+      // User can always see their own posts
+      if (post.author && post.author.id === currentUser.id) {
+        return true;
+      }
 
       // If post is public, everyone can see it
-      if (post.privacy === PRIVACY_LEVELS.PUBLIC) return true;
-
-      // For followers-only posts, check if user follows the author
-      if (post.privacy === PRIVACY_LEVELS.FOLLOWERS) {
-        const author = getUserById(post.authorId);
-        return author && author.followers && author.followers.includes(currentUser.id);
+      if (post.privacy === PRIVACY_LEVELS.PUBLIC) {
+        return true;
       }
 
-      // For selected-only posts, check if user is in the selected list
-      if (post.privacy === PRIVACY_LEVELS.SELECTED) {
-        return post.selectedUsers && post.selectedUsers.includes(currentUser.id);
-      }
-
+      // For now, we're only implementing public posts
       return false;
     });
-  }, [currentUser, posts, getUserById]);
+    
+    // Sort posts by creation date (newest first)
+    const sortedPosts = [...filteredPosts].sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || 0);
+      const dateB = new Date(b.createdAt || b.created_at || 0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    console.log('Sorted posts (newest first):', sortedPosts);
+    return sortedPosts;
+  }, [currentUser, posts]);
 
-  // Get posts by user ID
+  // Get posts by user ID (simplified)
   const getUserPosts = useCallback((userId) => {
     if (!userId) return [];
 
-    // If fetching own posts, return all
-    if (currentUser && userId === currentUser.id) {
-      return posts.filter(post => post.authorId === userId);
-    }
-
-    const user = getUserById(userId);
-    if (!user) return [];
-
-    // For other users, filter by visibility
-    return posts.filter(post => {
-      if (post.authorId !== userId) return false;
-
-      // If post is public, show it
-      if (post.privacy === PRIVACY_LEVELS.PUBLIC) return true;
-
-      // If post is for followers only, check if current user is a follower
-      if (post.privacy === PRIVACY_LEVELS.FOLLOWERS && currentUser) {
-        return user.followers && user.followers.includes(currentUser.id);
-      }
-
-      // Selected users only
-      if (post.privacy === PRIVACY_LEVELS.SELECTED && currentUser) {
-        return post.selectedUsers && post.selectedUsers.includes(currentUser.id);
-      }
-
-      return false;
-    });
-  }, [currentUser, posts, getUserById]);
-
-  // Function to handle fetching posts from API
-  const fetchPosts = useCallback(async () => {
-    // This would be replaced with a real API call in production
-    try {
-      // Mock API response for now
-      // const response = await fetch('/api/posts');
-      // const data = await response.json();
-      // setPosts(data.map(post => normalizePost(post)));
-
-      // For now just return the mock data
-      return posts;
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      toast.error('Failed to load posts');
-      return [];
-    }
+    return posts.filter(post => post.author && post.author.id === userId);
   }, [posts]);
 
   const value = {
     posts,
+    loading,
     addPost,
     deletePost,
     toggleLike,
     addComment,
     deleteComment,
-    getVisiblePosts,
+    getFilteredPosts,
     getUserPosts,
     fetchPosts,
     normalizePost,

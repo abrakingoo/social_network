@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"social/pkg/model"
 	"social/pkg/repository"
@@ -16,6 +17,7 @@ var allowedRoutes = map[string][]string{
 	"/api/logout":       {"POST", "OPTIONS"},
 	"/api/addGroup":     {"POST", "OPTIONS"},
 	"/api/getGroupData": {"GET", "OPTIONS"},
+	"/pkg/db/media/": {"GET", "OPTIONS"},
 }
 
 type App struct {
@@ -28,7 +30,7 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			allowedURL, ok := allowedRoutes[r.URL.Path]
-			if !ok {
+			if !ok && !strings.HasPrefix(r.URL.Path, "/pkg/db/media/") {
 				app.JSONResponse(w, r, http.StatusNotFound, "route not found", Error)
 				return
 			}
@@ -39,6 +41,10 @@ func (app *App) RouteChecker(next http.Handler) http.Handler {
 				if r.Method == method {
 					method_found = true
 				}
+			}
+
+			if strings.HasPrefix(r.URL.Path, "/pkg/db/media/") && r.Method == http.MethodGet {
+				method_found = true
 			}
 
 			if !method_found {
@@ -56,6 +62,10 @@ func (app *App) Routes() http.Handler {
 	// Public routes
 	mux.Handle("/api/register", http.HandlerFunc(app.Register))
 	mux.Handle("/api/login", http.HandlerFunc(app.Login))
+
+	// Serve media files
+	fs := http.FileServer(http.Dir("pkg/db/media"))
+	mux.Handle("/pkg/db/media/", http.StripPrefix("/pkg/db/media/", fs))
 
 	// protected routes
 	mux.Handle("/api/addPost", app.AuthMiddleware(http.HandlerFunc(app.AddPost)))
