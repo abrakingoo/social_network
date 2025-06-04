@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import PostCard from '@/components/post/PostCard';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/context/PostContext';
+import { formatAvatarUrl } from '@/lib/utils';
 
 const Profile = () => {
   const router = useRouter();
@@ -85,7 +86,7 @@ const Profile = () => {
         <div className="absolute bottom-0 left-0 transform translate-y-1/2 ml-8">
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-default">
-              <AvatarImage src={profileUser.avatar} alt={displayName} />
+              <AvatarImage src={formatAvatarUrl(profileUser.avatar)} alt={displayName} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
