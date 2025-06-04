@@ -44,9 +44,7 @@ export const PostProvider = ({ children }) => {
   // Normalize post data to ensure consistent structure
   const normalizePost = useCallback((postData) => {
     if (!postData) return null;
-    
-    console.log('Normalizing post data:', postData);
-    
+
     // Return a post with all required fields, using default values for missing ones
     return {
       ...DEFAULT_POST_STRUCTURE,
@@ -59,7 +57,6 @@ export const PostProvider = ({ children }) => {
       commentsCount: postData.commentsCount || (postData.comments ? postData.comments.length : 0),
       comments: Array.isArray(postData.comments) ? postData.comments : [],
       media: Array.isArray(postData.media) ? postData.media : [],
-      // Handle different ways the author/user info might be provided
       author: postData.user || postData.author || {
         id: currentUser?.id || '',
         first_name: currentUser?.firstName || '',
@@ -78,12 +75,11 @@ export const PostProvider = ({ children }) => {
       ...commentData
     };
   }, [currentUser]);
-  
+
   // Function to handle fetching posts from API
   const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Fetching posts from:', `${API_BASE_URL}/api/getPosts`);
       const response = await fetch(`${API_BASE_URL}/api/getPosts`, {
         credentials: 'include',
         headers: {
@@ -91,33 +87,24 @@ export const PostProvider = ({ children }) => {
         },
       });
 
-      console.log('Fetch response:', response.status, response.statusText);
-      
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'No error details available');
-        console.error('Error response body:', errorText);
         throw new Error(`Failed to fetch posts: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('Posts data received:', data);
-      
-      // The backend returns posts in the 'data' field based on the JSONResponse handler
-      const fetchedPosts = Array.isArray(data) ? data : 
-                           (data.data && Array.isArray(data.data) ? data.data : []);
-      
-      console.log('Processed posts:', fetchedPosts);
+      const fetchedPosts = Array.isArray(data) ? data :
+                          (data.data && Array.isArray(data.data) ? data.data : []);
+
       setPosts(fetchedPosts.map(post => normalizePost(post)));
       return fetchedPosts;
     } catch (error) {
-      console.error('Error fetching posts:', error);
       toast.error(`Failed to load posts: ${error.message}`);
       return [];
     } finally {
       setLoading(false);
     }
   }, [normalizePost]);
-  
+
   // Fetch posts when component mounts
   useEffect(() => {
     if (currentUser) {
@@ -139,8 +126,8 @@ export const PostProvider = ({ children }) => {
       const formData = new FormData();
       formData.append('content', postData.content);
       formData.append('privacy', postData.privacy);
-      
-      // Add images 
+
+      // Add images
       if (postData.images && postData.images.length > 0) {
         // Convert URLs back to File objects if needed
         for (const imageUrl of postData.images) {
@@ -150,23 +137,23 @@ export const PostProvider = ({ children }) => {
           }
         }
       }
-      
+
       const response = await fetch(`${API_BASE_URL}/api/addPost`, {
         method: 'POST',
         credentials: 'include',
         body: formData
       });
-      
+
       if (response.ok) {
         toast.success('Post created successfully!');
         console.log('Post created successfully, refreshing posts...');
-        
+
         // Refresh the posts list after successful creation
         setTimeout(async () => {
           console.log('Fetching posts after timeout...');
           await fetchPosts();
         }, 500);
-        
+
         return true;
       } else {
         const errorText = await response.text();
@@ -279,52 +266,37 @@ export const PostProvider = ({ children }) => {
         return post;
       })
     );
-    
+
     return true;
   }, [currentUser, posts]);
 
-
-
   // Get filtered posts (simplified to only show public posts for now)
   const getFilteredPosts = useCallback(() => {
-    console.log('getFilteredPosts called with posts:', posts);
-    console.log('Current user:', currentUser);
-    
-    if (!currentUser) return [];
+    if (!currentUser || !posts.length) return [];
 
     const filteredPosts = posts.filter(post => {
-      // Skip null posts (shouldn't happen, but just in case)
       if (!post) return false;
-      
+
       // User can always see their own posts
       if (post.author && post.author.id === currentUser.id) {
         return true;
       }
 
       // If post is public, everyone can see it
-      if (post.privacy === PRIVACY_LEVELS.PUBLIC) {
-        return true;
-      }
-
-      // For now, we're only implementing public posts
-      return false;
+      return post.privacy === PRIVACY_LEVELS.PUBLIC;
     });
-    
+
     // Sort posts by creation date (newest first)
-    const sortedPosts = [...filteredPosts].sort((a, b) => {
+    return [...filteredPosts].sort((a, b) => {
       const dateA = new Date(a.createdAt || a.created_at || 0);
       const dateB = new Date(b.createdAt || b.created_at || 0);
-      return dateB - dateA; // Descending order (newest first)
+      return dateB - dateA;
     });
-    
-    console.log('Sorted posts (newest first):', sortedPosts);
-    return sortedPosts;
   }, [currentUser, posts]);
 
   // Get posts by user ID (simplified)
   const getUserPosts = useCallback((userId) => {
-    if (!userId) return [];
-
+    if (!userId || !posts.length) return [];
     return posts.filter(post => post.author && post.author.id === userId);
   }, [posts]);
 
