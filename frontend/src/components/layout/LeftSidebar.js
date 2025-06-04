@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { User, Users, BookOpen, Calendar, Image, Settings } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
+import { formatAvatarUrl } from '@/lib/utils';
 
 const LeftSidebar = () => {
   const { currentUser } = useAuth();
@@ -54,7 +55,7 @@ const LeftSidebar = () => {
       <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
         <Link href="/profile" className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors">
           <Avatar>
-            <AvatarImage src={currentUser.avatar} alt={displayName} />
+            <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={displayName} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="font-medium truncate">{displayName}</div>
