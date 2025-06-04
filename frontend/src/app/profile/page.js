@@ -14,7 +14,7 @@ import { formatAvatarUrl } from '@/lib/utils';
 const Profile = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, getUserById, getAllUsers } = useAuth();
+  const { currentUser, getUserById, getAllUsers, loading: authLoading } = useAuth();
   const { getUserPosts } = usePosts();
   const [activeTab, setActiveTab] = useState('posts');
   const [profileUser, setProfileUser] = useState(null);
@@ -42,25 +42,25 @@ const Profile = () => {
     setIsLoading(false);
   }, [currentUser, pathname, router, getAllUsers]);
 
-  // Redirect to login if currentUser is null (logged out)
+  // Modify the useEffect to only redirect after auth is loaded
   useEffect(() => {
-    if (!currentUser) {
+    if (!authLoading && !currentUser) {  // Only redirect if auth is done loading and no user
       router.push('/login');
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, authLoading]);
 
-  // Don't render if currentUser is null
-  if (!currentUser) {
-    return null;
-  }
-
-  // Show loading state
-  if (isLoading) {
+  // Modify the loading check to include auth loading
+  if (authLoading || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
+  }
+
+  // Don't render if currentUser is null and auth is done loading
+  if (!authLoading && !currentUser) {
+    return null;
   }
 
   // Don't render if profile user not found
