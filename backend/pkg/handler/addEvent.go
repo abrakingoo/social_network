@@ -11,6 +11,7 @@ type AddEventData struct {
 	Description string    `json:"description"`
 	EventTime   time.Time `json:"event_time"`
 	GroupTitle  string    `json:"group_title"`
+	Location    string    `json:"location"`
 }
 
 func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +43,15 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		"creator_id",
 		"group_id",
 		"event_time",
+		"location",
+		"description",
 	}, []any{
 		event.Title,
 		userID,
 		groupId,
 		event.EventTime,
+		event.Location,
+		event.Description,
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusConflict, "failed to add event", Error)
