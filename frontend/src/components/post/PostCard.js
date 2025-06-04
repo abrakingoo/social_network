@@ -18,6 +18,7 @@ import {
 import { usePosts } from '@/context/PostContext';
 import { useAuth } from '@/context/AuthContext';
 import PostCardLightbox from './PostCardLightbox';
+import { formatAvatarUrl } from '@/lib/utils';
 
 // API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -179,7 +180,7 @@ const PostCard = ({ post }) => {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-3">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={author.avatar} alt={authorName} />
+                <AvatarImage src={formatAvatarUrl(author.avatar)} alt={authorName} />
                 <AvatarFallback>{firstName?.[0] || ''}{lastName?.[0] || ''}</AvatarFallback>
               </Avatar>
               <div>
@@ -309,7 +310,7 @@ const PostCard = ({ post }) => {
             {currentUser && (
               <form onSubmit={handleCommentSubmit} className="flex items-center p-4 space-x-2 w-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar} alt={currentUser.firstName} />
+                  <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={currentUser.firstName} />
                   <AvatarFallback>{currentUser.firstName?.[0] || ''}{currentUser.lastName?.[0] || ''}</AvatarFallback>
                 </Avatar>
                 <Input
