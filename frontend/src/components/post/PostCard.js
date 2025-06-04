@@ -17,6 +17,7 @@ import {
 
 import { usePosts } from '@/context/PostContext';
 import { useAuth } from '@/context/AuthContext';
+import PostCardLightbox from './PostCardLightbox';
 
 // API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -28,6 +29,10 @@ const PostCard = ({ post }) => {
   // Get the current user from context
   const { currentUser } = useAuth();
   const { toggleLike, addComment, deletePost } = usePosts();
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Check if we're on mobile
   useEffect(() => {
@@ -160,6 +165,15 @@ const PostCard = ({ post }) => {
 
   return (
     <div className={`max-w-4xl mx-auto ${isMobile ? '-mx-4' : ''}`}>
+      {/* Lightbox for images */}
+      <PostCardLightbox
+        open={lightboxOpen}
+        images={normalizedPost.media.map(img => `${API_BASE_URL}/${img}`)}
+        index={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+        onPrev={() => setLightboxIndex((prev) => (prev - 1 + normalizedPost.media.length) % normalizedPost.media.length)}
+        onNext={() => setLightboxIndex((prev) => (prev + 1) % normalizedPost.media.length)}
+      />
       <Card className={`mb-1 bg-white ${isMobile ? 'shadow-none rounded-none border-x-0' : 'shadow-sm'}`}>
         <CardHeader className="pt-4 pb-0">
           <div className="flex justify-between items-center">
@@ -226,7 +240,10 @@ const PostCard = ({ post }) => {
                   <div
                     key={index}
                     className={`relative ${rowSpan} group cursor-pointer`}
-                    onClick={() => {/* Add lightbox functionality here if desired */ }}
+                    onClick={() => {
+                      setLightboxIndex(index);
+                      setLightboxOpen(true);
+                    }}
                   >
                     <img
                       src={`${API_BASE_URL}/${image}`}
