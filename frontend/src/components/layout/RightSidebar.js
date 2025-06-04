@@ -3,6 +3,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { formatAvatarUrl } from '@/lib/utils';
 // Auth context dependency removed
 
 const RightSidebar = () => {
@@ -66,7 +67,7 @@ const RightSidebar = () => {
               <div className="flex items-center space-x-2">
                 <div className="relative">
                   <Avatar>
-                    <AvatarImage src={user.avatar} alt={user.firstName} />
+                    <AvatarImage src={formatAvatarUrl(user.avatar)} alt={user.firstName} />
                     <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
                   </Avatar>
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
@@ -98,7 +99,7 @@ const RightSidebar = () => {
             <div key={user.id} className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Avatar>
-                  <AvatarImage src={user.avatar} alt={user.firstName} />
+                  <AvatarImage src={formatAvatarUrl(user.avatar)} alt={user.firstName} />
                   <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
                 </Avatar>
                 <div>
