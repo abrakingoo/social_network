@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/context/AuthContext';
+import { formatAvatarUrl } from '@/lib/utils';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -119,7 +120,7 @@ const Navbar = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="rounded-full p-0 hover:bg-transparent focus:bg-transparent">
                     <Avatar className="h-8 w-8 cursor-default">
-                      <AvatarImage src={currentUser.avatar} />
+                      <AvatarImage src={formatAvatarUrl(currentUser.avatar)} />
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                   </Button>
