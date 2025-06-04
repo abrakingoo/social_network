@@ -42,6 +42,18 @@ const Profile = () => {
     setIsLoading(false);
   }, [currentUser, pathname, router, getAllUsers]);
 
+  // Redirect to login if currentUser is null (logged out)
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, router]);
+
+  // Don't render if currentUser is null
+  if (!currentUser) {
+    return null;
+  }
+
   // Show loading state
   if (isLoading) {
     return (
