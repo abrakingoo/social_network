@@ -18,6 +18,7 @@ const PostForm = () => {
   const [content, setContent] = useState('');
   const [privacy, setPrivacy] = useState(PRIVACY_LEVELS.PUBLIC);
   const [images, setImages] = useState([]);
+  const [imageFiles, setImageFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { currentUser } = useAuth();
@@ -43,33 +44,44 @@ const PostForm = () => {
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      // In a real app, this would upload to a server
-      const newImages = Array.from(e.target.files).map(file => URL.createObjectURL(file));
+      // Store the actual file objects for upload
+      const files = Array.from(e.target.files).slice(0, 4 - imageFiles.length);
+      setImageFiles(prev => [...prev, ...files].slice(0, 4)); // Limit to 4 images
+      
+      // Create preview URLs for display
+      const newImages = files.map(file => URL.createObjectURL(file));
       setImages(prev => [...prev, ...newImages].slice(0, 4)); // Limit to 4 images
     }
   };
 
   const removeImage = (indexToRemove) => {
     setImages(images.filter((_, index) => index !== indexToRemove));
+    setImageFiles(imageFiles.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content.trim() && images.length === 0) return;
+    if (!content.trim() && imageFiles.length === 0) return;
 
     setIsSubmitting(true);
 
     try {
-      addPost({
+      // Send the actual file objects to the server
+      const success = await addPost({
         content: content.trim(),
-        images: [...images], // Clone the array
+        images: imageFiles, // Send the actual file objects
         privacy
       });
 
-      // Reset form
-      setContent('');
-      setPrivacy(PRIVACY_LEVELS.PUBLIC);
-      setImages([]);
+      if (success) {
+        // Reset form
+        setContent('');
+        setPrivacy(PRIVACY_LEVELS.PUBLIC);
+        setImages([]);
+        setImageFiles([]);
+      }
+    } catch (error) {
+      console.error('Error submitting post:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -163,7 +175,7 @@ const PostForm = () => {
             <Button
               type="submit"
               className="bg-social hover:bg-social-dark"
-              disabled={isSubmitting || (!content.trim() && images.length === 0)}
+              disabled={isSubmitting || (!content.trim() && imageFiles.length === 0)}
             >
               {isSubmitting ? 'Posting...' : 'Post'}
             </Button>

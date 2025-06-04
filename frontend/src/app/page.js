@@ -12,7 +12,7 @@ const PostCard = lazy(() => import("@/components/post/PostCard"));
 // Extracting the content into a separate component for Suspense
 const HomeContent = () => {
   const { currentUser, loading } = useAuth();
-  const { posts, getVisiblePosts } = usePosts();
+  const { posts, getFilteredPosts } = usePosts();
   const [isMobile, setIsMobile] = useState(false);
 
   // Check if we're on mobile
@@ -21,10 +21,8 @@ const HomeContent = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
-    // Initial check
     checkIfMobile();
 
-    // Add event listener
     window.addEventListener('resize', checkIfMobile);
 
     // Cleanup
@@ -40,7 +38,7 @@ const HomeContent = () => {
   }
 
   // Get the posts visible to the current user
-  const visiblePosts = currentUser ? getVisiblePosts() : [];
+  const visiblePosts = currentUser ? getFilteredPosts() : [];
 
   return (
     <div className={`space-y-1 ${isMobile ? '-mx-4' : ''}`}>
