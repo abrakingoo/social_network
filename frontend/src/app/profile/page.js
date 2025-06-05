@@ -76,9 +76,11 @@ const Profile = () => {
   const userEmail = profileUser.email;
   const userDateOfBirth = profileUser.date_of_birth || profileUser.dateOfBirth;
   const userCreatedAt = profileUser.created_at || profileUser.createdAt;
-  const userAbout = profileUser.about_me || profileUser.about; // Use about_me from JSON
+  const userAbout = profileUser.about_me || profileUser.about; 
 
-  const displayName = userNickname || (userFirstName && userLastName ? `${userFirstName} ${userLastName}`.trim() : '');
+  const h1Name = userNickname || userFirstName || ''; 
+  const subtitleName = (userFirstName && userLastName) ? `${userFirstName} ${userLastName}`.trim() : null; // For the subtitle
+  const avatarAltName = userNickname || subtitleName || h1Name || 'User'; // For Avatar alt
 
   const initials = userFirstName && userLastName
     ? `${userFirstName[0]}${userLastName[0]}`.toUpperCase()
@@ -108,7 +110,7 @@ const Profile = () => {
         <div className="absolute bottom-0 left-0 transform translate-y-1/2 ml-8">
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-default">
-              <AvatarImage src={formatAvatarUrl(profileUser.avatar)} alt={displayName} />
+              <AvatarImage src={formatAvatarUrl(profileUser.avatar)} alt={avatarAltName} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
@@ -129,7 +131,7 @@ const Profile = () => {
       <div className="pt-20 pb-6 px-6 bg-white rounded-lg mt-4 shadow-sm">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold">{displayName}</h1>
+            <h1 className="text-2xl font-bold">{h1Name}</h1>
             <div className="flex items-center space-x-2 mt-1 text-gray-500">
               {profileUser.isPublic ? (
                 <Globe className="h-4 w-4" />
@@ -153,15 +155,6 @@ const Profile = () => {
                 <div className="flex items-center">
                   <UserCircle2 className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
                   <span>{userFirstName} {userLastName}</span>
-                </div>
-              )}
-              {/* Display Nickname only if it's different from FirstName LastName or if FirstName/LastName are not available */}
-              {userNickname && 
-                ((userFirstName && userLastName && userNickname.toLowerCase() !== `${userFirstName} ${userLastName}`.trim().toLowerCase()) || 
-                 (!userFirstName && !userLastName)) && (
-                <div className="flex items-center">
-                  <span className="font-semibold mr-1.5 text-gray-500">Nickname:</span>
-                  <span>{userNickname}</span>
                 </div>
               )}
               {userEmail && (
