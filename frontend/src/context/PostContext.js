@@ -146,11 +146,9 @@ export const PostProvider = ({ children }) => {
 
       if (response.ok) {
         toast.success('Post created successfully!');
-        console.log('Post created successfully, refreshing posts...');
 
         // Refresh the posts list after successful creation
         setTimeout(async () => {
-          console.log('Fetching posts after timeout...');
           await fetchPosts();
         }, 500);
 
