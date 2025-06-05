@@ -35,7 +35,14 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setCurrentUser(data.message);
+        const userObject = data.user || data.profile || data.account || data.data || data.message || data;
+        if (typeof userObject === 'object' && userObject !== null && Object.keys(userObject).length > 0) {
+          setCurrentUser(userObject);
+        } else {
+          // If after all checks, userObject is not a valid object or is empty, log an error and set to null
+          console.error("AuthContext: Failed to extract a valid user object from /api/profile response or user object is empty. Response data:", data);
+          setCurrentUser(null);
+        }
       } else {
         setCurrentUser(null);
       }
