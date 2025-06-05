@@ -157,22 +157,6 @@ const Profile = () => {
                   <span>{userFirstName} {userLastName}</span>
                 </div>
               )}
-              {userEmail && (
-                <div className="flex items-center">
-                  <Mail className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                  <span>{userEmail}</span>
-                </div>
-              )}
-              {userDateOfBirth && (
-                <div className="flex items-center">
-                  <Cake className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                  <span>
-                    Born {new Date(userDateOfBirth).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'long', day: 'numeric'
-                    })}
-                  </span>
-                </div>
-              )}
               {userCreatedAt && (
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
@@ -260,23 +244,80 @@ const Profile = () => {
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500">Basic Info</h4>
-                    <div className="mt-1 space-y-2">
-                      <div className="flex">
-                        <span className="w-32 text-gray-600">Name:</span>
-                        <span>{profileUser.firstName} {profileUser.lastName}</span>
-                      </div>
-                      {profileUser.nickname && (
-                        <div className="flex">
-                          <span className="w-32 text-gray-600">Nickname:</span>
-                          <span>{profileUser.nickname}</span>
+                    <h4 className="text-md font-semibold text-gray-800 mb-4">Basic Info</h4>
+                    <dl className="divide-y divide-gray-200">
+                      {userFirstName && (
+                        <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            <UserCircle2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            First Name
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">{userFirstName}</dd>
                         </div>
                       )}
-                      <div className="flex">
-                        <span className="w-32 text-gray-600">Profile Type:</span>
-                        <span>{profileUser.isPublic ? 'Public' : 'Private'}</span>
-                      </div>
-                    </div>
+                      {userLastName && (
+                        <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            <UserCircle2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            Last Name
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">{userLastName}</dd>
+                        </div>
+                      )}
+                      {userNickname && (
+                        <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            <UserCircle2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            Nickname
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">{userNickname}</dd>
+                        </div>
+                      )}
+                      {userEmail && (
+                        <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            <Mail className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            Email
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">{userEmail}</dd>
+                        </div>
+                      )}
+                      {userDateOfBirth && (
+                        <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            <Cake className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            Date of Birth
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">
+                            {new Date(userDateOfBirth).toLocaleDateString('en-US', {
+                              year: 'numeric', month: 'long', day: 'numeric',
+                            })}
+                          </dd>
+                        </div>
+                      )}
+                      {userCreatedAt && (
+                        <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            Joined
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">
+                            {new Date(userCreatedAt).toLocaleDateString('en-US', {
+                              year: 'numeric', month: 'long', day: 'numeric',
+                            })}
+                          </dd>
+                        </div>
+                      )}
+                      <div className="py-3 flex items-center">
+                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                            {profileUser.isPublic ? 
+                              <Globe className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" /> :
+                              <Lock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />}
+                            Profile Type
+                          </dt>
+                          <dd className="w-2/3 text-sm text-gray-900">{profileUser.isPublic ? 'Public' : 'Private'}</dd>
+                        </div>
+                    </dl>
                   </div>
 
                   {isOwnProfile && (
