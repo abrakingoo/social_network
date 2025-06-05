@@ -180,12 +180,6 @@ const Profile = () => {
                   </span>
                 </div>
               )}
-              {userLocation && (
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                  <span>{userLocation}</span>
-                </div>
-              )}
               {userCreatedAt && (
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
