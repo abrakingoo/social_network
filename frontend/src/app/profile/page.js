@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Camera, Users, Image as ImageIcon, MapPin, Calendar, Lock, Globe } from 'lucide-react';
+import { Camera, Users, Image as ImageIcon, MapPin, Calendar, Lock, Globe, Mail, Cake, UserCircle2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,7 +44,7 @@ const Profile = () => {
 
   // Modify the useEffect to only redirect after auth is loaded
   useEffect(() => {
-    if (!authLoading && !currentUser) {  // Only redirect if auth is done loading and no user
+    if (!authLoading && !currentUser) {  
       router.push('/login');
     }
   }, [currentUser, router, authLoading]);
@@ -70,13 +70,23 @@ const Profile = () => {
 
   const isOwnProfile = currentUser.id === profileUser.id;
   const userPosts = getUserPosts(profileUser.id);
-  const displayName = profileUser.nickname || `${profileUser.firstName} ${profileUser.lastName}`;
-  const initials = profileUser.firstName && profileUser.lastName
-    ? `${profileUser.firstName[0]}${profileUser.lastName[0]}`
-    : '??';
+  const userFirstName = profileUser.first_name || profileUser.firstName;
+  const userLastName = profileUser.last_name || profileUser.lastName;
+  const userNickname = profileUser.nickname;
+  const userEmail = profileUser.email;
+  const userDateOfBirth = profileUser.date_of_birth || profileUser.dateOfBirth;
+  const userCreatedAt = profileUser.created_at || profileUser.createdAt;
+  const userAbout = profileUser.about_me || profileUser.about; // Use about_me from JSON
+
+  const displayName = userNickname || (userFirstName && userLastName ? `${userFirstName} ${userLastName}`.trim() : '');
+
+  const initials = userFirstName && userLastName
+    ? `${userFirstName[0]}${userLastName[0]}`.toUpperCase()
+    : userNickname ? userNickname.substring(0, Math.min(2, userNickname.length)).toUpperCase() : '??';
 
   return (
     <div className="max-w-4xl mx-auto">
+
       {/* Cover photo */}
       <div className="relative">
         <div className="h-64 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-b-lg overflow-hidden">
@@ -131,22 +141,61 @@ const Profile = () => {
               </span>
             </div>
 
-            {profileUser.about && (
-              <p className="mt-3 text-gray-700">{profileUser.about}</p>
+            {userAbout && (
+              <div className="mt-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-1">About Me</h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{userAbout}</p>
+              </div>
             )}
 
-            <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-600">
-              {profileUser.location && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 mt-4 text-sm text-gray-600">
+              {userFirstName && userLastName && (
                 <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span>{profileUser.location}</span>
+                  <UserCircle2 className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <span>{userFirstName} {userLastName}</span>
                 </div>
               )}
-
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>Joined {new Date().getFullYear()}</span>
-              </div>
+              {/* Display Nickname only if it's different from FirstName LastName or if FirstName/LastName are not available */}
+              {userNickname && 
+                ((userFirstName && userLastName && userNickname.toLowerCase() !== `${userFirstName} ${userLastName}`.trim().toLowerCase()) || 
+                 (!userFirstName && !userLastName)) && (
+                <div className="flex items-center">
+                  <span className="font-semibold mr-1.5 text-gray-500">Nickname:</span>
+                  <span>{userNickname}</span>
+                </div>
+              )}
+              {userEmail && (
+                <div className="flex items-center">
+                  <Mail className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <span>{userEmail}</span>
+                </div>
+              )}
+              {userDateOfBirth && (
+                <div className="flex items-center">
+                  <Cake className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <span>
+                    Born {new Date(userDateOfBirth).toLocaleDateString('en-US', {
+                      year: 'numeric', month: 'long', day: 'numeric'
+                    })}
+                  </span>
+                </div>
+              )}
+              {userLocation && (
+                <div className="flex items-center">
+                  <MapPin className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <span>{userLocation}</span>
+                </div>
+              )}
+              {userCreatedAt && (
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
+                  <span>
+                    Joined {new Date(userCreatedAt).toLocaleDateString('en-US', {
+                      year: 'numeric', month: 'long', day: 'numeric'
+                    })}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
