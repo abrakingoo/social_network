@@ -2,8 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
+
+	"social/pkg/util"
 )
 
 type AddEventData struct {
@@ -39,6 +42,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = app.Queries.InsertData("events", []string{
+		"id",
 		"title",
 		"creator_id",
 		"group_id",
@@ -46,6 +50,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		"location",
 		"description",
 	}, []any{
+		util.UUIDGen(),
 		event.Title,
 		userID,
 		groupId,
