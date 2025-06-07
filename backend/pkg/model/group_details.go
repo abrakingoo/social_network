@@ -25,10 +25,12 @@ type Events struct {
 }
 
 type Groups struct {
-	ID           string  `json:"id"`
-	Title        string  `json:"title"`
-	Creator      Creator `json:"creator"`
-	MembersCount int     `json:"members_count"`
-	IsJoined     bool    `json:"is_joined"`
-	UserRole     string  `json:"user_role"`
+	ID           string    `json:"id"`
+	Title        string    `json:"title"`
+	About        string    `json:"about"`
+	Creator      Creator   `json:"creator"`
+	CreatedAt    time.Time `json:"created_at"`
+	MembersCount int       `json:"members_count"`
+	IsJoined     bool      `json:"is_joined"`
+	UserRole     string    `json:"user_role"`
 }
