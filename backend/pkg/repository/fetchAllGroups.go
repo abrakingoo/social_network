@@ -18,7 +18,7 @@ func (q *Query) FetchAllGroups(userid string) ([]model.Groups, error) {
 	`
 	rows, err := q.Db.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch posts: %w", err)
+		return nil, fmt.Errorf("failed to fetch groups: %w", err)
 	}
 	defer rows.Close()
 
@@ -34,7 +34,7 @@ func (q *Query) FetchAllGroups(userid string) ([]model.Groups, error) {
 			return nil, fmt.Errorf("failed to scan group: %w", err)
 		}
 		// check for user role in the group if present in the group
-		q.checkUserMembershipInGroup(userid, &group)
+		q.CheckUserMembershipInGroup(userid, &group)
 
 		groups = append(groups, group)
 
@@ -43,25 +43,22 @@ func (q *Query) FetchAllGroups(userid string) ([]model.Groups, error) {
 	return groups, nil
 }
 
-func (q *Query) checkUserMembershipInGroup(userId string, group *model.Groups) {
+func (q *Query) CheckUserMembershipInGroup(userID string, group *model.Groups) {
 	var role string
-	var is_joined bool
 
 	query := `SELECT role FROM group_members WHERE user_id = ? AND group_id = ?`
+	err := q.Db.QueryRow(query, userID, group.ID).Scan(&role)
 
-	err := q.Db.QueryRow(query, userId, group.ID).Scan(&role)
-	if err == sql.ErrNoRows {
-		// user does not exist
-		is_joined = false
-		role = ""
-	} else if err != nil {
-		// other DB error
-		log.Printf("CheckuserMemberShipInGroup: the db error is %v", err)
-		return
-	} else {
-		is_joined = true
+	switch {
+	case err == sql.ErrNoRows:
+		group.IsJoined = false
+		group.UserRole = ""
+	case err != nil:
+		log.Printf("CheckUserMembershipInGroup: db error: %v", err)
+		group.IsJoined = false
+		group.UserRole = ""
+	default:
+		group.IsJoined = true
+		group.UserRole = role
 	}
-
-	group.IsJoined = is_joined
-	group.UserRole = role
 }
