@@ -21,4 +21,5 @@ type Events struct {
 	EventTime   time.Time `json:"event_time"`
 	CreatedAt   time.Time `json:"created_at"`
 	Attendees   []Creator `json:"attendees"`
+	Location    string    `json:"location"`
 }
