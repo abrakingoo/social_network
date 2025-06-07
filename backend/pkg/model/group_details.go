@@ -23,3 +23,12 @@ type Events struct {
 	Attendees   []Creator `json:"attendees"`
 	Location    string    `json:"location"`
 }
+
+type Groups struct {
+	ID           string  `json:"id"`
+	Title        string  `json:"title"`
+	Creator      Creator `json:"creator"`
+	MembersCount int     `json:"members_count"`
+	IsJoined     bool    `json:"is_joined"`
+	UserRole     string  `json:"user_role"`
+}
