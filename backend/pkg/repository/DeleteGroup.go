@@ -15,8 +15,10 @@ func (q *Query) DeleteGroup(groupName , userid string) error {
 		return fmt.Errorf("errUnathorized: %w", err)
 	}
 
-	
 	// delete group
+	if err := q.deleteGroup(groupName); err != nil {
+		return err
+	}
 	
 	return nil
 }
@@ -41,5 +43,13 @@ func (q *Query) CheckIfUserIsGroupAdmin(groupName, userid string) error {
         return fmt.Errorf("user is not the admin")
     }
 
+	return nil
+}
+
+func (q *Query) deleteGroup(groupname string) error {
+	_, err := q.Db.Exec("DELETE FROM groups WHERE title = ?", groupname)
+	if err != nil {
+		return err
+	}
 	return nil
 }
