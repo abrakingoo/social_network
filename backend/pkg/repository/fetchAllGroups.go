@@ -18,6 +18,7 @@ func (q *Query) FetchAllGroups(userid string) ([]model.Groups, error) {
 	`
 	rows, err := q.Db.Query(query)
 	if err != nil {
+		log.Printf("FetchAllGroups: db error: %v", err)
 		return nil, fmt.Errorf("failed to fetch groups: %w", err)
 	}
 	defer rows.Close()
