@@ -27,4 +27,6 @@ func (app *App) DeleteGroup(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusConflict, err.Error(), Error)
 		return
 	}
+
+	app.JSONResponse(w, r, http.StatusOK, "group deleted successfully", Success)
 }
