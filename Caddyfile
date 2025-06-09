@@ -1,0 +1,46 @@
+localhost :80, :443 {
+	root * ./frontend/.next
+
+	# Rate-limited backend API routes
+	handle /api/login {
+		rate_limit {
+			zone login {
+				key {remote_host}
+				events 5 # 5 requests
+				window 5m # in 5 minute window 
+			}
+		}
+		reverse_proxy {$BACKEND_API}
+	}
+
+	handle /api/register {
+		rate_limit {
+			zone register {
+				key {remote_host}
+				events 5
+				window 5m
+			}
+		}
+		reverse_proxy {$BACKEND_API}
+	}
+
+	# Other backend API routes (without rate limiting)
+	handle /api/* {
+		reverse_proxy {$BACKEND_API}
+	}
+
+	# Serve Next.js static files
+	file_server /_next/static/* {
+		root ./frontend/.next
+	}
+
+	# Serve public folder files
+	file_server /public/* {
+		root ./frontend/public
+	}
+
+	# Default: proxy everything else to Next.js
+	handle {
+		reverse_proxy {$FRONTEND_API}
+	}
+}
