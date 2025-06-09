@@ -17,7 +17,7 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
-		LEFT JOIN users u ON u.id = p.user_id
+		JOIN users u ON u.id = p.user_id
 		WHERE p.group_id IS NULL
 		 AND (
     	-- Public posts: everyone can see
