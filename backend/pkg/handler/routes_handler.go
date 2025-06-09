@@ -21,6 +21,7 @@ var allowedRoutes = map[string][]string{
 	"/api/addEvent":     {"POST", "OPTIONS"},
 	"/api/updateUser":   {"POST", "OPTIONS"},
 	"/api/getAllGroups": {"GET", "OPTIONS"},
+	"/api/deleteGroup":  {"DELETE", "OPTIONS"},
 }
 
 type App struct {
@@ -80,6 +81,7 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/addEvent", app.AuthMiddleware(http.HandlerFunc(app.AddEvent)))
 	mux.Handle("/api/updateUser", app.AuthMiddleware(http.HandlerFunc(app.UpdateUser)))
 	mux.Handle("/api/getAllGroups", app.AuthMiddleware(http.HandlerFunc(app.GetAllGroups)))
+	mux.Handle("/api/deleteGroup", app.AuthMiddleware(http.HandlerFunc(app.DeleteGroup)))
 
 	return mux
 }
