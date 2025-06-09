@@ -69,7 +69,7 @@ export default function RegisterPage() {
         }
       });
 
-      const response = await fetch('http://localhost:8000/api/register', {
+      const response = await fetch(`${process.env.BACKEND_API}/api/register`, {
         method: 'POST',
         credentials: 'include',
         body: multipartFormData,
