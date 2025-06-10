@@ -10,7 +10,7 @@ func (app *App) GetPosts(w http.ResponseWriter, r *http.Request) {
 	userID , err := app.GetSessionData(r)
 	if err != nil {
 		fmt.Println(err)
-		app.JSONResponse(w, r, http.StatusInternalServerError, "Error extracting userid", Error)
+		app.JSONResponse(w, r, http.StatusUnauthorized, "Getpost: unathorized ", Error)
 		return
 	}
 
