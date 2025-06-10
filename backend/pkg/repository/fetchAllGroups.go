@@ -10,8 +10,8 @@ import (
 func (q *Query) FetchAllGroups(userid string) ([]model.Groups, error) {
 	var groups []model.Groups
 	query := `
-		SELECT 
-			g.id, g.title, g.description, u.id, u.first_name, u.last_name, u.nickname, u.avatar,  
+		SELECT
+			g.id, g.title, g.description, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
 			g.created_at, g.members_count
 		FROM groups g
 		JOIN users u ON u.id = g.creator_id
