@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-func (c *Client) sendError(text string) {
+func (c *Client) SendError(text string) {
 	payload, _ := json.Marshal(map[string]string{
 		"type":    "error",
 		"message": text,
@@ -17,7 +17,7 @@ func (c *Client) sendError(text string) {
 	}
 }
 
-func (c *Client) sendResponse(msgType string, payload map[string]string) {
+func (c *Client) SendResponse(msgType string, payload map[string]string) {
 	payload["type"] = msgType
 	data, err := json.Marshal(payload)
 	if err != nil {
