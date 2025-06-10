@@ -6,6 +6,7 @@ import (
 
 	"social/pkg/model"
 	"social/pkg/repository"
+	"social/pkg/websocket"
 )
 
 var allowedRoutes = map[string][]string{
@@ -24,6 +25,7 @@ var allowedRoutes = map[string][]string{
 type App struct {
 	Queries repository.Query
 	User    *model.User
+	Hub     *websocket.Hub
 }
 
 // RouteChecker is a middleware that checks if the requested route and method are allowed.
