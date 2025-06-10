@@ -71,4 +71,11 @@ class WebSocketManager {
     }
   }
 
+  // Notify all listeners for a specific event type
+  notifyListeners(type, data) {
+    if (this.listeners.has(type)) {
+      this.listeners.get(type).forEach(callback => callback(data));
+    }
+  }
+
   
