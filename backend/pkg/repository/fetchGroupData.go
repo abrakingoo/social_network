@@ -40,16 +40,20 @@ func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 
 func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
 	row := q.Db.QueryRow(`
-        SELECT g.id, g.title, g.description, 
-		g.created_at, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+        SELECT g.id, g.title, g.description,
+		g.created_at, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
+		COALESCE(gm.role, '') as role
 		FROM groups g
 		JOIN users u ON u.id = g.creator_id
-        WHERE g.id = ? 
+		LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = g.creator_id
+        WHERE g.id = ?
     `, groupid)
 
 	user := model.Creator{}
 
-	err := row.Scan(&group.ID, &group.Title, &group.About, &group.CreatedAt, &user.ID, &user.FirstName, &user.LastName, &user.Nickname, &user.Avatar)
+	err := row.Scan(&group.ID, &group.Title, &group.About, &group.CreatedAt,
+		&user.ID, &user.FirstName, &user.LastName, &user.Nickname, &user.Avatar,
+		&user.Role)
 	if err == sql.ErrNoRows {
 		return errors.New("no group data found")
 	}
@@ -90,8 +94,8 @@ func (q *Query) fetchGroupPosts(groupid string) ([]model.Post, error) {
 
 func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 	query := `
-		SELECT 
-			p.id, p.content, 
+		SELECT
+			p.id, p.content,
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
 			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM posts p
@@ -180,7 +184,7 @@ func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 
 func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error {
 	rows, err := q.Db.Query(`
-		SELECT 
+		SELECT
 			u.id, u.first_name, u.last_name, u.nickname, u.avatar, gm.role
 		FROM group_members gm
 		JOIN users u ON u.id = gm.user_id
@@ -311,7 +315,7 @@ func (q *Query) FetchGroupId(title string) (string, error) {
 	row := q.Db.QueryRow(`
 		SELECT id
 		FROM groups
-		WHERE title = ? 
+		WHERE title = ?
 		LIMIT 1
 	`, title)
 
@@ -325,4 +329,33 @@ func (q *Query) FetchGroupId(title string) (string, error) {
 	}
 
 	return id, nil
+}
+
+func (q *Query) FetchEventByID(eventID string) (model.Events, error) {
+	var event model.Events
+	row := q.Db.QueryRow(`
+		SELECT
+			e.id, e.title, e.description, e.event_time, e.created_at, e.location,
+			ec.id, ec.first_name, ec.last_name, ec.nickname, ec.avatar
+		FROM events e
+		JOIN users ec ON ec.id = e.creator_id
+		WHERE e.id = ?
+	`, eventID)
+
+	err := row.Scan(
+		&event.ID, &event.Title, &event.Description, &event.EventTime, &event.CreatedAt, &event.Location,
+		&event.Creator.ID, &event.Creator.FirstName, &event.Creator.LastName,
+		&event.Creator.Nickname, &event.Creator.Avatar,
+	)
+	if err == sql.ErrNoRows {
+		return model.Events{}, errors.New("event not found")
+	}
+	if err != nil {
+		return model.Events{}, fmt.Errorf("failed to fetch event by ID: %w", err)
+	}
+
+	// Initialize attendees slice (backend will populate this in a later phase if needed)
+	event.Attendees = []model.Creator{}
+
+	return event, nil
 }
