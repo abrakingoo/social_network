@@ -7,5 +7,5 @@ type Client struct {
 	Conn        *websocket.Conn
 	Send        chan []byte
 	ProcessChan chan map[string]string
-	Hubb         *Hub
+	Hubb        *Hub
 }
