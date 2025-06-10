@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { groupService } from '@/services/groupService'; // Import groupService
 import PostForm from '@/components/post/PostForm';
 import PostCard from '@/components/post/PostCard';
 import EventForm from '@/components/group/EventForm';
@@ -12,13 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
-import { Users, Calendar, Settings, Info, UserPlus } from 'lucide-react';
+import { Users, Calendar, Settings, Info, UserPlus, Trash2, Loader2 } from 'lucide-react'; // Add Trash2 and Loader2
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
 
@@ -26,122 +28,190 @@ const GroupDetail = () => {
   const router = useRouter();
   const params = useParams();
   const groupId = params.id;
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth(); // Get authLoading
   const { toast } = useToast();
+  const [groupData, setGroupData] = useState(null); // State for real group data
+  const [isLoadingDetails, setIsLoadingDetails] = useState(true); // Loading state for details
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete confirmation dialog
+  const [isDeleting, setIsDeleting] = useState(false); // Loading state for deletion
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
 
-  // Mock group data (keep this from the original file)
-  const [mockGroup, setMockGroup] = useState({
-    id: groupId,
-    name: 'Photography Enthusiasts',
-    description: 'A group for sharing photography tips, gear recommendations, and amazing photos!',
-    coverImage: null,
-    memberCount: 452,
-    isJoined: true,
-    isAdmin: groupId === '2', // For demo: user is admin of group with ID 2
-    createdAt: new Date(2022, 5, 15),
-    members: [
-      { id: '101', firstName: 'John', lastName: 'Doe', avatar: null },
-      { id: '102', firstName: 'Jane', lastName: 'Smith', avatar: null },
-      { id: '103', firstName: 'Mike', lastName: 'Johnson', avatar: null }
-    ],
-    events: [
-      {
-        id: '201',
-        title: 'Monthly Photography Contest',
-        description: 'Submit your best nature photos for a chance to win!',
-        date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5), // 5 days from now
-        time: '14:00',
-        location: 'Online',
-        attendees: 28
-      },
-      {
-        id: '202',
-        title: 'Photography Workshop',
-        description: 'Learn how to capture stunning landscape photos',
-        date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 12), // 12 days from now
-        time: '10:00',
-        location: 'Central Park',
-        attendees: 15
-      }
-    ]
-  });
+  // Remove mock group data and mock posts
+  // const [mockGroup, setMockGroup] = useState({ ... });
+  // const mockPosts = [ ... ];
 
-  // Mock posts
-  const mockPosts = [
-    {
-      id: '301',
-      author: { id: '101', firstName: 'John', lastName: 'Doe', avatar: null },
-      content: 'Just got this amazing shot during sunset! What do you think?',
-      image: null,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      likesCount: 24,
-      commentsCount: 5,
-      isLiked: false,
-      groupId: groupId
-    },
-    {
-      id: '302',
-      author: { id: '102', firstName: 'Jane', lastName: 'Smith', avatar: null },
-      content: 'Does anyone have recommendations for a good entry-level DSLR camera?',
-      image: null,
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      likesCount: 8,
-      commentsCount: 12,
-      isLiked: true,
-      groupId: groupId
-    }
-  ];
-
-  // Redirect to login if not authenticated
+  // Fetch group details on component mount
   useEffect(() => {
-    if (!currentUser) {
+    let isMounted = true; // For cleanup
+
+    const fetchGroupDetails = async () => {
+      if (!currentUser || authLoading) {
+        console.log('[GroupDetail] Skipping fetch - auth not ready:', { currentUser, authLoading });
+        return;
+      }
+
+      console.log('[GroupDetail] Starting to fetch group details for ID:', groupId);
+      setIsLoadingDetails(true);
+      try {
+        // 1. Fetch all groups to get the title by ID (workaround)
+        console.log('[GroupDetail] Fetching all groups to find title for ID:', groupId);
+        const allGroups = await groupService.getAllGroups();
+        if (!isMounted) return; // Don't update state if component unmounted
+
+        console.log('[GroupDetail] All groups fetched:', allGroups);
+
+        const currentGroup = allGroups.find(group => group.id === groupId);
+        console.log('[GroupDetail] Found current group:', currentGroup);
+
+        if (currentGroup) {
+          // 2. Fetch detailed group data using the title
+          console.log('[GroupDetail] Fetching details for group title:', currentGroup.title);
+          const details = await groupService.getGroupDetails(currentGroup.title);
+          if (!isMounted) return; // Don't update state if component unmounted
+
+          console.log('[GroupDetail] Group details fetched:', details);
+
+          // Determine the current user's role and membership status in this group
+          let userRole = '';
+          let isJoined = false;
+
+          if (currentUser) {
+            const memberInfo = details.members.find(member => member.id === currentUser.id);
+            if (memberInfo) {
+              isJoined = true;
+              userRole = memberInfo.role;
+            }
+          }
+
+          // Augment groupData with user-specific info
+          setGroupData({
+            ...details,
+            is_joined: isJoined,
+            user_role: userRole,
+            events: details.Events, // Ensure events is populated correctly
+          });
+        } else {
+          console.error('[GroupDetail] Group not found for ID:', groupId);
+          if (!isMounted) return;
+          toast({
+            title: "Error",
+            description: "Group not found.",
+            variant: "destructive"
+          });
+          router.push('/groups'); // Redirect if group not found
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('[GroupDetail] Error in fetchGroupDetails:', {
+          error,
+          message: error.message,
+          status: error.status,
+          stack: error.stack
+        });
+        toast({
+          title: "Error",
+          description: "Failed to load group details. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoadingDetails(false);
+        }
+      }
+    };
+
+    fetchGroupDetails();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [groupId, currentUser, authLoading]); // Removed router and toast from dependencies
+
+  // Separate effect for auth redirect
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
       router.push('/login');
     }
-  }, [currentUser, router]);
+  }, [currentUser, authLoading, router]);
 
-  // Don't render if user not authenticated
-  if (!currentUser) {
-    return null;
+  // Don't render if auth is still loading or user not authenticated
+  if (authLoading || !currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-social" />
+      </div>
+    );
   }
 
-  const formatEventDate = (date, time) => {
+  // Show loading spinner if group details are being fetched
+  if (isLoadingDetails || !groupData) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-social" />
+      </div>
+    );
+  }
+
+  const formatEventDate = (dateString, time) => {
+    const date = new Date(dateString);
     const formattedDate = date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric'
     });
-
     return time ? `${formattedDate}, ${time}` : formattedDate;
   };
 
-  const handleJoinGroup = () => {
+  // Handle joining/leaving group (stubbed as per Phase 1)
+  const handleJoinLeaveGroup = (isJoined) => {
     toast({
-      title: "Group joined",
-      description: "You have successfully joined the group!",
+      title: isJoined ? "Leave Group" : "Join Group",
+      description: isJoined ? "Leaving group functionality will be available soon!" : "Joining group functionality will be available soon!",
     });
   };
 
+  // Placeholder for RSVP functionality
   const handleRSVP = (eventId) => {
-    // Toggle RSVP status
-    setRsvpStatus(prev => ({
-      ...prev,
-      [eventId]: !prev[eventId]
+    setRsvpStatus(prevStatus => ({
+      ...prevStatus,
+      [eventId]: !prevStatus[eventId] // Toggle RSVP status locally
     }));
-
     toast({
-      title: rsvpStatus[eventId] ? "RSVP Cancelled" : "RSVP Confirmed",
-      description: rsvpStatus[eventId]
-        ? "You're no longer attending this event."
-        : "You're going to this event!",
+      title: "RSVP Status Updated",
+      description: rsvpStatus[eventId] ? "You have un-RSVP'd for this event." : "You have successfully RSVP'd for this event!",
     });
+  };
+
+  // Handle group deletion
+  const handleDeleteGroup = async () => {
+    setIsDeleting(true);
+    try {
+      await groupService.deleteGroup(groupData.title);
+      toast({
+        title: "Group Deleted",
+        description: `${groupData.title} has been successfully deleted.`,
+      });
+      router.push('/groups'); // Redirect to groups list after deletion
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast({
+        title: "Deletion Failed",
+        description: error.message || "Failed to delete group. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   const handleEventCreated = (newEvent) => {
-    setMockGroup(prevGroup => ({
-      ...prevGroup,
-      events: [newEvent, ...prevGroup.events]
+    // Assuming newEvent comes in a format ready to be added to groupData.events
+    setGroupData(prevGroupData => ({
+      ...prevGroupData,
+      events: [newEvent, ...(prevGroupData.events || [])] // Ensure events is an array
     }));
     setIsCreateEventOpen(false);
   };
@@ -151,7 +221,7 @@ const GroupDetail = () => {
               {/* Group Header */}
               <Card className="mb-6 overflow-hidden">
                 <div className="h-40 bg-gradient-to-r from-social/30 to-social-accent/30 relative">
-                  {mockGroup.isAdmin && (
+                  {groupData.user_role === 'admin' && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -166,29 +236,35 @@ const GroupDetail = () => {
                   <div className="absolute -top-12 left-6">
                     <Avatar className="h-24 w-24 border-4 border-white">
                       <AvatarFallback className="text-3xl bg-social text-white">
-                        {mockGroup.name.slice(0, 2).toUpperCase()}
+                        {groupData.title.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="ml-28 flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-2xl">{mockGroup.name}</CardTitle>
+                      <CardTitle className="text-2xl">{groupData.title}</CardTitle>
                       <CardDescription>
-                        {mockGroup.memberCount} members · Created {mockGroup.createdAt.toLocaleDateString()}
+                        {groupData.members_count} members · Created {new Date(groupData.created_at).toLocaleDateString()}
                       </CardDescription>
                     </div>
 
-                    {mockGroup.isAdmin ? (
-                      <Button className="bg-social hover:bg-social-dark">
-                        <Settings className="h-4 w-4 mr-2" />
-                        Manage Group
-                      </Button>
-                    ) : mockGroup.isJoined ? (
-                      <Button variant="outline">Leave Group</Button>
+                    {groupData.user_role === 'admin' ? (
+                      <div className="flex space-x-2">
+                        <Button className="bg-social hover:bg-social-dark">
+                          <Settings className="h-4 w-4 mr-2" />
+                          Manage Group
+                        </Button>
+                        <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Group
+                        </Button>
+                      </div>
+                    ) : groupData.is_joined ? (
+                      <Button variant="outline" onClick={() => handleJoinLeaveGroup(true)}>Leave Group</Button>
                     ) : (
                       <Button
                         className="bg-social hover:bg-social-dark"
-                        onClick={handleJoinGroup}
+                        onClick={() => handleJoinLeaveGroup(false)}
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
                         Join Group
@@ -197,7 +273,7 @@ const GroupDetail = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{mockGroup.description}</p>
+                  <p className="text-gray-600">{groupData.about}</p>
                 </CardContent>
               </Card>
 
@@ -214,15 +290,15 @@ const GroupDetail = () => {
 
                     <TabsContent value="posts" className="mt-6">
                       {/* Posts content - keep existing code */}
-                      {mockGroup.isJoined && (
+                      {groupData.is_joined && (
                         <div className="mb-6">
                           <PostForm groupId={groupId} />
                         </div>
                       )}
 
-                      {mockPosts.length > 0 ? (
+                      {groupData.group_posts && groupData.group_posts.length > 0 ? (
                         <div className="space-y-6">
-                          {mockPosts.map((post) => (
+                          {groupData.group_posts.map((post) => (
                             <PostCard key={post.id} post={post} />
                           ))}
                         </div>
@@ -237,7 +313,7 @@ const GroupDetail = () => {
                     </TabsContent>
 
                     <TabsContent value="events" className="mt-6">
-                      {mockGroup.isAdmin && (
+                      {groupData.user_role === 'admin' && (
                         <div className="mb-6">
                           <Button
                             className="w-full bg-social hover:bg-social-dark"
@@ -250,15 +326,15 @@ const GroupDetail = () => {
                       )}
 
                       <div className="space-y-4">
-                        {mockGroup.events.length > 0 ? (
-                          mockGroup.events.map((event) => (
+                        {groupData.events && groupData.events.length > 0 ? (
+                          groupData.events.map((event) => (
                             <Card key={event.id} className="overflow-hidden">
                               <CardHeader>
                                 <div className="flex justify-between items-start">
                                   <div>
                                     <CardTitle>{event.title}</CardTitle>
                                     <CardDescription>
-                                      {formatEventDate(event.date, event.time)}
+                                      {formatEventDate(event.event_time, '')}
                                     </CardDescription>
                                   </div>
                                   <Button
@@ -281,8 +357,8 @@ const GroupDetail = () => {
 
                                 <div className="mt-3 flex items-center">
                                   <Badge variant="secondary" className="mr-2">
-                                    {event.attendees + (rsvpStatus[event.id] ? 1 : 0)}
-                                    {(event.attendees + (rsvpStatus[event.id] ? 1 : 0)) === 1 ? ' person' : ' people'} going
+                                    {event.attendees ? event.attendees.length : 0 + (rsvpStatus[event.id] ? 1 : 0)}
+                                    {(event.attendees ? event.attendees.length : 0 + (rsvpStatus[event.id] ? 1 : 0)) === 1 ? ' person' : ' people'} going
                                   </Badge>
 
                                   {rsvpStatus[event.id] && (
@@ -317,12 +393,12 @@ const GroupDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <p className="text-gray-600 mb-4">
-                            {mockGroup.description}
+                            {groupData.about}
                           </p>
                           <div>
                             <h4 className="font-medium mb-2">Created on</h4>
                             <p className="text-gray-600 mb-4">
-                              {mockGroup.createdAt.toLocaleDateString()}
+                              {new Date(groupData.created_at).toLocaleDateString()}
                             </p>
                           </div>
                           <div>
@@ -351,19 +427,23 @@ const GroupDetail = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {mockGroup.members.map((member) => (
-                          <div key={member.id} className="flex items-center">
-                            <Avatar className="h-8 w-8 mr-3">
-                              <AvatarImage src={member.avatar} />
-                              <AvatarFallback>
-                                {member.firstName[0]}{member.lastName[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="text-sm font-medium">
-                              {member.firstName} {member.lastName}
+                        {groupData.members && groupData.members.length > 0 ? (
+                          groupData.members.map((member) => (
+                            <div key={member.id} className="flex items-center">
+                              <Avatar className="h-8 w-8 mr-3">
+                                <AvatarImage src={member.avatar} />
+                                <AvatarFallback>
+                                  {member.first_name[0]}{member.last_name[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="text-sm font-medium">
+                                {member.first_name} {member.last_name}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500">No members yet.</p>
+                        )}
                       </div>
                       <Button variant="ghost" className="w-full mt-4 text-sm">
                         See all members
@@ -380,17 +460,17 @@ const GroupDetail = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {mockGroup.events.length > 0 ? (
+                      {groupData.events && groupData.events.length > 0 ? (
                         <div className="space-y-4">
-                          {mockGroup.events.slice(0, 2).map((event) => (
+                          {groupData.events.slice(0, 2).map((event) => (
                             <div key={event.id} className="border-b pb-3 last:border-0">
                               <h4 className="font-medium">{event.title}</h4>
                               <p className="text-sm text-gray-500 mb-1">
-                                {formatEventDate(event.date, event.time)}
+                                {formatEventDate(event.event_time, '')}
                               </p>
                               <div className="flex items-center">
                                 <p className="text-xs text-gray-500 mr-2">
-                                  {event.attendees + (rsvpStatus[event.id] ? 1 : 0)} going
+                                  {event.attendees ? event.attendees.length : 0 + (rsvpStatus[event.id] ? 1 : 0)} going
                                 </p>
                                 {rsvpStatus[event.id] && (
                                   <Badge variant="outline" className="text-xs bg-green-50">
@@ -426,7 +506,45 @@ const GroupDetail = () => {
           <EventForm
             onClose={() => setIsCreateEventOpen(false)}
             onEventCreated={handleEventCreated}
+            groupTitle={groupData.title}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Group Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the
+              <span className="font-semibold text-social"> {groupData.title} </span>
+              group and remove all its associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteGroup}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Group'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
