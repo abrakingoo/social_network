@@ -103,15 +103,15 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 // fetchUserInfo first fetches userinfo from the user info table
 func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
 	row := q.Db.QueryRow(`
-        SELECT email, first_name, last_name, 
-		date_of_birth, avatar, nickname , about_me, created_at , 
-		is_public 
-        FROM users 
-        WHERE id = ? 
+        SELECT id, email, first_name, last_name,
+		date_of_birth, avatar, nickname , about_me, created_at ,
+		is_public
+        FROM users
+        WHERE id = ?
         LIMIT 1
     `, userid)
 
-	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.CreatedAt, &user.IsPublic)
+	err := row.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.CreatedAt, &user.IsPublic)
 	if err == sql.ErrNoRows {
 		return errors.New("no user data found")
 	}
@@ -124,10 +124,10 @@ func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
 
 func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 	query := `
-		SELECT 
-			p.id, p.group_id, p.content, 
+		SELECT
+			p.id, p.group_id, p.content,
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar 
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
 		LEFT JOIN users u ON u.id = p.user_id
@@ -206,8 +206,8 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 
 func (q *Query) getAllCommentedPostID(userid string) ([]string, error) {
 	query := `
-		SELECT DISTINCT post_id 
-		FROM comments 
+		SELECT DISTINCT post_id
+		FROM comments
 		WHERE user_id = ?
 	`
 
@@ -242,8 +242,8 @@ func (q *Query) fetchPostsByIDs(postIDs []string) ([]model.Post, error) {
 	placeholders = placeholders[:len(placeholders)-1] // Remove trailing comma
 
 	query := `
-        SELECT 
-            p.id, p.group_id, p.content, 
+        SELECT
+            p.id, p.group_id, p.content,
             p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
             m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
         FROM posts p
@@ -365,8 +365,8 @@ func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
 
 func (q *Query) getallLikedPostIDs(userid string) ([]string, error) {
 	query := `
-	SELECT DISTINCT post_id 
-	FROM post_likes 
+	SELECT DISTINCT post_id
+	FROM post_likes
 	WHERE user_id = ?
 `
 
