@@ -10,6 +10,7 @@ import (
 	handler "social/pkg/handler"
 	"social/pkg/model"
 	"social/pkg/repository"
+	"social/pkg/websocket"
 )
 
 func main() {
@@ -18,11 +19,15 @@ func main() {
 		fmt.Println(err)
 	}
 
+	hub := websocket.NewHub()
+	go hub.Run()
+
 	app := handler.App{
 		Queries: repository.Query{
 			Db: db,
 		},
 		User: &model.User{},
+		Hub:  hub,
 	}
 
 	server := http.Server{
