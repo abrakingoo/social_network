@@ -78,4 +78,15 @@ class WebSocketManager {
     }
   }
 
+  // Send message through WebSocket
+  send(type, data) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      const message = JSON.stringify({ type, data });
+      this.ws.send(message);
+      console.log('WebSocket message sent:', message);
+    } else {
+      console.error('WebSocket is not connected');
+    }
+  }
+
   
