@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 
 	socket "social/pkg/websocket"
@@ -24,7 +23,7 @@ func (app *App) ServeWS(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("WebSocket upgrade failed:", err)
+		app.JSONResponse(w, r, http.StatusUpgradeRequired, "failed to upgrade connection", Error)
 		return
 	}
 	client := &socket.Client{
