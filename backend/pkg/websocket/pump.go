@@ -15,7 +15,7 @@ const (
 )
 
 // readPump reads raw frames, unmarshals, and pushes into processChan
-func (c *Client) readPump() {
+func (c *Client) ReadPump() {
 	defer func() {
 		c.Hubb.Unregister <- c
 		c.Conn.Close()
@@ -45,7 +45,7 @@ func (c *Client) readPump() {
 }
 
 // writePump drains c.send and emits ping frames
-func (c *Client) writePump() {
+func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
