@@ -15,7 +15,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (app *App) ServeWS(w http.ResponseWriter, r *http.Request) {
+func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "unauthorized", Error)
