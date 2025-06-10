@@ -6,6 +6,7 @@ import (
 
 	"social/pkg/model"
 	"social/pkg/repository"
+	"social/pkg/websocket"
 )
 
 var allowedRoutes = map[string][]string{
@@ -19,11 +20,16 @@ var allowedRoutes = map[string][]string{
 	"/api/getGroupData": {"GET", "OPTIONS"},
 	"/pkg/db/media/":    {"GET", "OPTIONS"},
 	"/api/addEvent":     {"POST", "OPTIONS"},
+	"/api/updateUser":   {"PATCH", "OPTIONS"},
+	"/api/groups":       {"GET", "OPTIONS"},
+	"/api/deleteGroup":  {"DELETE", "OPTIONS"},
+	"/api/ws":           {"GET", "OPTIONS"},
 }
 
 type App struct {
 	Queries repository.Query
 	User    *model.User
+	Hub     *websocket.Hub
 }
 
 // RouteChecker is a middleware that checks if the requested route and method are allowed.
@@ -76,6 +82,10 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/addGroup", app.AuthMiddleware(http.HandlerFunc(app.AddGroup)))
 	mux.Handle("/api/getGroupData", app.AuthMiddleware(http.HandlerFunc(app.GetGroupData)))
 	mux.Handle("/api/addEvent", app.AuthMiddleware(http.HandlerFunc(app.AddEvent)))
+	mux.Handle("/api/updateUser", app.AuthMiddleware(http.HandlerFunc(app.UpdateUser)))
+	mux.Handle("/api/groups", app.AuthMiddleware(http.HandlerFunc(app.GetAllGroups)))
+	mux.Handle("/api/deleteGroup", app.AuthMiddleware(http.HandlerFunc(app.DeleteGroup)))
+	mux.Handle("/api/ws", app.AuthMiddleware(http.HandlerFunc(app.HandleWebsocket)))
 
 	return mux
 }

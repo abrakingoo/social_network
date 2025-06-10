@@ -23,3 +23,14 @@ type Events struct {
 	Attendees   []Creator `json:"attendees"`
 	Location    string    `json:"location"`
 }
+
+type Groups struct {
+	ID           string    `json:"id"`
+	Title        string    `json:"title"`
+	About        string    `json:"about"`
+	Creator      Creator   `json:"creator"`
+	CreatedAt    time.Time `json:"created_at"`
+	MembersCount int       `json:"members_count"`
+	IsJoined     bool      `json:"is_joined"`
+	UserRole     string    `json:"user_role"`
+}

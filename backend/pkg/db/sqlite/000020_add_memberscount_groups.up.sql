@@ -1,0 +1,1 @@
+ALTER TABLE groups ADD COLUMN members_count INTEGER DEFAULT 0;
