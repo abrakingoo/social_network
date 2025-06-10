@@ -89,4 +89,73 @@ class WebSocketManager {
     }
   }
 
-  
+  // Disconnect WebSocket
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+      this.isConnecting = false;
+      this.reconnectAttempts = 0;
+    }
+  }
+}
+
+// Singleton instance
+export const wsManager = new WebSocketManager();
+
+// Custom hook for using WebSocket in React components
+export const useWebSocket = (type, callback) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const callbackRef = useRef(callback);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    // Replace with your backend WebSocket URL
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8080/ws';
+    wsManager.connect(wsUrl);
+
+    const connectionCallback = (data) => {
+      setIsConnected(data.status === 'connected');
+    };
+
+    const messageCallback = (data) => {
+      if (callbackRef.current) {
+        callbackRef.current(data);
+      }
+    };
+
+    wsManager.addListener('connection', connectionCallback);
+    if (type) {
+      wsManager.addListener(type, messageCallback);
+    }
+
+    return () => {
+      wsManager.removeListener('connection', connectionCallback);
+      if (type) {
+        wsManager.removeListener(type, messageCallback);
+      }
+      // Optionally disconnect on unmount if no other components are using it
+      // wsManager.disconnect();
+    };
+  }, [type]);
+
+  return { isConnected, send: (type, data) => wsManager.send(type, data) };
+};
+
+// Supported event types for reference
+export const EVENT_TYPES = {
+  PRIVATE_MESSAGE: 'private_message',
+  GROUP_MESSAGE: 'group_message',
+  NOTIFICATION_LIKE: 'like',
+  NOTIFICATION_COMMENT: 'comment',
+  NOTIFICATION_FOLLOW_REQUEST: 'follow_request',
+  NOTIFICATION_FOLLOW_ACCEPT: 'follow_accept',
+  NOTIFICATION_GROUP_INVITE: 'group_invite',
+  NOTIFICATION_GROUP_JOIN_REQUEST: 'group_join_request',
+  NOTIFICATION_GROUP_JOIN_ACCEPT: 'group_join_accept',
+  NOTIFICATION_EVENT_CREATE: 'event_create',
+  NOTIFICATION_EVENT_RESPONSE: 'event_response',
+};
