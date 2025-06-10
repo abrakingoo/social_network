@@ -23,9 +23,10 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusUpgradeRequired, "failed to upgrade connection", Error)
+		app.JSONResponse(w, r, http.StatusBadRequest, "failed to upgrade connection", Error)
 		return
 	}
+
 	client := &socket.Client{
 		UserID:      userID,
 		Conn:        conn,
@@ -35,6 +36,11 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.Hub.Register <- client
+	defer func() {
+		app.Hub.Unregister <- client
+		close(client.Send)
+	}()
+
 	go client.WritePump()
 	go client.ProcessMessages()
 	client.ReadPump()
