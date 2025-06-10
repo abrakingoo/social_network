@@ -56,4 +56,19 @@ class WebSocketManager {
     };
   }
 
+  // Add event listener for specific message types
+  addListener(type, callback) {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, new Set());
+    }
+    this.listeners.get(type).add(callback);
+  }
+
+  // Remove event listener
+  removeListener(type, callback) {
+    if (this.listeners.has(type)) {
+      this.listeners.get(type).delete(callback);
+    }
+  }
+
   
