@@ -79,7 +79,7 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/addGroup", app.AuthMiddleware(http.HandlerFunc(app.AddGroup)))
 	mux.Handle("/api/getGroupData", app.AuthMiddleware(http.HandlerFunc(app.GetGroupData)))
 	mux.Handle("/api/addEvent", app.AuthMiddleware(http.HandlerFunc(app.AddEvent)))
-	mux.Handle("/api/ws", app.AuthMiddleware(http.HandlerFunc(app.ServeWS)))
+	mux.Handle("/api/ws", app.AuthMiddleware(http.HandlerFunc(app.HandleWebsocket)))
 
 	return mux
 }
