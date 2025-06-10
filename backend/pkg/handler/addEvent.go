@@ -40,6 +40,8 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate event ID
+	eventID := util.UUIDGen()
 	err = app.Queries.InsertData("events", []string{
 		"id",
 		"title",
@@ -49,7 +51,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		"location",
 		"description",
 	}, []any{
-		util.UUIDGen(),
+		eventID,
 		event.Title,
 		userID,
 		groupId,
@@ -62,5 +64,12 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.JSONResponse(w, r, http.StatusCreated, "event added successfully", Success)
+	// Fetch the newly created event data to return to the frontend
+	createdEvent, err := app.Queries.FetchEventByID(eventID)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "failed to retrieve created event", Error)
+		return
+	}
+
+	app.JSONResponse(w, r, http.StatusCreated, createdEvent, Success)
 }
