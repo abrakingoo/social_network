@@ -48,7 +48,7 @@ export default function RootLayout({ children }) {
         {/* Preconnect to important domains */}
         <link rel="preconnect" href="https://images.unsplash.com" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.className} ${geistMono.className} antialiased`}>
         <RootLayoutClient>
           {children}
         </RootLayoutClient>
