@@ -6,6 +6,7 @@ import {
   useState,
   useCallback
 } from "react";
+import * as ToastPrimitives from "@radix-ui/react-toast";
 
 const ToastContext = createContext({
   toasts: [],
@@ -30,9 +31,11 @@ export const ToastProvider = ({ children }) => {
   }, []);
 
   return (
-    <ToastContext.Provider value={{ toasts, toast, dismiss }}>
-      {children}
-    </ToastContext.Provider>
+    <ToastPrimitives.Provider>
+      <ToastContext.Provider value={{ toasts, toast, dismiss }}>
+        {children}
+      </ToastContext.Provider>
+    </ToastPrimitives.Provider>
   );
 };
 
