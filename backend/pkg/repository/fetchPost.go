@@ -9,7 +9,7 @@ import (
 	"social/pkg/model"
 )
 
-func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
+func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 	query := `
 		SELECT 
 			p.id, p.content, 
@@ -17,11 +17,33 @@ func (q *Query) FetchPostWithMedia() ([]model.Post, error) {
 			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
-		LEFT JOIN users u ON u.id = p.user_id
+		JOIN users u ON u.id = p.user_id
 		WHERE p.group_id IS NULL
+		 AND (
+    	-- Public posts: everyone can see
+    		p.privacy = 'public'
+    	OR
+    	-- Almost private: only accepted followers can see
+    		(p.privacy = 'almost_private' AND EXISTS (
+      		SELECT 1 FROM user_follows uf 
+      		WHERE uf.following_id = p.user_id 
+        	AND uf.follower_id = ?            -- current user ID parameter
+        	AND uf.status = 'accepted'
+    		))
+    	OR
+    	-- Private: only users in visibility list can see
+    		(p.privacy = 'private' AND EXISTS (
+      		SELECT 1 FROM post_visibility pv 
+      		WHERE pv.post_id = p.id 
+       		AND pv.user_id = ?                -- current user ID parameter
+    	))
+    	OR
+    	-- User's own posts: always visible
+    		p.user_id = ?                     -- current user ID parameter
+  		)
 		ORDER BY p.created_at DESC
 	`
-	rows, err := q.Db.Query(query)
+	rows, err := q.Db.Query(query, id, id, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
@@ -192,9 +214,9 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 	return commentsByPost, nil
 }
 
-func (q *Query) FetchAllPosts() ([]model.Post, error) {
+func (q *Query) FetchAllPosts(userID string) ([]model.Post, error) {
 	// 1. Fetch posts with their media
-	posts, err := q.FetchPostWithMedia()
+	posts, err := q.FetchPostWithMedia(userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get posts: %w", err)
 	}
