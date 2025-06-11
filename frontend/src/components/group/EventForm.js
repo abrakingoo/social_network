@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { groupService } from '@/services/groupService';
 
 const EventForm = ({ onClose, onEventCreated }) => {
   const { groupId } = useParams();
@@ -43,7 +44,7 @@ const EventForm = ({ onClose, onEventCreated }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Form validation
@@ -67,19 +68,27 @@ const EventForm = ({ onClose, onEventCreated }) => {
 
     setIsSubmitting(true);
 
-    // In a real app, this would call an API to create the event
-    setTimeout(() => {
-      const newEvent = {
-        id: `event-${Date.now()}`,
+    try {
+      // Combine date and time into a single ISO 8601 string
+      let eventTime = null;
+      if (formData.date) {
+        const datePart = format(formData.date, "yyyy-MM-dd");
+        if (formData.time) {
+          eventTime = `${datePart}T${formData.time}:00Z`; // Assuming time is HH:MM, append :00Z for UTC
+        } else {
+          eventTime = `${datePart}T00:00:00Z`; // Default to start of day if no time
+        }
+      }
+
+      const newEventData = {
+        group_id: groupId,
         title: formData.title,
         description: formData.description,
-        date: formData.date,
-        time: formData.time,
+        event_time: eventTime,
         location: formData.location,
-        groupId: groupId,
-        attendees: 1, // Creator is first attendee
-        createdAt: new Date()
       };
+
+      const createdEvent = await groupService.createEvent(newEventData);
 
       toast({
         title: "Event created",
@@ -87,14 +96,23 @@ const EventForm = ({ onClose, onEventCreated }) => {
       });
 
       if (onEventCreated) {
-        onEventCreated(newEvent);
+        // The backend should return the full event object, which we pass to the parent
+        onEventCreated(createdEvent);
       }
 
-      setIsSubmitting(false);
       if (onClose) {
         onClose();
       }
-    }, 800);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create event. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
