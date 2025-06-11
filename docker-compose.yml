@@ -19,8 +19,6 @@ services:
       - 3000:3000
     depends_on:
       - backend
-    environment:
-      - BACKEND_API=http://backend:8000
 
 
   
