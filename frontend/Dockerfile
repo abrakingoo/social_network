@@ -1,4 +1,4 @@
-FROM node:24-alpine3.22 as builder
+FROM node:24-alpine3.22 AS builder
 
 # set working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ RUN npm run build
 
 
 
-FROM node:24-alpine3.22 as runner
+FROM node:24-alpine3.22 AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
