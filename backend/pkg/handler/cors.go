@@ -6,9 +6,8 @@ import (
 )
 
 func (app *App) WithCORS(handler http.Handler) http.Handler {
-	allowedOrigins := []string{"http://localhost", "http://localhost:8000"}
+	allowedOrigins := []string{"http://localhost", "http://localhost:3000"}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		origin := r.Header.Get("Origin")
 		if isOriginAllowed(origin, allowedOrigins) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
