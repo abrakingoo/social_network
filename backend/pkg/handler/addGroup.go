@@ -32,19 +32,37 @@ func (app *App) AddGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	groupId := util.UUIDGen()
+
 	err = app.Queries.InsertData("groups", []string{
 		"id",
 		"title",
 		"description",
 		"creator_id",
 	}, []any{
-		util.UUIDGen(),
+		groupId,
 		addGroupData.Title,
 		addGroupData.Description,
 		userID,
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to create group", Error)
+		return
+	}
+
+	err = app.Queries.InsertData("group_members", []string{
+		"id",
+		"group_id",
+		"user_id",
+		"role",
+	}, []any{
+		util.UUIDGen(),
+		groupId,
+		userID,
+		"admin",
+	})
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to add group member", Error)
 		return
 	}
 	app.JSONResponse(w, r, http.StatusOK, "Group created successfully", Success)
