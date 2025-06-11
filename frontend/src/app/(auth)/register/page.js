@@ -29,6 +29,7 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [backendErrors, setBackendErrors] = useState({});
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost';
 
   const handleClearBackendErrors = (fieldName) => {
     setBackendErrors(prev => {
@@ -69,7 +70,7 @@ export default function RegisterPage() {
         }
       });
 
-      const response = await fetch(`${process.env.BACKEND_API}/api/register`, {
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
         method: 'POST',
         credentials: 'include',
         body: multipartFormData,
