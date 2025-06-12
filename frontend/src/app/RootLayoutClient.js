@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PostProvider } from "@/context/PostContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { GroupProvider } from "@/context/GroupContext";
 import { Toaster } from "@/components/ui/toaster";
 import { ToastProvider } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
@@ -104,10 +105,12 @@ export default function RootLayoutClient({ children }) {
         <ToastProvider>
           <AuthProvider>
             <PostProvider>
-              <Toaster />
-              <AuthenticatedLayout>
-                {children}
-              </AuthenticatedLayout>
+              <GroupProvider>
+                <Toaster />
+                <AuthenticatedLayout>
+                  {children}
+                </AuthenticatedLayout>
+              </GroupProvider>
             </PostProvider>
           </AuthProvider>
         </ToastProvider>
