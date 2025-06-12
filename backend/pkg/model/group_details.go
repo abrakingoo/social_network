@@ -20,6 +20,7 @@ type Events struct {
 	Creator     Creator   `json:"creator"`
 	EventTime   time.Time `json:"event_time"`
 	CreatedAt   time.Time `json:"created_at"`
+	RsvpCount   int       `json:"rsvp_count"`
 	Attendees   []Creator `json:"attendees"`
 	Location    string    `json:"location"`
 }

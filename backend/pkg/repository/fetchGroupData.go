@@ -216,7 +216,7 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 	eventRows, err := q.Db.Query(`
 		SELECT
 			e.id, e.title, e.description, e.event_time, e.created_at, e.location,
-			ec.id, ec.first_name, ec.last_name, ec.nickname, ec.avatar
+			ec.id, ec.first_name, ec.last_name, ec.nickname, ec.avatar, e.going_count
 		FROM events e
 		JOIN users ec ON ec.id = e.creator_id
 		WHERE e.group_id = ?
@@ -235,7 +235,7 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 		err := eventRows.Scan(
 			&event.ID, &event.Title, &event.Description, &event.EventTime, &event.CreatedAt, &event.Location,
 			&event.Creator.ID, &event.Creator.FirstName, &event.Creator.LastName,
-			&event.Creator.Nickname, &event.Creator.Avatar,
+			&event.Creator.Nickname, &event.Creator.Avatar, &event.RsvpCount,
 		)
 		if err != nil {
 			return err
