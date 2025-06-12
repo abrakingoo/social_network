@@ -28,7 +28,13 @@ func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rsvp.Status == "going" {
+	rsvped, err := app.Queries.CheckForRsvp(rsvp.ID, userID)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnprocessableEntity, "Error while processing data", Error)
+		return
+	}
+
+	if !rsvped {
 		app.Queries.InsertData("event_attendance", []string{
 			"id",
 			"event_id",
@@ -40,15 +46,13 @@ func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
 			userID,
 			rsvp.Status,
 		})
-	} else if rsvp.Status == "not_going" {
+	} else {
 		app.Queries.UpdateData("event_attendance", []string{
 			"event_id",
 			"user_id",
-			"status",
 		}, []any{
 			rsvp.ID,
 			userID,
-			"going",
 		}, []string{
 			"status",
 		}, []any{
