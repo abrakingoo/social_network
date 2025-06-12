@@ -50,6 +50,8 @@ const Friends = () => {
     </div>;
   }
 
+  if (error) return <div>{error}</div>;
+
   // Don't render if user is not authenticated
   if (!currentUser) {
     return null;
