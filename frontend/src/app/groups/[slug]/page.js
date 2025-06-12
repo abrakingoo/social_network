@@ -1,4 +1,6 @@
-// Updated GroupDetail component for /groups/[slug]/page.js
+// Optimized GroupDetail component - only refreshes events section
+// Replace your GroupDetail component with this version:
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,7 +31,7 @@ import { Badge } from '@/components/ui/badge';
 const GroupDetail = () => {
   const router = useRouter();
   const params = useParams();
-  const groupSlug = params.slug; // Changed from params.id to params.slug
+  const groupSlug = params.slug;
   const { currentUser, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [groupData, setGroupData] = useState(null);
@@ -38,105 +40,155 @@ const GroupDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
+  const [isRefreshingEvents, setIsRefreshingEvents] = useState(false); // New state for events refresh
+
+  // Full fetch for initial load
+  const fetchGroupDetails = async () => {
+    if (!currentUser || authLoading) {
+      console.log('[GroupDetail] Skipping fetch - auth not ready:', { currentUser, authLoading });
+      return;
+    }
+
+    console.log('[GroupDetail] Starting to fetch group details for slug:', groupSlug);
+    setIsLoadingDetails(true);
+    try {
+      // 1. Fetch all groups to find the group by slug
+      console.log('[GroupDetail] Fetching all groups to find group by slug:', groupSlug);
+      const allGroupsResult = await groupService.getAllGroups();
+
+      console.log('[GroupDetail] All groups fetched:', allGroupsResult);
+
+      const allGroups = allGroupsResult.groups || [];
+      const currentGroup = findGroupBySlug(groupSlug, allGroups);
+      console.log('[GroupDetail] Found current group by slug:', currentGroup);
+
+      if (currentGroup) {
+        // 2. Fetch detailed group data using the title
+        console.log('[GroupDetail] Fetching details for group title:', currentGroup.title);
+        const details = await groupService.getGroupDetails(currentGroup.title);
+
+        console.log('[GroupDetail] Group details fetched:', details);
+
+        // Use the role and membership info from the initial groups fetch
+        const userRole = currentGroup.user_role || '';
+        const isJoined = currentGroup.is_joined || false;
+
+        console.log('[GroupDetail] Using role info from groups list:', {
+          userRole,
+          isJoined,
+          currentGroup_user_role: currentGroup.user_role,
+          currentGroup_is_joined: currentGroup.is_joined
+        });
+
+        // Initialize RSVP status for each event
+        const initialRsvpStatus = {};
+        const eventsWithRsvpStatus = (details.Events || []).map(event => {
+          const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
+          initialRsvpStatus[event.id] = isRsvpdByUser;
+          return { ...event, is_rsvpd: isRsvpdByUser };
+        });
+        setRsvpStatus(initialRsvpStatus);
+
+        // Augment groupData with user-specific info and initialized events
+        setGroupData({
+          ...details,
+          is_joined: isJoined,
+          user_role: userRole,
+          events: eventsWithRsvpStatus,
+          Events: eventsWithRsvpStatus,
+          // Store the original group ID for API calls that still need it
+          group_id: currentGroup.id
+        });
+      } else {
+        console.error('[GroupDetail] Group not found for slug:', groupSlug);
+        toast({
+          title: "Error",
+          description: "Group not found.",
+          variant: "destructive"
+        });
+        router.push('/groups');
+      }
+    } catch (error) {
+      console.error('[GroupDetail] Error in fetchGroupDetails:', {
+        error,
+        message: error.message,
+        status: error.status,
+        stack: error.stack
+      });
+      toast({
+        title: "Error",
+        description: "Failed to load group details. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  // NEW: Lightweight events-only refresh function
+  const refreshEventsOnly = async () => {
+    if (!groupData || !groupData.title) {
+      console.log('[GroupDetail] Cannot refresh events - no group data available');
+      return;
+    }
+
+    console.log('[GroupDetail] Refreshing events only for group:', groupData.title);
+    setIsRefreshingEvents(true);
+
+    try {
+      // Fetch updated group details to get latest events
+      const details = await groupService.getGroupDetails(groupData.title);
+
+      // Update RSVP status for each event
+      const updatedRsvpStatus = {};
+      const eventsWithRsvpStatus = (details.Events || []).map(event => {
+        const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
+        updatedRsvpStatus[event.id] = isRsvpdByUser;
+        return { ...event, is_rsvpd: isRsvpdByUser };
+      });
+
+      // Update RSVP status state
+      setRsvpStatus(updatedRsvpStatus);
+
+      // Update only the events-related data in groupData
+      setGroupData(prevGroupData => ({
+        ...prevGroupData,
+        Events: eventsWithRsvpStatus,
+        events: eventsWithRsvpStatus,
+        // Also update other arrays that might have changed
+        group_post: Array.isArray(details.group_post) ? details.group_post : [],
+        members: Array.isArray(details.members) ? details.members : [],
+        members_count: Array.isArray(details.members) ? details.members.length : 0
+      }));
+
+      console.log('[GroupDetail] Events refreshed successfully:', eventsWithRsvpStatus.length, 'events found');
+
+    } catch (error) {
+      console.error('[GroupDetail] Error refreshing events:', error);
+      throw error; // Re-throw so caller can handle
+    } finally {
+      setIsRefreshingEvents(false);
+    }
+  };
 
   // Fetch group details on component mount
   useEffect(() => {
     let isMounted = true;
 
-    const fetchGroupDetails = async () => {
-      if (!currentUser || authLoading) {
-        console.log('[GroupDetail] Skipping fetch - auth not ready:', { currentUser, authLoading });
-        return;
-      }
-
-      console.log('[GroupDetail] Starting to fetch group details for slug:', groupSlug);
-      setIsLoadingDetails(true);
-      try {
-        // 1. Fetch all groups to find the group by slug
-        console.log('[GroupDetail] Fetching all groups to find group by slug:', groupSlug);
-        const allGroupsResult = await groupService.getAllGroups();
-        if (!isMounted) return;
-
-        console.log('[GroupDetail] All groups fetched:', allGroupsResult);
-
-        const allGroups = allGroupsResult.groups || [];
-        const currentGroup = findGroupBySlug(groupSlug, allGroups);
-        console.log('[GroupDetail] Found current group by slug:', currentGroup);
-
-        if (currentGroup) {
-          // 2. Fetch detailed group data using the title
-          console.log('[GroupDetail] Fetching details for group title:', currentGroup.title);
-          const details = await groupService.getGroupDetails(currentGroup.title);
-          if (!isMounted) return;
-
-          console.log('[GroupDetail] Group details fetched:', details);
-
-          // Use the role and membership info from the initial groups fetch
-          const userRole = currentGroup.user_role || '';
-          const isJoined = currentGroup.is_joined || false;
-
-          console.log('[GroupDetail] Using role info from groups list:', {
-            userRole,
-            isJoined,
-            currentGroup_user_role: currentGroup.user_role,
-            currentGroup_is_joined: currentGroup.is_joined
-          });
-
-          // Initialize RSVP status for each event
-          const initialRsvpStatus = {};
-          const eventsWithRsvpStatus = (details.Events || []).map(event => {
-            const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
-            initialRsvpStatus[event.id] = isRsvpdByUser;
-            return { ...event, is_rsvpd: isRsvpdByUser };
-          });
-          setRsvpStatus(initialRsvpStatus);
-
-          // Augment groupData with user-specific info and initialized events
-          setGroupData({
-            ...details,
-            is_joined: isJoined,
-            user_role: userRole,
-            events: eventsWithRsvpStatus,
-            Events: eventsWithRsvpStatus,
-            // Store the original group ID for API calls that still need it
-            group_id: currentGroup.id
-          });
-        } else {
-          console.error('[GroupDetail] Group not found for slug:', groupSlug);
-          if (!isMounted) return;
-          toast({
-            title: "Error",
-            description: "Group not found.",
-            variant: "destructive"
-          });
-          router.push('/groups');
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        console.error('[GroupDetail] Error in fetchGroupDetails:', {
-          error,
-          message: error.message,
-          status: error.status,
-          stack: error.stack
-        });
-        toast({
-          title: "Error",
-          description: "Failed to load group details. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        if (isMounted) {
-          setIsLoadingDetails(false);
-        }
+    const fetchData = async () => {
+      await fetchGroupDetails();
+      // Only set loading to false if component is still mounted
+      if (isMounted) {
+        // fetchGroupDetails already handles setIsLoadingDetails(false)
       }
     };
 
-    fetchGroupDetails();
+    fetchData();
 
     return () => {
       isMounted = false;
     };
-  }, [groupSlug, currentUser, authLoading]); // Changed dependency from groupId to groupSlug
+  }, [groupSlug, currentUser, authLoading]);
 
   // Separate effect for auth redirect
   useEffect(() => {
@@ -144,6 +196,37 @@ const GroupDetail = () => {
       router.push('/login');
     }
   }, [currentUser, authLoading, router]);
+
+  // OPTIMIZED: Updated handleEventCreated to only refresh events
+  const handleEventCreated = async () => {
+    // Close the dialog first
+    setIsCreateEventOpen(false);
+
+    console.log('[GroupDetail] Event created successfully, refreshing events...');
+
+    // Show immediate feedback
+    toast({
+      title: "Event Created",
+      description: "Updating events list...",
+    });
+
+    // Refresh only the events data
+    try {
+      await refreshEventsOnly();
+
+      toast({
+        title: "Success",
+        description: "Your event has been created and added to the list.",
+      });
+    } catch (error) {
+      console.error('[GroupDetail] Error refreshing events after creation:', error);
+      toast({
+        title: "Event Created",
+        description: "Event was created successfully. Please refresh the page to see it.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Don't render if auth is still loading or user not authenticated
   if (authLoading || !currentUser) {
@@ -252,6 +335,7 @@ const GroupDetail = () => {
       return {
         ...prevGroupData,
         events: updatedEvents,
+        Events: updatedEvents,
       };
     });
 
@@ -286,6 +370,7 @@ const GroupDetail = () => {
         return {
           ...prevGroupData,
           events: updatedEvents,
+          Events: updatedEvents,
         };
       });
 
@@ -318,14 +403,6 @@ const GroupDetail = () => {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
-  };
-
-  const handleEventCreated = (newEvent) => {
-    setGroupData(prevGroupData => ({
-      ...prevGroupData,
-      events: [newEvent, ...(prevGroupData.events || [])]
-    }));
-    setIsCreateEventOpen(false);
   };
 
   return (
@@ -433,14 +510,23 @@ const GroupDetail = () => {
                   <Button
                     className="w-full bg-social hover:bg-social-dark"
                     onClick={() => setIsCreateEventOpen(true)}
+                    disabled={isRefreshingEvents}
                   >
                     <Calendar className="h-4 w-4 mr-2" />
-                    Create Event
+                    {isRefreshingEvents ? "Updating..." : "Create Event"}
                   </Button>
                 </div>
               )}
 
               <div className="space-y-4">
+                {/* Add subtle loading indicator for events refresh */}
+                {isRefreshingEvents && (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-social mr-2" />
+                    <span className="text-sm text-gray-600">Updating events...</span>
+                  </div>
+                )}
+
                 {groupData.Events && groupData.Events.length > 0 ? (
                   groupData.Events.map((event) => (
                     <Card key={event.id} className="overflow-hidden">
