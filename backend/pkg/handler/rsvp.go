@@ -38,7 +38,21 @@ func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
 			util.UUIDGen(),
 			rsvp.ID,
 			userID,
+			rsvp.Status,
+		})
+	} else if rsvp.Status == "not_going" {
+		app.Queries.UpdateData("event_attendance", []string{
+			"event_id",
+			"user_id",
+			"status",
+		}, []any{
+			rsvp.ID,
+			userID,
 			"going",
+		}, []string{
+			"status",
+		}, []any{
+			rsvp.Status,
 		})
 	}
 }
