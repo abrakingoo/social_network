@@ -15,6 +15,8 @@ func (q *Query) FetchAllUsers() ([]model.User ,error) {
 			u.id, u.first_name, u.last_name, u.nickname, u.avatar,  
 			u.is_public
 		FROM users u
+		ORDER BY u.created_at DESC
+        LIMIT 100
 	`
 	rows, err := q.Db.Query(query)
 	if err != nil {
