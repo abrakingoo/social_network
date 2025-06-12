@@ -1,14 +1,13 @@
-// Optimized GroupDetail component - only refreshes events section
-// Replace your GroupDetail component with this version:
-
+// Optimized GroupDetail component - sidebar moved to global RightSidebar
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useGroup } from '@/context/GroupContext';
 import { groupService } from '@/services/groupService';
-import { findGroupBySlug } from '@/lib/slugUtils'; // Import slug utilities
+import { findGroupBySlug } from '@/lib/slugUtils';
 import PostForm from '@/components/post/PostForm';
 import PostCard from '@/components/post/PostCard';
 import EventForm from '@/components/group/EventForm';
@@ -33,14 +32,21 @@ const GroupDetail = () => {
   const params = useParams();
   const groupSlug = params.slug;
   const { currentUser, loading: authLoading } = useAuth();
+  const { setGroupData } = useGroup();
   const { toast } = useToast();
-  const [groupData, setGroupData] = useState(null);
+  const [groupData, setLocalGroupData] = useState(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
-  const [isRefreshingEvents, setIsRefreshingEvents] = useState(false); // New state for events refresh
+  const [isRefreshingEvents, setIsRefreshingEvents] = useState(false);
+
+  // Update both local state and global context
+  const updateGroupData = (data) => {
+    setLocalGroupData(data);
+    setGroupData(data);
+  };
 
   // Full fetch for initial load
   const fetchGroupDetails = async () => {
@@ -52,35 +58,15 @@ const GroupDetail = () => {
     console.log('[GroupDetail] Starting to fetch group details for slug:', groupSlug);
     setIsLoadingDetails(true);
     try {
-      // 1. Fetch all groups to find the group by slug
-      console.log('[GroupDetail] Fetching all groups to find group by slug:', groupSlug);
       const allGroupsResult = await groupService.getAllGroups();
-
-      console.log('[GroupDetail] All groups fetched:', allGroupsResult);
-
       const allGroups = allGroupsResult.groups || [];
       const currentGroup = findGroupBySlug(groupSlug, allGroups);
-      console.log('[GroupDetail] Found current group by slug:', currentGroup);
 
       if (currentGroup) {
-        // 2. Fetch detailed group data using the title
-        console.log('[GroupDetail] Fetching details for group title:', currentGroup.title);
         const details = await groupService.getGroupDetails(currentGroup.title);
-
-        console.log('[GroupDetail] Group details fetched:', details);
-
-        // Use the role and membership info from the initial groups fetch
         const userRole = currentGroup.user_role || '';
         const isJoined = currentGroup.is_joined || false;
 
-        console.log('[GroupDetail] Using role info from groups list:', {
-          userRole,
-          isJoined,
-          currentGroup_user_role: currentGroup.user_role,
-          currentGroup_is_joined: currentGroup.is_joined
-        });
-
-        // Initialize RSVP status for each event
         const initialRsvpStatus = {};
         const eventsWithRsvpStatus = (details.Events || []).map(event => {
           const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
@@ -89,16 +75,16 @@ const GroupDetail = () => {
         });
         setRsvpStatus(initialRsvpStatus);
 
-        // Augment groupData with user-specific info and initialized events
-        setGroupData({
+        const groupDataWithUser = {
           ...details,
           is_joined: isJoined,
           user_role: userRole,
           events: eventsWithRsvpStatus,
           Events: eventsWithRsvpStatus,
-          // Store the original group ID for API calls that still need it
           group_id: currentGroup.id
-        });
+        };
+
+        updateGroupData(groupDataWithUser);
       } else {
         console.error('[GroupDetail] Group not found for slug:', groupSlug);
         toast({
@@ -109,12 +95,7 @@ const GroupDetail = () => {
         router.push('/groups');
       }
     } catch (error) {
-      console.error('[GroupDetail] Error in fetchGroupDetails:', {
-        error,
-        message: error.message,
-        status: error.status,
-        stack: error.stack
-      });
+      console.error('[GroupDetail] Error in fetchGroupDetails:', error);
       toast({
         title: "Error",
         description: "Failed to load group details. Please try again.",
@@ -125,21 +106,16 @@ const GroupDetail = () => {
     }
   };
 
-  // NEW: Lightweight events-only refresh function
+  // Lightweight events-only refresh function
   const refreshEventsOnly = async () => {
     if (!groupData || !groupData.title) {
       console.log('[GroupDetail] Cannot refresh events - no group data available');
       return;
     }
 
-    console.log('[GroupDetail] Refreshing events only for group:', groupData.title);
     setIsRefreshingEvents(true);
-
     try {
-      // Fetch updated group details to get latest events
       const details = await groupService.getGroupDetails(groupData.title);
-
-      // Update RSVP status for each event
       const updatedRsvpStatus = {};
       const eventsWithRsvpStatus = (details.Events || []).map(event => {
         const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
@@ -147,73 +123,59 @@ const GroupDetail = () => {
         return { ...event, is_rsvpd: isRsvpdByUser };
       });
 
-      // Update RSVP status state
       setRsvpStatus(updatedRsvpStatus);
 
-      // Update only the events-related data in groupData
-      setGroupData(prevGroupData => ({
-        ...prevGroupData,
+      const updatedGroupData = {
+        ...groupData,
         Events: eventsWithRsvpStatus,
         events: eventsWithRsvpStatus,
-        // Also update other arrays that might have changed
         group_post: Array.isArray(details.group_post) ? details.group_post : [],
         members: Array.isArray(details.members) ? details.members : [],
         members_count: Array.isArray(details.members) ? details.members.length : 0
-      }));
+      };
 
-      console.log('[GroupDetail] Events refreshed successfully:', eventsWithRsvpStatus.length, 'events found');
-
+      updateGroupData(updatedGroupData);
     } catch (error) {
       console.error('[GroupDetail] Error refreshing events:', error);
-      throw error; // Re-throw so caller can handle
+      throw error;
     } finally {
       setIsRefreshingEvents(false);
     }
   };
 
-  // Fetch group details on component mount
   useEffect(() => {
     let isMounted = true;
-
     const fetchData = async () => {
       await fetchGroupDetails();
-      // Only set loading to false if component is still mounted
-      if (isMounted) {
-        // fetchGroupDetails already handles setIsLoadingDetails(false)
-      }
     };
-
     fetchData();
-
     return () => {
       isMounted = false;
     };
   }, [groupSlug, currentUser, authLoading]);
 
-  // Separate effect for auth redirect
   useEffect(() => {
     if (!authLoading && !currentUser) {
       router.push('/login');
     }
   }, [currentUser, authLoading, router]);
 
-  // OPTIMIZED: Updated handleEventCreated to only refresh events
+  // Clear group data when component unmounts
+  useEffect(() => {
+    return () => {
+      setGroupData(null);
+    };
+  }, []);
+
   const handleEventCreated = async () => {
-    // Close the dialog first
     setIsCreateEventOpen(false);
-
-    console.log('[GroupDetail] Event created successfully, refreshing events...');
-
-    // Show immediate feedback
     toast({
       title: "Event Created",
       description: "Updating events list...",
     });
 
-    // Refresh only the events data
     try {
       await refreshEventsOnly();
-
       toast({
         title: "Success",
         description: "Your event has been created and added to the list.",
@@ -228,7 +190,6 @@ const GroupDetail = () => {
     }
   };
 
-  // Don't render if auth is still loading or user not authenticated
   if (authLoading || !currentUser) {
     return (
       <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
@@ -237,7 +198,6 @@ const GroupDetail = () => {
     );
   }
 
-  // Show loading spinner if group details are being fetched OR if essential data is missing
   if (isLoadingDetails || !groupData || !groupData.title) {
     return (
       <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
@@ -256,7 +216,6 @@ const GroupDetail = () => {
     return time ? `${formattedDate}, ${time}` : formattedDate;
   };
 
-  // Handle joining/leaving group - now use the stored group_id for API calls
   const handleJoinLeaveGroup = async (isCurrentlyJoined) => {
     if (!groupData.group_id) {
       toast({
@@ -271,7 +230,8 @@ const GroupDetail = () => {
       if (isCurrentlyJoined) {
         const result = await groupService.leaveGroup(groupData.group_id);
         if (result.success) {
-          setGroupData(prev => ({ ...prev, is_joined: false }));
+          const updatedData = { ...groupData, is_joined: false };
+          updateGroupData(updatedData);
           toast({
             title: "Success",
             description: "You have left the group successfully.",
@@ -280,7 +240,8 @@ const GroupDetail = () => {
       } else {
         const result = await groupService.joinGroup(groupData.group_id);
         if (result.success) {
-          setGroupData(prev => ({ ...prev, is_joined: true }));
+          const updatedData = { ...groupData, is_joined: true };
+          updateGroupData(updatedData);
           toast({
             title: "Success",
             description: "You have joined the group successfully!",
@@ -296,7 +257,6 @@ const GroupDetail = () => {
     }
   };
 
-  // Handle RSVP functionality
   const handleRSVP = async (eventId) => {
     if (!currentUser) {
       toast({
@@ -309,71 +269,52 @@ const GroupDetail = () => {
 
     const currentStatus = rsvpStatus[eventId] ? "going" : "not_going";
     const newStatus = currentStatus === "going" ? "not_going" : "going";
-    const toastTitle = newStatus === "going" ? "RSVP Confirmed" : "RSVP Cancelled";
-    const toastDescription = newStatus === "going" ? "You have successfully RSVP'd for this event!" : "You have un-RSVP'd for this event.";
 
-    // Optimistic UI update
-    setRsvpStatus(prevStatus => ({
-      ...prevStatus,
-      [eventId]: newStatus === "going"
-    }));
+    setRsvpStatus(prev => ({ ...prev, [eventId]: newStatus === "going" }));
 
-    setGroupData(prevGroupData => {
-      const updatedEvents = prevGroupData.events.map(event => {
+    const updatedEvents = groupData.events.map(event => {
+      if (event.id === eventId) {
+        const updatedAttendees = newStatus === "going"
+          ? [...(event.attendees || []), currentUser]
+          : (event.attendees || []).filter(attendee => attendee.id !== currentUser.id);
+        return {
+          ...event,
+          attendees: updatedAttendees,
+          is_rsvpd: newStatus === "going",
+        };
+      }
+      return event;
+    });
+
+    const updatedGroupData = {
+      ...groupData,
+      events: updatedEvents,
+      Events: updatedEvents,
+    };
+    updateGroupData(updatedGroupData);
+
+    try {
+      await groupService.rsvpEvent(eventId, newStatus);
+      toast({
+        title: newStatus === "going" ? "RSVP Confirmed" : "RSVP Cancelled",
+        description: newStatus === "going" ? "You have successfully RSVP'd for this event!" : "You have un-RSVP'd for this event.",
+      });
+    } catch (error) {
+      setRsvpStatus(prev => ({ ...prev, [eventId]: currentStatus === "going" }));
+      const revertedEvents = groupData.events.map(event => {
         if (event.id === eventId) {
-          const updatedAttendees = newStatus === "going"
+          const revertedAttendees = currentStatus === "going"
             ? [...(event.attendees || []), currentUser]
             : (event.attendees || []).filter(attendee => attendee.id !== currentUser.id);
           return {
             ...event,
-            attendees: updatedAttendees,
-            is_rsvpd: newStatus === "going",
+            attendees: revertedAttendees,
+            is_rsvpd: currentStatus === "going",
           };
         }
         return event;
       });
-      return {
-        ...prevGroupData,
-        events: updatedEvents,
-        Events: updatedEvents,
-      };
-    });
-
-    try {
-      await groupService.rsvpEvent(eventId, newStatus);
-
-      toast({
-        title: toastTitle,
-        description: toastDescription,
-      });
-    } catch (error) {
-      console.error('Error updating RSVP status:', error);
-      // Revert optimistic update on error
-      setRsvpStatus(prevStatus => ({
-        ...prevStatus,
-        [eventId]: currentStatus === "going"
-      }));
-      setGroupData(prevGroupData => {
-        const updatedEvents = prevGroupData.events.map(event => {
-          if (event.id === eventId) {
-            const revertedAttendees = currentStatus === "going"
-              ? [...(event.attendees || []), currentUser]
-              : (event.attendees || []).filter(attendee => attendee.id !== currentUser.id);
-            return {
-              ...event,
-              attendees: revertedAttendees,
-              is_rsvpd: currentStatus === "going",
-            };
-          }
-          return event;
-        });
-        return {
-          ...prevGroupData,
-          events: updatedEvents,
-          Events: updatedEvents,
-        };
-      });
-
+      updateGroupData({ ...groupData, events: revertedEvents, Events: revertedEvents });
       toast({
         title: "RSVP Failed",
         description: error.message || "Failed to update RSVP status. Please try again.",
@@ -382,7 +323,6 @@ const GroupDetail = () => {
     }
   };
 
-  // Handle group deletion
   const handleDeleteGroup = async () => {
     setIsDeleting(true);
     try {
@@ -406,7 +346,7 @@ const GroupDetail = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-full mx-auto">
       {/* Group Header */}
       <Card className="mb-6 overflow-hidden">
         <div className="h-40 bg-gradient-to-r from-social/30 to-social-accent/30 relative">
@@ -470,259 +410,165 @@ const GroupDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Group Content */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="md:col-span-2">
-          <Tabs defaultValue="posts" className="w-full mb-6">
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="posts">Posts</TabsTrigger>
-              <TabsTrigger value="events">Events</TabsTrigger>
-              <TabsTrigger value="about">About</TabsTrigger>
-            </TabsList>
+      {/* Group Content - Full Width */}
+      <div className="w-full">
+        <Tabs defaultValue="posts" className="w-full mb-6">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="posts">Posts</TabsTrigger>
+            <TabsTrigger value="events">Events</TabsTrigger>
+            <TabsTrigger value="about">About</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="posts" className="mt-6">
-              {groupData.is_joined && (
-                <div className="mb-6">
-                  <PostForm groupId={groupData.group_id} />
-                </div>
-              )}
-
-              {groupData.group_post && groupData.group_post.length > 0 ? (
-                <div className="space-y-6">
-                  {groupData.group_post.map((post) => (
-                    <PostCard key={post.id} post={post} />
-                  ))}
-                </div>
-              ) : (
-                <Card className="p-8 text-center">
-                  <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-                  <p className="text-gray-500">
-                    Be the first to post in this group!
-                  </p>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="events" className="mt-6">
-              {groupData.user_role === 'admin' && (
-                <div className="mb-6">
-                  <Button
-                    className="w-full bg-social hover:bg-social-dark"
-                    onClick={() => setIsCreateEventOpen(true)}
-                    disabled={isRefreshingEvents}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {isRefreshingEvents ? "Updating..." : "Create Event"}
-                  </Button>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {/* Add subtle loading indicator for events refresh */}
-                {isRefreshingEvents && (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-social mr-2" />
-                    <span className="text-sm text-gray-600">Updating events...</span>
-                  </div>
-                )}
-
-                {groupData.Events && groupData.Events.length > 0 ? (
-                  groupData.Events.map((event) => (
-                    <Card key={event.id} className="overflow-hidden">
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle>{event.title}</CardTitle>
-                            <CardDescription>
-                              {formatEventDate(event.event_time, '')}
-                              {event.location && ` · ${event.location}`}
-                            </CardDescription>
-                          </div>
-                          <Button
-                            onClick={() => handleRSVP(event.id)}
-                            className={rsvpStatus[event.id] ? "bg-green-600 hover:bg-green-700" : "bg-social hover:bg-social-dark"}
-                          >
-                            {rsvpStatus[event.id] ? "Going" : "RSVP"}
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-gray-600 mb-3">{event.description}</p>
-
-                        {event.location && (
-                          <div className="flex items-center text-sm text-gray-500 mb-2">
-                            <span className="font-medium mr-2">Location:</span>
-                            {event.location}
-                          </div>
-                        )}
-
-                        <div className="mt-3 flex items-center">
-                          <Badge variant="secondary" className="mr-2">
-                            {event.attendees ? event.attendees.length : 0}
-                            {(event.attendees ? event.attendees.length : 0) === 1 ? ' person' : ' people'} going
-                          </Badge>
-
-                          {rsvpStatus[event.id] && (
-                            <Badge variant="outline" className="bg-green-50">
-                              You're going
-                            </Badge>
-                          )}
-                        </div>
-                        {event.creator && event.creator.firstname && (
-                          <div className="flex items-center mt-2 text-sm text-gray-500">
-                            <span>Created by {event.creator.firstname} {event.creator.lastname}</span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <Card className="p-8 text-center">
-                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                    <h3 className="text-lg font-medium mb-1">No upcoming events</h3>
-                    <p className="text-gray-500">
-                      {groupData.user_role === 'admin' ? 'Create the first event for this group!' : 'There are no scheduled events for this group yet'}
-                    </p>
-                  </Card>
-                )}
+          <TabsContent value="posts" className="mt-6">
+            {groupData.is_joined && (
+              <div className="mb-6">
+                <PostForm groupId={groupData.group_id} />
               </div>
-            </TabsContent>
+            )}
 
-            <TabsContent value="about" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Info className="h-5 w-5 mr-2" />
-                    About this group
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    {groupData.about || 'No description available.'}
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Created:</span>
-                      <p className="text-gray-600">{groupData.created_at ? new Date(groupData.created_at).toLocaleDateString() : 'Unknown'}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Members:</span>
-                      <p className="text-gray-600">{groupData.members_count || groupData.members?.length || 0}</p>
-                    </div>
-                    {groupData.Creator && groupData.Creator.firstname && (
-                      <div>
-                        <span className="font-medium">Creator:</span>
-                        <p className="text-gray-600">
-                          {groupData.Creator.firstname} {groupData.Creator.lastname}
-                          {groupData.Creator.nickname && ` (${groupData.Creator.nickname})`}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">Group rules</h4>
-                    <ul className="list-disc list-inside text-gray-600 space-y-1">
-                      <li>Be kind and respectful to other members</li>
-                      <li>No spam or self-promotion</li>
-                      <li>Only share content relevant to the group's purpose</li>
-                    </ul>
-                  </div>
-                </CardContent>
+            {groupData.group_post && groupData.group_post.length > 0 ? (
+              <div className="space-y-6">
+                {groupData.group_post.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            ) : (
+              <Card className="p-8 text-center">
+                <h3 className="text-lg font-medium mb-2">No posts yet</h3>
+                <p className="text-gray-500">
+                  Be the first to post in this group!
+                </p>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+            )}
+          </TabsContent>
 
-        {/* Sidebar */}
-        <div>
-          {/* Members */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Users className="h-5 w-5 mr-2" />
-                Members ({groupData.members_count || groupData.members?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {groupData.members && groupData.members.length > 0 ? (
-                  groupData.members.slice(0, 5).map((member) => (
-                    <div key={member.id} className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.avatar} />
-                        <AvatarFallback>
-                          {member.firstname?.[0] || member.first_name?.[0] || 'U'}{member.lastname?.[0] || member.last_name?.[0] || 'S'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {member.firstname || member.first_name || 'Unknown'} {member.lastname || member.last_name || 'User'}
-                        </p>
-                        {member.nickname && (
-                          <p className="text-xs text-gray-500 truncate">{member.nickname}</p>
-                        )}
-                        {member.role && member.role !== 'member' && (
-                          <Badge variant="outline" className="text-xs">
-                            {member.role}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">No members yet.</p>
-                )}
-              </div>
-              {groupData.members && groupData.members.length > 5 && (
-                <Button variant="ghost" className="w-full mt-4 text-sm">
-                  See all members
+          <TabsContent value="events" className="mt-6">
+            {groupData.user_role === 'admin' && (
+              <div className="mb-6">
+                <Button
+                  className="w-full bg-social hover:bg-social-dark"
+                  onClick={() => setIsCreateEventOpen(true)}
+                  disabled={isRefreshingEvents}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {isRefreshingEvents ? "Updating..." : "Create Event"}
                 </Button>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
 
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <Calendar className="h-5 w-5 mr-2" />
-                Upcoming Events
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+            <div className="space-y-4">
+              {isRefreshingEvents && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-social mr-2" />
+                  <span className="text-sm text-gray-600">Updating events...</span>
+                </div>
+              )}
+
               {groupData.Events && groupData.Events.length > 0 ? (
-                <div className="space-y-4">
-                  {groupData.Events.slice(0, 2).map((event) => (
-                    <div key={event.id} className="border-b pb-3 last:border-0">
-                      <h4 className="font-medium">{event.title}</h4>
-                      <p className="text-sm text-gray-500 mb-1">
-                        {formatEventDate(event.event_time, '')}
-                      </p>
-                      <div className="flex items-center">
-                        <p className="text-xs text-gray-500 mr-2">
-                          {event.attendees ? event.attendees.length : 0} going
-                        </p>
+                groupData.Events.map((event) => (
+                  <Card key={event.id} className="overflow-hidden">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle>{event.title}</CardTitle>
+                          <CardDescription>
+                            {formatEventDate(event.event_time, '')}
+                            {event.location && ` · ${event.location}`}
+                          </CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => handleRSVP(event.id)}
+                          className={rsvpStatus[event.id] ? "bg-green-600 hover:bg-green-700" : "bg-social hover:bg-social-dark"}
+                        >
+                          {rsvpStatus[event.id] ? "Going" : "RSVP"}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 mb-3">{event.description}</p>
+
+                      {event.location && (
+                        <div className="flex items-center text-sm text-gray-500 mb-2">
+                          <span className="font-medium mr-2">Location:</span>
+                          {event.location}
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex items-center">
+                        <Badge variant="secondary" className="mr-2">
+                          {event.attendees ? event.attendees.length : 0}
+                          {(event.attendees ? event.attendees.length : 0) === 1 ? ' person' : ' people'} going
+                        </Badge>
+
                         {rsvpStatus[event.id] && (
-                          <Badge variant="outline" className="text-xs bg-green-50">
+                          <Badge variant="outline" className="bg-green-50">
                             You're going
                           </Badge>
                         )}
                       </div>
-                    </div>
-                  ))}
-                  <Button variant="ghost" className="w-full text-sm">
-                    See all events
-                  </Button>
-                </div>
+                      {event.creator && event.creator.firstname && (
+                        <div className="flex items-center mt-2 text-sm text-gray-500">
+                          <span>Created by {event.creator.firstname} {event.creator.lastname}</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
               ) : (
-                <p className="text-sm text-gray-500">
-                  No upcoming events scheduled
-                </p>
+                <Card className="p-8 text-center">
+                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <h3 className="text-lg font-medium mb-1">No upcoming events</h3>
+                  <p className="text-gray-500">
+                    {groupData.user_role === 'admin' ? 'Create the first event for this group!' : 'There are no scheduled events for this group yet'}
+                  </p>
+                </Card>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="about" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Info className="h-5 w-5 mr-2" />
+                  About this group
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 mb-4">
+                  {groupData.about || 'No description available.'}
+                </p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Created:</span>
+                    <p className="text-gray-600">{groupData.created_at ? new Date(groupData.created_at).toLocaleDateString() : 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Members:</span>
+                    <p className="text-gray-600">{groupData.members_count || groupData.members?.length || 0}</p>
+                  </div>
+                  {groupData.Creator && groupData.Creator.firstname && (
+                    <div>
+                      <span className="font-medium">Creator:</span>
+                      <p className="text-gray-600">
+                        {groupData.Creator.firstname} {groupData.Creator.lastname}
+                        {groupData.Creator.nickname && ` (${groupData.Creator.nickname})`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4">
+                  <h4 className="font-medium mb-2">Group rules</h4>
+                  <ul className="list-disc list-inside text-gray-600 space-y-1">
+                    <li>Be kind and respectful to other members</li>
+                    <li>No spam or self-promotion</li>
+                    <li>Only share content relevant to the group's purpose</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Event Creation Dialog */}
