@@ -59,4 +59,12 @@ func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
 			rsvp.Status,
 		})
 	}
+
+	count, err := app.Queries.FetchAttendingMembersCount(rsvp.ID)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusFailedDependency, "error while getting rsvped member count", Error)
+		return
+	}
+
+	app.JSONResponse(w, r, http.StatusOK, count, Success)
 }
