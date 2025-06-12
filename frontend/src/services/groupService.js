@@ -195,27 +195,72 @@ export const groupService = {
     }
   },
 
-  // Get group details by ID
-  async getGroupDetails(groupId) {
+  // Get group details by title (FIXED with proper data extraction and debugging)
+  async getGroupDetails(groupTitle) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/getGroupData?group_id=${encodeURIComponent(groupId)}`, {
+      // The backend expects a POST request with JSON body containing the group title
+      const response = await fetch(`${API_BASE_URL}/api/getGroupData`, {
+        method: 'POST',
         credentials: 'include',
-        headers: getHeaders(false) // No CSRF token needed for GET
+        headers: getHeaders(true), // Include Content-Type for JSON body
+        body: JSON.stringify({
+          title: groupTitle
+        })
       });
 
-      const rawData = await response.json(); // Read the response body as JSON
-      console.log('[groupService.getGroupDetails] Raw response data:', rawData); // Debug line
+      const rawData = await response.json();
+      console.log('[groupService.getGroupDetails] Raw response data:', rawData);
 
-      // Now pass the rawData to handleApiResponse for common error handling
-      return handleApiResponse(response, 'getGroupDetails', rawData); // Pass rawData along with response
+      // Handle the response using the common error handler - FIX: Add await here
+      const responseData = await handleApiResponse(response, 'getGroupDetails', rawData);
+      console.log('[groupService.getGroupDetails] After handleApiResponse:', responseData);
+
+      // FIXED: Extract the actual group data from the message property
+      const groupData = responseData.message || responseData;
+      console.log('[groupService.getGroupDetails] Extracted groupData:', groupData);
+      console.log('[groupService.getGroupDetails] GroupData members:', groupData.members);
+      console.log('[groupService.getGroupDetails] GroupData Creator:', groupData.Creator);
+
+      // Transform the data to ensure consistent field access
+      // API returns: group_post, Events, Creator (with firstname, lastname, etc.)
+      const transformedData = {
+        // First, copy all the original properties
+        id: groupData.id,
+        title: groupData.title,
+        about: groupData.about,
+        created_at: groupData.created_at,
+
+        // Handle arrays - convert null to empty arrays
+        group_post: Array.isArray(groupData.group_post) ? groupData.group_post : [],
+        Events: Array.isArray(groupData.Events) ? groupData.Events : [],
+        members: Array.isArray(groupData.members) ? groupData.members : [],
+
+        // Handle Creator object
+        Creator: groupData.Creator && typeof groupData.Creator === 'object' ? groupData.Creator : {},
+
+        // Add computed members_count
+        members_count: Array.isArray(groupData.members) ? groupData.members.length : 0
+      };
+
+      console.log('[groupService.getGroupDetails] Transformed data:', transformedData);
+      console.log('[groupService.getGroupDetails] Transformed members:', transformedData.members);
+      console.log('[groupService.getGroupDetails] Transformed Creator:', transformedData.Creator);
+
+      return transformedData;
     } catch (error) {
+      console.error('[groupService.getGroupDetails] Error:', {
+        message: error.message,
+        type: error.type,
+        status: error.status,
+        data: error.data
+      });
+
       if (error.type === GroupErrorTypes.NOT_FOUND) {
         throw new Error('Group not found or you do not have access to it.');
       }
       throw error;
     }
   },
-
   // Update group details
   async updateGroup(groupId, updateData) {
     try {
@@ -243,21 +288,21 @@ export const groupService = {
     }
   },
 
-  // Delete a group
-  async deleteGroup(groupId) {
+  // Delete a group (FIXED to use title as expected by backend)
+  async deleteGroup(groupTitle) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/deleteGroup`, {
         method: 'DELETE',
         credentials: 'include',
         headers: getHeaders(true), // Include Content-Type header for DELETE
-        body: JSON.stringify({ group_id: groupId })
+        body: JSON.stringify({ title: groupTitle }) // Use title, not group_id
       });
 
       const data = await handleApiResponse(response, 'deleteGroup');
       return {
         success: true,
         message: data.message,
-        deleted_group_id: data.deleted_group_id
+        deleted_group_title: groupTitle
       };
     } catch (error) {
       if (error.type === GroupErrorTypes.PERMISSION_DENIED) {
