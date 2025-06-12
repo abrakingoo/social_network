@@ -9,7 +9,8 @@ import (
 )
 
 type Rsvp struct {
-	ID string `json:"id"`
+	ID     string `json:"eventId"`
+	Status string `json:"status"`
 }
 
 func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
@@ -27,15 +28,17 @@ func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.Queries.InsertData("event_attendance", []string{
-		"id",
-		"event_id",
-		"user_id",
-		"status",
-	}, []any{
-		util.UUIDGen(),
-		rsvp.ID,
-		userID,
-		"going",
-	})
+	if rsvp.Status == "going" {
+		app.Queries.InsertData("event_attendance", []string{
+			"id",
+			"event_id",
+			"user_id",
+			"status",
+		}, []any{
+			util.UUIDGen(),
+			rsvp.ID,
+			userID,
+			"going",
+		})
+	}
 }
