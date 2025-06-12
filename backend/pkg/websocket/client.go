@@ -9,7 +9,7 @@ type Client struct {
 	UserID      string
 	Conn        *websocket.Conn
 	Send        chan []byte
-	ProcessChan chan map[string]string
+	ProcessChan chan map[string]any
 	Hubb        *Hub
 }
 
