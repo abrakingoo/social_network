@@ -24,6 +24,7 @@ var allowedRoutes = map[string][]string{
 	"/api/groups":       {"GET", "OPTIONS"},
 	"/api/deleteGroup":  {"DELETE", "OPTIONS"},
 	"/api/ws":           {"GET", "OPTIONS"},
+	"/api/users":        {"GET", "OPTIONS"},
 }
 
 type App struct {
@@ -86,6 +87,7 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/groups", app.AuthMiddleware(http.HandlerFunc(app.GetAllGroups)))
 	mux.Handle("/api/deleteGroup", app.AuthMiddleware(http.HandlerFunc(app.DeleteGroup)))
 	mux.Handle("/api/ws", app.AuthMiddleware(http.HandlerFunc(app.HandleWebsocket)))
+	mux.Handle("/api/users", app.AuthMiddleware(http.HandlerFunc(app.GetAllUsers)))
 
 	return mux
 }
