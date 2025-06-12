@@ -24,12 +24,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Search, Plus, UserPlus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import lodash from 'lodash';
+import { titleToSlug } from '@/lib/slugUtils'; // Import slug utility
+
 
 // Group card component for better reusability
 const GroupCard = ({ group, onJoin, onLeave, isJoining }) => {
   const { currentUser } = useAuth();
   const isAdmin = group.user_role === 'admin';
   const isMember = group.is_joined;
+
+  // Convert group title to URL-safe slug
+  const groupSlug = titleToSlug(group.title);
 
   return (
     <Card className="overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -43,7 +48,8 @@ const GroupCard = ({ group, onJoin, onLeave, isJoining }) => {
           </Avatar>
         </div>
         <div className="ml-16">
-          <Link href={`/groups/${group.id}`} className="text-lg font-semibold hover:text-social">
+          {/* Updated link to use slug instead of ID */}
+          <Link href={`/groups/${groupSlug}`} className="text-lg font-semibold hover:text-social">
             {group.title}
           </Link>
           <p className="text-sm text-gray-500">{group.members_count} members</p>
@@ -57,7 +63,8 @@ const GroupCard = ({ group, onJoin, onLeave, isJoining }) => {
       <CardFooter className="border-t pt-4 pb-4">
         {isAdmin ? (
           <Button variant="outline" className="w-full" asChild>
-            <Link href={`/groups/${group.id}`}>
+            {/* Updated link to use slug instead of ID */}
+            <Link href={`/groups/${groupSlug}`}>
               Manage Group
             </Link>
           </Button>
@@ -237,7 +244,6 @@ const Groups = () => {
     }
   };
 
-  // Handle group creation
   const handleCreateGroup = async (e) => {
     e.preventDefault();
 
@@ -293,8 +299,11 @@ const Groups = () => {
           description: result.message || `${trimmedName} has been created successfully!`,
         });
 
-        // Redirect to the new group
-        router.push(`/groups/${result.group_id}`);
+        // Convert group title to slug for redirect
+        const groupSlug = titleToSlug(trimmedName);
+
+        // Redirect to the new group using slug instead of ID
+        router.push(`/groups/${groupSlug}`);
       }
     } catch (error) {
       const errorMessage = error.message || "Failed to create group. Please try again.";
@@ -309,7 +318,6 @@ const Groups = () => {
       setIsCreating(false);
     }
   };
-
   // Show loading state while checking authentication
   if (authLoading) {
     return (
