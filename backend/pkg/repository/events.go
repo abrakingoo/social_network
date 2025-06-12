@@ -16,7 +16,7 @@ import (
 // - bool: true if a matching row exists, false otherwise
 // - error: any error encountered during query execution
 
-func (q *Query) CheckForRsvp(eventID , userID string) (bool, error) {
+func (q *Query) CheckForRsvp(eventID, userID string) (bool, error) {
 	query := `
 		SELECT 1
 		FROM event_attendance
@@ -37,4 +37,31 @@ func (q *Query) CheckForRsvp(eventID , userID string) (bool, error) {
 
 	// Row exists
 	return true, nil
+}
+
+func (q *Query) FetchAttendingMembersCount(eventID string) (int, error) {
+
+	if eventID == "" {
+		return 0, fmt.Errorf("FetchAttendingMembersCount: eventID cannot be empty")
+	}
+
+	query := `
+		SELECT e.going_count
+		FROM events e
+		WHERE id = ?
+	`
+
+	var count int
+	err := q.Db.QueryRow(query, eventID).Scan(&count)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Row does not exist
+			 return 0, fmt.Errorf("FetchAttendingMembersCount: no event found with ID %s", eventID)
+		}
+		// Some other error occurred
+		return 0, fmt.Errorf("FetchAttendingMembersCount : query error : %w", err)
+	}
+
+	return count , nil
+
 }
