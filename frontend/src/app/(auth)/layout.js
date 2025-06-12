@@ -1,15 +1,15 @@
 'use client';
 
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 import Link from "next/link";
 
 export default function AuthLayout({ children }) {
   return (
     <TooltipProvider>
       <ToastProvider>
-        <Sonner />
+        <Toaster />
         <div className="flex flex-col min-h-screen">
           <header className="sticky top-0 z-50 bg-white shadow-sm">
             <div className="container mx-auto px-4">

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Calendar, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,9 +14,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { groupService } from '@/services/groupService';
 
-const EventForm = ({ onClose, onEventCreated }) => {
-  const { groupId } = useParams();
+const EventForm = ({ onClose, onEventCreated, groupTitle }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -43,14 +42,23 @@ const EventForm = ({ onClose, onEventCreated }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Form validation
+    // Form validation - all fields are required according to API
     if (!formData.title.trim()) {
       toast({
         title: "Error",
         description: "Event title is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast({
+        title: "Error",
+        description: "Event description is required",
         variant: "destructive"
       });
       return;
@@ -65,54 +73,99 @@ const EventForm = ({ onClose, onEventCreated }) => {
       return;
     }
 
+    if (!formData.location.trim()) {
+      toast({
+        title: "Error",
+        description: "Event location is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!groupTitle) {
+      toast({
+        title: "Error",
+        description: "Group information is missing",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // In a real app, this would call an API to create the event
-    setTimeout(() => {
-      const newEvent = {
-        id: `event-${Date.now()}`,
-        title: formData.title,
-        description: formData.description,
-        date: formData.date,
-        time: formData.time,
-        location: formData.location,
-        groupId: groupId,
-        attendees: 1, // Creator is first attendee
-        createdAt: new Date()
-      };
-
-      toast({
-        title: "Event created",
-        description: "Your event has been created successfully",
-      });
-
-      if (onEventCreated) {
-        onEventCreated(newEvent);
+    try {
+      // Combine date and time into a single ISO 8601 string
+      let eventTime = null;
+      if (formData.date) {
+        const datePart = format(formData.date, "yyyy-MM-dd");
+        if (formData.time) {
+          eventTime = `${datePart}T${formData.time}:00Z`; // Time in HH:MM format, append :00Z for UTC
+        } else {
+          eventTime = `${datePart}T00:00:00Z`; // Default to start of day if no time
+        }
       }
 
-      setIsSubmitting(false);
+      // Match API requirements exactly
+      const newEventData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        event_time: eventTime,
+        group_title: groupTitle, // API expects group_title, not group_id
+        location: formData.location.trim()
+      };
+
+      console.log('[EventForm] Creating event with data:', newEventData);
+
+      const result = await groupService.createEvent(newEventData);
+
+      console.log('[EventForm] Event creation result:', result);
+
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        date: null,
+        time: '',
+        location: ''
+      });
+
+      // Just call the callback to trigger refresh - no need for mock data
+      if (onEventCreated) {
+        onEventCreated(); // Parent component will handle the refresh
+      }
+
       if (onClose) {
         onClose();
       }
-    }, 800);
+    } catch (error) {
+      console.error('[EventForm] Error creating event:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create event. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="title">Title*</Label>
+        <Label htmlFor="title">Event Title*</Label>
         <Input
           id="title"
           name="title"
           value={formData.title}
           onChange={handleInputChange}
-          placeholder="Event title"
+          placeholder="Enter event title"
           required
+          maxLength={100}
         />
       </div>
 
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Description*</Label>
         <Textarea
           id="description"
           name="description"
@@ -120,17 +173,20 @@ const EventForm = ({ onClose, onEventCreated }) => {
           onChange={handleInputChange}
           placeholder="What is this event about?"
           rows={4}
+          required
+          maxLength={500}
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label>Date*</Label>
+          <Label>Event Date*</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className="w-full justify-start text-left font-normal"
+                type="button"
               >
                 <Calendar className="mr-2 h-4 w-4" />
                 {formData.date ? (
@@ -147,13 +203,14 @@ const EventForm = ({ onClose, onEventCreated }) => {
                 onSelect={handleDateChange}
                 initialFocus
                 className="p-3 pointer-events-auto"
+                disabled={(date) => date < new Date().setHours(0, 0, 0, 0)} // Disable past dates
               />
             </PopoverContent>
           </Popover>
         </div>
 
         <div>
-          <Label htmlFor="time">Time</Label>
+          <Label htmlFor="time">Event Time (Optional)</Label>
           <div className="relative">
             <Input
               id="time"
@@ -169,13 +226,15 @@ const EventForm = ({ onClose, onEventCreated }) => {
       </div>
 
       <div>
-        <Label htmlFor="location">Location</Label>
+        <Label htmlFor="location">Location*</Label>
         <Input
           id="location"
           name="location"
           value={formData.location}
           onChange={handleInputChange}
           placeholder="Where will this event take place?"
+          required
+          maxLength={200}
         />
       </div>
 
