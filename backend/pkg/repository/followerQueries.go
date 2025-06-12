@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"social/pkg/model"
-	"errors"
-	"database/sql"
 )
 
 func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
