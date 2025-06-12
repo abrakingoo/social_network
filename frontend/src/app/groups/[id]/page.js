@@ -37,10 +37,6 @@ const GroupDetail = () => {
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
 
-  // Remove mock group data and mock posts
-  // const [mockGroup, setMockGroup] = useState({ ... });
-  // const mockPosts = [ ... ];
-
   // Fetch group details on component mount
   useEffect(() => {
     let isMounted = true; // For cleanup
@@ -56,10 +52,13 @@ const GroupDetail = () => {
       try {
         // 1. Fetch all groups to get the title by ID (workaround)
         console.log('[GroupDetail] Fetching all groups to find title for ID:', groupId);
-        const allGroups = await groupService.getAllGroups();
+        const allGroupsResult = await groupService.getAllGroups();
         if (!isMounted) return; // Don't update state if component unmounted
 
-        console.log('[GroupDetail] All groups fetched:', allGroups);
+        console.log('[GroupDetail] All groups fetched:', allGroupsResult);
+
+        // FIX: Access the groups array from the result object
+        const allGroups = allGroupsResult.groups || [];
 
         const currentGroup = allGroups.find(group => group.id === groupId);
         console.log('[GroupDetail] Found current group:', currentGroup);
@@ -77,14 +76,16 @@ const GroupDetail = () => {
           let isJoined = false;
 
           if (currentUser) {
+            // API returns members array with Creator objects containing firstname, lastname, nickname, avatar
             const memberInfo = details.members.find(member => member.id === currentUser.id);
             if (memberInfo) {
               isJoined = true;
-              userRole = memberInfo.role;
+              userRole = memberInfo.role || '';
             }
           }
 
           // Initialize RSVP status for each event
+          // API returns Events array (capitalized)
           const initialRsvpStatus = {};
           const eventsWithRsvpStatus = (details.Events || []).map(event => {
             const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
@@ -94,11 +95,13 @@ const GroupDetail = () => {
           setRsvpStatus(initialRsvpStatus);
 
           // Augment groupData with user-specific info and initialized events
+          // Use exact API field names: group_post, Events, Creator, etc.
           setGroupData({
             ...details,
             is_joined: isJoined,
             user_role: userRole,
-            events: eventsWithRsvpStatus, // Use events augmented with is_rsvpd
+            events: eventsWithRsvpStatus, // For backwards compatibility
+            Events: eventsWithRsvpStatus, // API field name
           });
         } else {
           console.error('[GroupDetail] Group not found for ID:', groupId);
@@ -154,8 +157,8 @@ const GroupDetail = () => {
     );
   }
 
-  // Show loading spinner if group details are being fetched
-  if (isLoadingDetails || !groupData) {
+  // Show loading spinner if group details are being fetched OR if essential data is missing
+  if (isLoadingDetails || !groupData || !groupData.title) {
     return (
       <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-social" />
@@ -265,10 +268,11 @@ const GroupDetail = () => {
     }
   };
 
-  // Handle group deletion
+  // Handle group deletion - FIXED to use title
   const handleDeleteGroup = async () => {
     setIsDeleting(true);
     try {
+      // The delete API expects title, not ID
       await groupService.deleteGroup(groupData.title);
       toast({
         title: "Group Deleted",
@@ -317,15 +321,19 @@ const GroupDetail = () => {
                   <div className="absolute -top-12 left-6">
                     <Avatar className="h-24 w-24 border-4 border-white">
                       <AvatarFallback className="text-3xl bg-social text-white">
-                        {groupData.title.slice(0, 2).toUpperCase()}
+                        {groupData.title ? groupData.title.slice(0, 2).toUpperCase() : 'GR'}
                       </AvatarFallback>
                     </Avatar>
                   </div>
                   <div className="ml-28 flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-2xl">{groupData.title}</CardTitle>
+                      <CardTitle className="text-2xl">{groupData.title || 'Loading...'}</CardTitle>
                       <CardDescription>
-                        {groupData.members_count} members · Created {new Date(groupData.created_at).toLocaleDateString()}
+                        {groupData.members_count || groupData.members?.length || 0} members ·
+                        Created {groupData.created_at ? new Date(groupData.created_at).toLocaleDateString() : 'Unknown'}
+                        {groupData.Creator && groupData.Creator.firstname && (
+                          <span> · by {groupData.Creator.firstname} {groupData.Creator.lastname}</span>
+                        )}
                       </CardDescription>
                     </div>
 
@@ -354,7 +362,7 @@ const GroupDetail = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">{groupData.about}</p>
+                  <p className="text-gray-600">{groupData.about || 'No description available.'}</p>
                 </CardContent>
               </Card>
 
@@ -370,16 +378,16 @@ const GroupDetail = () => {
                     </TabsList>
 
                     <TabsContent value="posts" className="mt-6">
-                      {/* Posts content - keep existing code */}
+                      {/* Posts content - FIXED to use group_post */}
                       {groupData.is_joined && (
                         <div className="mb-6">
                           <PostForm groupId={groupId} />
                         </div>
                       )}
 
-                      {groupData.group_posts && groupData.group_posts.length > 0 ? (
+                      {groupData.group_post && groupData.group_post.length > 0 ? (
                         <div className="space-y-6">
-                          {groupData.group_posts.map((post) => (
+                          {groupData.group_post.map((post) => (
                             <PostCard key={post.id} post={post} />
                           ))}
                         </div>
@@ -407,8 +415,8 @@ const GroupDetail = () => {
                       )}
 
                       <div className="space-y-4">
-                        {groupData.events && groupData.events.length > 0 ? (
-                          groupData.events.map((event) => (
+                        {groupData.Events && groupData.Events.length > 0 ? (
+                          groupData.Events.map((event) => (
                             <Card key={event.id} className="overflow-hidden">
                               <CardHeader>
                                 <div className="flex justify-between items-start">
@@ -416,6 +424,7 @@ const GroupDetail = () => {
                                     <CardTitle>{event.title}</CardTitle>
                                     <CardDescription>
                                       {formatEventDate(event.event_time, '')}
+                                      {event.location && ` · ${event.location}`}
                                     </CardDescription>
                                   </div>
                                   <Button
@@ -438,8 +447,8 @@ const GroupDetail = () => {
 
                                 <div className="mt-3 flex items-center">
                                   <Badge variant="secondary" className="mr-2">
-                                    {event.attendees ? event.attendees.length : 0 + (rsvpStatus[event.id] ? 1 : 0)}
-                                    {(event.attendees ? event.attendees.length : 0 + (rsvpStatus[event.id] ? 1 : 0)) === 1 ? ' person' : ' people'} going
+                                    {event.attendees ? event.attendees.length : 0}
+                                    {(event.attendees ? event.attendees.length : 0) === 1 ? ' person' : ' people'} going
                                   </Badge>
 
                                   {rsvpStatus[event.id] && (
@@ -448,6 +457,11 @@ const GroupDetail = () => {
                                     </Badge>
                                   )}
                                 </div>
+                                {event.creator && event.creator.firstname && (
+                                  <div className="flex items-center mt-2 text-sm text-gray-500">
+                                    <span>Created by {event.creator.firstname} {event.creator.lastname}</span>
+                                  </div>
+                                )}
                               </CardContent>
                             </Card>
                           ))
@@ -456,7 +470,7 @@ const GroupDetail = () => {
                             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                             <h3 className="text-lg font-medium mb-1">No upcoming events</h3>
                             <p className="text-gray-500">
-                              There are no scheduled events for this group yet
+                              {groupData.user_role === 'admin' ? 'Create the first event for this group!' : 'There are no scheduled events for this group yet'}
                             </p>
                           </Card>
                         )}
@@ -464,7 +478,7 @@ const GroupDetail = () => {
                     </TabsContent>
 
                     <TabsContent value="about" className="mt-6">
-                      {/* About content - keep existing code */}
+                      {/* About content */}
                       <Card>
                         <CardHeader>
                           <CardTitle className="flex items-center">
@@ -474,15 +488,28 @@ const GroupDetail = () => {
                         </CardHeader>
                         <CardContent>
                           <p className="text-gray-600 mb-4">
-                            {groupData.about}
+                            {groupData.about || 'No description available.'}
                           </p>
-                          <div>
-                            <h4 className="font-medium mb-2">Created on</h4>
-                            <p className="text-gray-600 mb-4">
-                              {new Date(groupData.created_at).toLocaleDateString()}
-                            </p>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Created:</span>
+                              <p className="text-gray-600">{groupData.created_at ? new Date(groupData.created_at).toLocaleDateString() : 'Unknown'}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium">Members:</span>
+                              <p className="text-gray-600">{groupData.members_count || groupData.members?.length || 0}</p>
+                            </div>
+                            {groupData.Creator && groupData.Creator.firstname && (
+                              <div>
+                                <span className="font-medium">Creator:</span>
+                                <p className="text-gray-600">
+                                  {groupData.Creator.firstname} {groupData.Creator.lastname}
+                                  {groupData.Creator.nickname && ` (${groupData.Creator.nickname})`}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          <div>
+                          <div className="mt-4">
                             <h4 className="font-medium mb-2">Group rules</h4>
                             <ul className="list-disc list-inside text-gray-600 space-y-1">
                               <li>Be kind and respectful to other members</li>
@@ -498,27 +525,37 @@ const GroupDetail = () => {
 
                 {/* Sidebar */}
                 <div>
-                  {/* Members - keep existing code */}
+                  {/* Members - FIXED field names */}
                   <Card className="mb-6">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center">
                         <Users className="h-5 w-5 mr-2" />
-                        Members
+                        Members ({groupData.members_count || groupData.members?.length || 0})
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         {groupData.members && groupData.members.length > 0 ? (
-                          groupData.members.map((member) => (
-                            <div key={member.id} className="flex items-center">
-                              <Avatar className="h-8 w-8 mr-3">
+                          groupData.members.slice(0, 5).map((member) => (
+                            <div key={member.id} className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
                                 <AvatarImage src={member.avatar} />
                                 <AvatarFallback>
-                                  {member.first_name[0]}{member.last_name[0]}
+                                  {member.firstname?.[0] || member.first_name?.[0] || 'U'}{member.lastname?.[0] || member.last_name?.[0] || 'S'}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="text-sm font-medium">
-                                {member.first_name} {member.last_name}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {member.firstname || member.first_name || 'Unknown'} {member.lastname || member.last_name || 'User'}
+                                </p>
+                                {member.nickname && (
+                                  <p className="text-xs text-gray-500 truncate">{member.nickname}</p>
+                                )}
+                                {member.role && member.role !== 'member' && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {member.role}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           ))
@@ -526,13 +563,15 @@ const GroupDetail = () => {
                           <p className="text-sm text-gray-500">No members yet.</p>
                         )}
                       </div>
-                      <Button variant="ghost" className="w-full mt-4 text-sm">
-                        See all members
-                      </Button>
+                      {groupData.members && groupData.members.length > 5 && (
+                        <Button variant="ghost" className="w-full mt-4 text-sm">
+                          See all members
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
 
-                  {/* Upcoming Events */}
+                  {/* Upcoming Events - FIXED to use Events */}
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center">
@@ -541,9 +580,9 @@ const GroupDetail = () => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {groupData.events && groupData.events.length > 0 ? (
+                      {groupData.Events && groupData.Events.length > 0 ? (
                         <div className="space-y-4">
-                          {groupData.events.slice(0, 2).map((event) => (
+                          {groupData.Events.slice(0, 2).map((event) => (
                             <div key={event.id} className="border-b pb-3 last:border-0">
                               <h4 className="font-medium">{event.title}</h4>
                               <p className="text-sm text-gray-500 mb-1">
@@ -551,7 +590,7 @@ const GroupDetail = () => {
                               </p>
                               <div className="flex items-center">
                                 <p className="text-xs text-gray-500 mr-2">
-                                  {event.attendees ? event.attendees.length : 0 + (rsvpStatus[event.id] ? 1 : 0)} going
+                                  {event.attendees ? event.attendees.length : 0} going
                                 </p>
                                 {rsvpStatus[event.id] && (
                                   <Badge variant="outline" className="text-xs bg-green-50">
@@ -587,7 +626,7 @@ const GroupDetail = () => {
           <EventForm
             onClose={() => setIsCreateEventOpen(false)}
             onEventCreated={handleEventCreated}
-            groupTitle={groupData.title}
+            groupTitle={groupData.title || ''}
           />
         </DialogContent>
       </Dialog>
@@ -599,7 +638,7 @@ const GroupDetail = () => {
             <DialogTitle>Are you absolutely sure?</DialogTitle>
             <DialogDescription>
               This action cannot be undone. This will permanently delete the
-              <span className="font-semibold text-social"> {groupData.title} </span>
+              <span className="font-semibold text-social"> {groupData.title || 'this group'} </span>
               group and remove all its associated data.
             </DialogDescription>
           </DialogHeader>
