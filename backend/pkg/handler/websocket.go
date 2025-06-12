@@ -42,6 +42,6 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	go client.WritePump()
-	go client.ProcessMessages()
+	go client.ProcessMessages(&app.Queries)
 	client.ReadPump()
 }
