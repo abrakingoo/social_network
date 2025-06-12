@@ -71,18 +71,17 @@ const GroupDetail = () => {
 
           console.log('[GroupDetail] Group details fetched:', details);
 
-          // Determine the current user's role and membership status in this group
-          let userRole = '';
-          let isJoined = false;
+          // FIXED: Use the role and membership info from the initial groups fetch
+          // instead of trying to re-determine it from the detailed data
+          const userRole = currentGroup.user_role || '';
+          const isJoined = currentGroup.is_joined || false;
 
-          if (currentUser) {
-            // API returns members array with Creator objects containing firstname, lastname, nickname, avatar
-            const memberInfo = details.members.find(member => member.id === currentUser.id);
-            if (memberInfo) {
-              isJoined = true;
-              userRole = memberInfo.role || '';
-            }
-          }
+          console.log('[GroupDetail] Using role info from groups list:', {
+            userRole,
+            isJoined,
+            currentGroup_user_role: currentGroup.user_role,
+            currentGroup_is_joined: currentGroup.is_joined
+          });
 
           // Initialize RSVP status for each event
           // API returns Events array (capitalized)
