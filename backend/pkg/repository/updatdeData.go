@@ -17,7 +17,7 @@ import (
 //
 // Example usage:
 //   // Update user status from pending to accepted
-//   err := q.UpdateData("follows", []string{"follower_id", "following_id"}, 
+//   err := q.UpdateData("follows", []string{"follower_id", "following_id"},
 //                       []any{123, 456}, []string{"status"}, []any{"accepted"})
 //
 // Returns error if column/value length mismatches occur or if the database operation fails.

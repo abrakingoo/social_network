@@ -56,12 +56,12 @@ func (q *Query) FetchAttendingMembersCount(eventID string) (int, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Row does not exist
-			 return 0, fmt.Errorf("FetchAttendingMembersCount: no event found with ID %s", eventID)
+			return 0, fmt.Errorf("FetchAttendingMembersCount: no event found with ID %s", eventID)
 		}
 		// Some other error occurred
 		return 0, fmt.Errorf("FetchAttendingMembersCount : query error : %w", err)
 	}
 
-	return count , nil
+	return count, nil
 
 }
