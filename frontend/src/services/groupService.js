@@ -355,6 +355,8 @@ export const groupService = {
   // Create a new event
   async createEvent(eventData) {
     try {
+      console.log('[groupService.createEvent] Creating event with data:', eventData);
+
       const response = await fetch(`${API_BASE_URL}/api/addEvent`, {
         method: 'POST',
         credentials: 'include',
@@ -362,17 +364,41 @@ export const groupService = {
         body: JSON.stringify(eventData)
       });
 
+      console.log('[groupService.createEvent] Response status:', response.status);
+
       const data = await handleApiResponse(response, 'createEvent');
+      console.log('[groupService.createEvent] Response data:', data);
+
       return {
         success: true,
-        message: data.message,
-        event_id: data.event_id,
-        event_url: data.event_url
+        message: data.message || 'Event created successfully',
+        // Note: The API doesn't return event_id or event_url according to the docs
+        // So we'll just return the success message
       };
     } catch (error) {
+      console.error('[groupService.createEvent] Error:', {
+        message: error.message,
+        type: error.type,
+        status: error.status,
+        data: error.data
+      });
+
       if (error.type === GroupErrorTypes.INVALID_INPUT) {
         throw new Error('Invalid event data provided. Please check the event details.');
       }
+
+      if (error.status === 400) {
+        throw new Error('Invalid event information. Please check all required fields.');
+      }
+
+      if (error.status === 401) {
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      if (error.status === 403) {
+        throw new Error('You do not have permission to create events in this group.');
+      }
+
       throw error;
     }
   },
