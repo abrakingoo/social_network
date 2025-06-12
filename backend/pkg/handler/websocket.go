@@ -31,7 +31,7 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		UserID:      userID,
 		Conn:        conn,
 		Send:        make(chan []byte, 256),
-		ProcessChan: make(chan map[string]string, 100),
+		ProcessChan: make(chan map[string]any, 100),
 		Hubb:        app.Hub,
 	}
 
