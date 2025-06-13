@@ -19,9 +19,12 @@ localhost :80, :443 {
 	handle /api/register {
 		rate_limit {
 			zone register {
+				match {
+					method POST OPTIONS
+				}
 				key {remote_host}
-				events 5
-				window 5m
+				events 2
+				window 1m
 			}
 		}
 		reverse_proxy {$BACKEND_API}
