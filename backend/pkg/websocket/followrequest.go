@@ -2,6 +2,8 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"social/pkg/model"
 	"social/pkg/repository"
@@ -70,5 +72,44 @@ func (c *Client) RespondFollowReques(msg map[string]any, q *repository.Query) {
 	if err != nil {
 		c.SendError("Invalid data encoding")
 		return
+	}
+
+	var request model.FollowRequest
+	if err := json.Unmarshal(dataBytes, &request); err != nil {
+		c.SendError("Invalid follow request data")
+		return
+	}
+
+	exists, status, err := q.FollowExists(request.RecipientID, c.UserID)
+	if err != nil {
+		c.SendError("Error while checking following status")
+		return
+	}
+
+	if !exists {
+		c.SendError("Error: No follow request found.")
+		return
+	}
+
+	if status == "accepted" || status == "declined" {
+		c.SendError("Error: already responded to this request")
+	}
+
+	err = q.UpdateData("user_follows", []string{
+		"follower_id",
+		"following_id",
+	}, []any{
+		request.RecipientID,
+		c.UserID,
+	}, []string{
+		"status",
+		"updated_at",
+	}, []any{
+		request.ResponseStatus,
+		time.Now(),
+	})
+	if err != nil {
+		res := fmt.Sprintf("Error while updating follow status: %v", err)
+		c.SendError(res)
 	}
 }
