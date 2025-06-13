@@ -5,6 +5,7 @@ import (
 
 	"social/pkg/model"
 	"social/pkg/repository"
+	"social/pkg/util"
 )
 
 func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
@@ -117,5 +118,73 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 	if admin != c.UserID {
 		c.SendError("Only group admin can respond to join requests")
 		return
+	}
+
+	isMember, err := q.CheckRow("group_members", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+	})
+	if err != nil {
+		c.SendError("Error while checking membership")
+		return
+	}
+
+	if isMember {
+		c.SendError("The user is already a member")
+		return
+	}
+
+	inJoin, err := q.CheckRow("group_join_requests", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+	})
+	if err != nil {
+		c.SendError("Error while checking join request")
+		return
+	}
+
+	if !inJoin {
+		c.SendError("No request to respond to")
+		return
+	}
+
+	err = q.UpdateData("group_join_requests", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+	}, []string{
+		"status",
+	}, []any{
+		request.ResponseStatus,
+	})
+	if err != nil {
+		c.SendError("Error wupdating join request status")
+		return
+	}
+
+	if request.ResponseStatus == "accepted" {
+		err = q.InsertData("group_members", []string{
+			"id",
+			"group_id",
+			"user_id",
+			"role",
+		}, []any{
+			util.UUIDGen(),
+			request.GroupId,
+			request.RecipientID,
+			"member",
+		})
+		if err != nil {
+			c.SendError("Error adding user as a member to the group")
+			return
+		}
 	}
 }
