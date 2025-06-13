@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"social/pkg/model"
 )
@@ -67,4 +69,22 @@ func (q *Query) FetchFollowing(userID string, userData *model.UserData) error {
 	}
 
 	return rows.Err()
+}
+
+func (q *Query) FollowExists(followerID, followingID string) (exists bool, status string, err error) {
+	query := `
+		SELECT status FROM user_follows
+		WHERE follower_id = ? AND following_id = ?
+		LIMIT 1
+	`
+
+	err = q.Db.QueryRow(query, followerID, followingID).Scan(&status)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, "", nil // not found
+		}
+		return false, "", fmt.Errorf("FollowExists: query failed: %w", err)
+	}
+
+	return true, status, nil
 }

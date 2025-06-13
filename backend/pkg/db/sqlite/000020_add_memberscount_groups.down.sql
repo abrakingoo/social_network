@@ -1,1 +1,1 @@
-ALTER TABLE events DROP COLUMN members_count;
+ALTER TABLE groups DROP COLUMN members_count;
