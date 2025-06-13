@@ -94,3 +94,5 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 		}
 	}
 }
+
+func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query) {}
