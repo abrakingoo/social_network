@@ -51,11 +51,9 @@ const GroupDetail = () => {
   // Full fetch for initial load
   const fetchGroupDetails = async () => {
     if (!currentUser || authLoading) {
-      console.log('[GroupDetail] Skipping fetch - auth not ready:', { currentUser, authLoading });
       return;
     }
 
-    console.log('[GroupDetail] Starting to fetch group details for slug:', groupSlug);
     setIsLoadingDetails(true);
     try {
       const allGroupsResult = await groupService.getAllGroups();
@@ -109,7 +107,6 @@ const GroupDetail = () => {
   // Lightweight events-only refresh function
   const refreshEventsOnly = async () => {
     if (!groupData || !groupData.title) {
-      console.log('[GroupDetail] Cannot refresh events - no group data available');
       return;
     }
 
