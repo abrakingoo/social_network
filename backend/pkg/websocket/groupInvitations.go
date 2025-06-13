@@ -5,6 +5,7 @@ import (
 
 	"social/pkg/model"
 	"social/pkg/repository"
+	"social/pkg/util"
 )
 
 func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
@@ -45,6 +46,24 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
 
 	if isMember {
 		c.SendError("User is already a member")
+		return
+	}
+
+	err = q.InsertData("group_invitations", []string{
+		"id",
+		"group_id",
+		"sender_id",
+		"receiver_id",
+		"status",
+	}, []any{
+		util.UUIDGen(),
+		request.GroupId,
+		c.UserID,
+		request.RecipientID,
+		"pending",
+	})
+	if err != nil {
+		c.SendError("failed to send invitation")
 		return
 	}
 }
