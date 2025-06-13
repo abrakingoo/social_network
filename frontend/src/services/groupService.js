@@ -77,28 +77,13 @@ export const groupService = {
         ...(filter !== 'all' && { filter })
       });
 
-      console.log('[groupService.getAllGroups] Fetching groups with params:', {
-        url: `${API_BASE_URL}/api/groups`,
-        params: Object.fromEntries(queryParams),
-        headers: getHeaders(false)
-      });
-
       const response = await fetch(`${API_BASE_URL}/api/groups?${queryParams}`, {
         method: 'GET',
         credentials: 'include',
         headers: getHeaders(false)
       });
 
-      console.log('[groupService.getAllGroups] Response status:', response.status);
-
-      // Log response headers for debugging
-      console.log('[groupService.getAllGroups] Response headers:', {
-        'content-type': response.headers.get('content-type'),
-        'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
-      });
-
       const data = await response.json();
-      console.log('[groupService.getAllGroups] Raw response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch groups');
@@ -119,11 +104,6 @@ export const groupService = {
         });
         throw new Error('Server returned an unexpected response format: Expected `message` to be an array or null.');
       }
-
-      // No pagination info needed as we are fetching all groups
-      console.log('[groupService.getAllGroups] Processed response:', {
-        groupsCount: groupsArray.length
-      });
 
       return {
         groups: groupsArray,
@@ -209,17 +189,12 @@ export const groupService = {
       });
 
       const rawData = await response.json();
-      console.log('[groupService.getGroupDetails] Raw response data:', rawData);
 
       // Handle the response using the common error handler - FIX: Add await here
       const responseData = await handleApiResponse(response, 'getGroupDetails', rawData);
-      console.log('[groupService.getGroupDetails] After handleApiResponse:', responseData);
 
       // FIXED: Extract the actual group data from the message property
       const groupData = responseData.message || responseData;
-      console.log('[groupService.getGroupDetails] Extracted groupData:', groupData);
-      console.log('[groupService.getGroupDetails] GroupData members:', groupData.members);
-      console.log('[groupService.getGroupDetails] GroupData Creator:', groupData.Creator);
 
       // Transform the data to ensure consistent field access
       // API returns: group_post, Events, Creator (with firstname, lastname, etc.)
@@ -241,10 +216,6 @@ export const groupService = {
         // Add computed members_count
         members_count: Array.isArray(groupData.members) ? groupData.members.length : 0
       };
-
-      console.log('[groupService.getGroupDetails] Transformed data:', transformedData);
-      console.log('[groupService.getGroupDetails] Transformed members:', transformedData.members);
-      console.log('[groupService.getGroupDetails] Transformed Creator:', transformedData.Creator);
 
       return transformedData;
     } catch (error) {
@@ -355,8 +326,6 @@ export const groupService = {
   // Create a new event
   async createEvent(eventData) {
     try {
-      console.log('[groupService.createEvent] Creating event with data:', eventData);
-
       const response = await fetch(`${API_BASE_URL}/api/addEvent`, {
         method: 'POST',
         credentials: 'include',
@@ -364,10 +333,7 @@ export const groupService = {
         body: JSON.stringify(eventData)
       });
 
-      console.log('[groupService.createEvent] Response status:', response.status);
-
       const data = await handleApiResponse(response, 'createEvent');
-      console.log('[groupService.createEvent] Response data:', data);
 
       return {
         success: true,
@@ -406,24 +372,29 @@ export const groupService = {
   // RSVP to an event
   async rsvpEvent(eventId, status) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/rsvpEvent`, {
+      const response = await fetch(`${API_BASE_URL}/api/rsvp`, {  // FIXED: Use correct endpoint
         method: 'POST',
         credentials: 'include',
-        headers: getHeaders(true), // Include Content-Type header for POST
+        headers: getHeaders(true),
         body: JSON.stringify({
-          event_id: eventId,
-          status: status,
-          timestamp: new Date().toISOString()
+          eventId: eventId,  // FIXED: Use 'eventId' not 'event_id'
+          status: status     // FIXED: Remove timestamp
         })
       });
 
-      const data = await handleApiResponse(response, 'rsvpEvent');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update RSVP status');
+      }
+
       return {
         success: true,
-        message: data.message,
-        updated_status: status
+        attendeeCount: data.message, // Backend returns count in 'message' field
+        status: status
       };
     } catch (error) {
+      console.error('[groupService.rsvpEvent] Error:', error);
       throw new Error('Failed to update RSVP status. Please try again.');
     }
   },
