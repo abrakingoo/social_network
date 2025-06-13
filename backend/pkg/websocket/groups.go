@@ -114,8 +114,8 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 		return
 	}
 
-	if admin == c.UserID {
-		c.SendError("Cannot to request to join your own group")
+	if admin != c.UserID {
+		c.SendError("Only group admin can respond to join requests")
 		return
 	}
 }
