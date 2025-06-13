@@ -30,4 +30,21 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
 		c.SendError("Only group admin can send join invitations")
 		return
 	}
+
+	isMember, err := q.CheckRow("group_members", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+	})
+	if err != nil {
+		c.SendError("error while checking user membership")
+		return
+	}
+
+	if isMember {
+		c.SendError("User is already a member")
+		return
+	}
 }
