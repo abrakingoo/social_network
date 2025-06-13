@@ -20,6 +20,16 @@ func (c *Client) Unfollow(msg map[string]any, q *repository.Query) {
 		return
 	}
 
+	if request.RecipientID == c.UserID {
+		c.SendError("You can't unfollow yourself")
+		return
+	}
+
+	if request.RecipientID == "" {
+		c.SendError("No recipient found")
+		return
+	}
+
 	exists, status, err := q.FollowExists(c.UserID, request.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
