@@ -67,3 +67,5 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
 		return
 	}
 }
+
+func (c *Client) RespondSendInvitation(msg map[string]any, q *repository.Query) {}
