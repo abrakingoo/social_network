@@ -16,13 +16,12 @@ import (
 // Example usage:
 //   // Delete a specific follow relationship
 //   err := q.DeleteData("follows", []string{"follower_id", "following_id"}, []any{123, 456})
-//   
+//
 //   // Delete all pending requests for a user
 //   err := q.DeleteData("follows", []string{"follower_id", "status"}, []any{123, "pending"})
 //
 // Returns error if column/value length mismatches occur or if the database operation fails.
 // WARNING: This will permanently delete matching records. Ensure WHERE conditions are specific enough.
-
 
 func (q *Query) DeleteData(table string, whereColumns []string, whereValues []any) error {
 	if len(whereColumns) == 0 || len(whereColumns) != len(whereValues) {

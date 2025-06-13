@@ -17,13 +17,15 @@ var allowedRoutes = map[string][]string{
 	"/api/profile":      {"GET", "OPTIONS"},
 	"/api/logout":       {"POST", "OPTIONS"},
 	"/api/addGroup":     {"POST", "OPTIONS"},
-	"/api/getGroupData": {"GET", "POST","OPTIONS"},
+	"/api/getGroupData": {"GET", "POST", "OPTIONS"},
 	"/pkg/db/media/":    {"GET", "OPTIONS"},
 	"/api/addEvent":     {"POST", "OPTIONS"},
 	"/api/updateUser":   {"PATCH", "OPTIONS"},
 	"/api/groups":       {"GET", "OPTIONS"},
 	"/api/deleteGroup":  {"DELETE", "OPTIONS"},
 	"/api/ws":           {"GET", "OPTIONS"},
+	"/api/rsvp":         {"POST", "OPTIONS"},
+	"/api/users":        {"GET", "OPTIONS"},
 }
 
 type App struct {
@@ -86,6 +88,8 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/groups", app.AuthMiddleware(http.HandlerFunc(app.GetAllGroups)))
 	mux.Handle("/api/deleteGroup", app.AuthMiddleware(http.HandlerFunc(app.DeleteGroup)))
 	mux.Handle("/api/ws", app.AuthMiddleware(http.HandlerFunc(app.HandleWebsocket)))
+	mux.Handle("/api/rsvp", app.AuthMiddleware(http.HandlerFunc(app.Rsvp)))
+	mux.Handle("/api/users", app.AuthMiddleware(http.HandlerFunc(app.GetAllUsers)))
 
 	return mux
 }
