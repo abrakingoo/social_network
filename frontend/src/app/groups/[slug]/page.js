@@ -69,7 +69,7 @@ const GroupDetail = () => {
 
         const initialRsvpStatus = {};
         const eventsWithRsvpStatus = (details.Events || []).map(event => {
-          const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
+          const isRsvpdByUser = event.user_rsvp_status === 'going';
           initialRsvpStatus[event.id] = isRsvpdByUser;
           return { ...event, is_rsvpd: isRsvpdByUser };
         });
@@ -118,7 +118,7 @@ const GroupDetail = () => {
       const details = await groupService.getGroupDetails(groupData.title);
       const updatedRsvpStatus = {};
       const eventsWithRsvpStatus = (details.Events || []).map(event => {
-        const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
+        const isRsvpdByUser = event.user_rsvp_status === 'going';
         updatedRsvpStatus[event.id] = isRsvpdByUser;
         return { ...event, is_rsvpd: isRsvpdByUser };
       });
@@ -268,7 +268,7 @@ const GroupDetail = () => {
     }
 
     const currentStatus = rsvpStatus[eventId] ? "going" : "not_going";
-    const newStatus = currentStatus === "going" ? "not_going" : "going";
+    const newStatus = currentStatus === "going" ? "not going" : "going";
 
     setRsvpStatus(prev => ({ ...prev, [eventId]: newStatus === "going" }));
 
