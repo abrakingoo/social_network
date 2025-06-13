@@ -184,6 +184,16 @@ localhost :80, :443 {
 		reverse_proxy {$BACKEND_API}
 	}
 
+	# Websocket endpoint
+	@websockets {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+
+	handle /api/ws {
+		reverse_proxy @websockets {$BACKEND_API}
+	}
+
 	# Other backend API routes (without rate limiting)
 	handle /api/* {
 		reverse_proxy {$BACKEND_API}
