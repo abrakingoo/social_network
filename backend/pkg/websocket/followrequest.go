@@ -23,6 +23,16 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 		return
 	}
 
+	if request.RecipientID == c.UserID {
+		c.SendError("You can't follow yourself")
+		return
+	}
+
+	if request.RecipientID == "" {
+		c.SendError("No recipient found")
+		return
+	}
+
 	exists, _, err := q.FollowExists(c.UserID, request.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
