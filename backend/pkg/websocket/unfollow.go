@@ -20,7 +20,7 @@ func (c *Client) Unfollow(msg map[string]any, q *repository.Query) {
 		return
 	}
 
-	exists, status, err := q.FollowExists(request.RecipientID, c.UserID)
+	exists, status, err := q.FollowExists(c.UserID, request.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
 		return
