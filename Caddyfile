@@ -170,6 +170,20 @@ localhost :80, :443 {
 		reverse_proxy {$BACKEND_API}
 	}
 
+	handle /api/deleteGroup {
+		rate_limit {
+			zone deleteGroup {
+				match {
+					method DELETE OPTIONS
+				}
+				key {remote_host}
+				events 2
+				window 1m
+			}
+		}
+		reverse_proxy {$BACKEND_API}
+	}
+
 	# Other backend API routes (without rate limiting)
 	handle /api/* {
 		reverse_proxy {$BACKEND_API}
