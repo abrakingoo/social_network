@@ -1,4 +1,14 @@
 localhost :80, :443 {
+	@allowedAgents {
+		header User-Agent *Mozilla*
+		header User-Agent *curl*
+	}
+
+	@forbiddenAgents {
+		header User-Agent *Mozilla*
+		header User-Agent *curl*
+	}
+
 	root * ./frontend/.next
 
 	# Rate-limited backend API routes
@@ -13,7 +23,7 @@ localhost :80, :443 {
 				window 1m # in 1 minute window 
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/register {
@@ -27,7 +37,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/addPost {
@@ -41,7 +51,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/getPosts {
@@ -55,7 +65,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/profile {
@@ -69,7 +79,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/logout {
@@ -83,7 +93,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/addGroup {
@@ -97,7 +107,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/getGroupData {
@@ -111,7 +121,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /pkg/db/media/ {
@@ -125,7 +135,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/addEvent {
@@ -139,7 +149,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/updateUser {
@@ -153,7 +163,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/groups {
@@ -167,7 +177,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/deleteGroup {
@@ -181,7 +191,7 @@ localhost :80, :443 {
 				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	# Websocket endpoint
@@ -191,12 +201,12 @@ localhost :80, :443 {
 	}
 
 	handle /api/ws {
-		reverse_proxy @websockets {$BACKEND_API}
+		reverse_proxy @allowedAgents @websockets {$BACKEND_API}
 	}
 
 	# Other backend API routes (without rate limiting)
 	handle /api/* {
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	# Serve Next.js static files
@@ -211,6 +221,8 @@ localhost :80, :443 {
 
 	# Default: proxy everything else to Next.js
 	handle {
-		reverse_proxy {$FRONTEND_API}
+		reverse_proxy @allowedAgents {$FRONTEND_API}
 	}
+
+	respond @forbiddenAgents "Access denied" 403
 }
