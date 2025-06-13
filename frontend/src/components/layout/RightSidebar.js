@@ -103,7 +103,7 @@ const RightSidebar = () => {
                     </div>
                   </div>
                 ))}
-                <Button variant="ghost" className="w-full text-sm">
+                <Button variant="ghost" className="w-full text-sm" onClick={() => window.location.href = `/events`}>
                   See all events
                 </Button>
               </div>
