@@ -128,6 +128,20 @@ localhost :80, :443 {
 		reverse_proxy {$BACKEND_API}
 	}
 
+	handle /api/addEvent {
+		rate_limit {
+			zone addEvent {
+				match {
+					method POST OPTIONS
+				}
+				key {remote_host}
+				events 5
+				window 1m
+			}
+		}
+		reverse_proxy {$BACKEND_API}
+	}
+
 	# Other backend API routes (without rate limiting)
 	handle /api/* {
 		reverse_proxy {$BACKEND_API}
