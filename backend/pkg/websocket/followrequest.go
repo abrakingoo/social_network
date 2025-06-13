@@ -21,6 +21,17 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 		return
 	}
 
+	exists, _, err := q.FollowExists(c.UserID, request.RecipientID)
+	if err != nil {
+		c.SendError("Error while checking following status")
+		return
+	}
+
+	if exists {
+		c.SendError("Error: request already sent")
+		return
+	}
+
 	isPublic, err := q.CheckUserIsPublic(request.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking user data")
