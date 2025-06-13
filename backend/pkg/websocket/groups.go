@@ -95,4 +95,27 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 	}
 }
 
-func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query) {}
+func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query) {
+	dataBytes, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var request model.GroupRequest
+	if err := json.Unmarshal(dataBytes, &request); err != nil {
+		c.SendError("Invalid follow request data")
+		return
+	}
+
+	admin, err := q.FetchGroupAdmin(request.GroupId)
+	if err != nil {
+		c.SendError("Error fetching group admin")
+		return
+	}
+
+	if admin == c.UserID {
+		c.SendError("Cannot to request to join your own group")
+		return
+	}
+}
