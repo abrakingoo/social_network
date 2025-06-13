@@ -156,6 +156,20 @@ localhost :80, :443 {
 		reverse_proxy {$BACKEND_API}
 	}
 
+	handle /api/groups {
+		rate_limit {
+			zone groups {
+				match {
+					method GET OPTIONS
+				}
+				key {remote_host}
+				events 60
+				window 1m
+			}
+		}
+		reverse_proxy {$BACKEND_API}
+	}
+
 	# Other backend API routes (without rate limiting)
 	handle /api/* {
 		reverse_proxy {$BACKEND_API}
