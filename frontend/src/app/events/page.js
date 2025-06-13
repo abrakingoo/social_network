@@ -57,8 +57,8 @@ export default function Events() {
               title: group.title,
               slug: titleToSlug(group.title)
             },
-            // Check if current user is attending
-            isAttending: (event.attendees || []).some(attendee => attendee.id === currentUser.id)
+            // Use user_rsvp_status from backend
+            isAttending: event.user_rsvp_status === 'going'
           }));
 
           allEvents.push(...eventsWithGroupInfo);
@@ -113,7 +113,7 @@ export default function Events() {
     if (!event) return;
 
     const currentStatus = event.isAttending ? "going" : "not_going";
-    const newStatus = currentStatus === "going" ? "not_going" : "going";
+    const newStatus = currentStatus === "going" ? "not going" : "going";
     const toastTitle = newStatus === "going" ? "RSVP Confirmed" : "RSVP Cancelled";
     const toastDescription = newStatus === "going" ? "You have successfully RSVP'd for this event!" : "You have un-RSVP'd for this event.";
 
