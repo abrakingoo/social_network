@@ -33,15 +33,33 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 		return
 	}
 
-	exists, _, err := q.FollowExists(c.UserID, request.RecipientID)
+	exists, status, err := q.FollowExists(c.UserID, request.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
 		return
 	}
 
-	if exists {
+	if exists && status != "declined" {
 		c.SendError("Error: request already sent")
 		return
+	} else if exists && status == "declined" {
+		err = q.UpdateData("user_follows", []string{
+			"following_id",
+			"follower_id",
+		}, []any{
+			request.RecipientID,
+			c.UserID,
+		}, []string{
+			"status",
+			"updated_at",
+		}, []any{
+			"pending",
+			time.Now(),
+		})
+		if err != nil {
+			res := fmt.Sprintf("Error while updating follow status: %v", err)
+			c.SendError(res)
+		}
 	}
 
 	isPublic, err := q.CheckUserIsPublic(request.RecipientID)
