@@ -17,6 +17,16 @@ func (c *Client) ProcessMessages(q *repository.Query) {
 			c.RespondFollowRequest(msg, q)
 		case "Unfollow":
 			c.Unfollow(msg, q)
+		case "exit_group":
+			c.ExitGroup(msg, q)
+		case "group_invitation":
+			c.SendInvitation(msg, q)
+		case "respond_group_invitation":
+			c.RespondSendInvitation(msg, q)
+		case "group_join_request":
+			c.GroupJoinRequest(msg, q)
+		case "respond_group_join_request":
+			c.RespondGroupJoinRequest(msg, q)
 		default:
 			c.SendError("Unknown message type")
 		}
