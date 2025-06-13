@@ -67,7 +67,7 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 	}
 }
 
-func (c *Client) RespondFollowReques(msg map[string]any, q *repository.Query) {
+func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
