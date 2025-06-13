@@ -109,7 +109,7 @@ func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 	}
 
 	if request.RecipientID == c.UserID {
-		c.SendError("You can't follow yourself")
+		c.SendError("You can't respond to yourself")
 		return
 	}
 
