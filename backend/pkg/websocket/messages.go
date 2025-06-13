@@ -15,6 +15,8 @@ func (c *Client) ProcessMessages(q *repository.Query) {
 			c.FollowRequest(msg, q)
 		case "respond_follow_request":
 			c.RespondFollowRequest(msg, q)
+		case "Unfollow":
+			c.Unfollow(msg, q)
 		default:
 			c.SendError("Unknown message type")
 		}
