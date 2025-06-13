@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"social/pkg/model"
-	"database/sql"
 )
 
 func (q *Query) FetchAllGroups(userid string) ([]model.Groups, error) {
