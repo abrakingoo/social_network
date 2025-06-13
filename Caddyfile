@@ -5,6 +5,9 @@ localhost :80, :443 {
 	handle /api/login {
 		rate_limit {
 			zone login {
+				match {
+					method POST OPTIONS
+				}
 				key {remote_host}
 				events 5 # 5 requests
 				window 1m # in 1 minute window 
