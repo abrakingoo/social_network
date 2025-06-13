@@ -14,7 +14,7 @@ import { FadeLoader } from "react-spinners";
 
 const Friends = () => {
   const router = useRouter();
-  const { currentUser, getAllUsers } = useAuth();
+  const { currentUser, getAllUsers, loading: authLoading } = useAuth();
   const [users, setUsers] = useState([]);
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
@@ -24,7 +24,7 @@ const Friends = () => {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!currentUser) {
+    if (!authLoading && !currentUser == null) {
       router.push("/login");
     }
 
