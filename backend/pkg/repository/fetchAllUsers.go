@@ -8,9 +8,9 @@ import (
 
 func (q *Query) FetchAllUsers(userID string) ([]model.AllUsers, error) {
 
-	var users model.AllUsers
+	var _ model.AllUsers
 
-	//return folllowers 
+	// return folllowers 
 
 	// return following
 
@@ -18,7 +18,7 @@ func (q *Query) FetchAllUsers(userID string) ([]model.AllUsers, error) {
 	return nil , nil
 }
 
-func (q *Query) fetchNonMutual(userID string) ([]model.Follower, error) {
+func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 
 	var users []model.Follower
 	query := `
@@ -64,3 +64,13 @@ func (q *Query) fetchNonMutual(userID string) ([]model.Follower, error) {
 	return users, nil
 }
 
+
+func (q *Query) FetchSentFollowRequests(userID string) ([]model.Follower, error) {
+
+	return nil, nil
+}
+
+func (q *Query) FetchReceivedFollowRequests(userId string) ([]model.Follower, error) {
+
+	return nil, nil
+} 
