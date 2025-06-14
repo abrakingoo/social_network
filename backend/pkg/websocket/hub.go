@@ -27,11 +27,9 @@ func (h *Hub) Run() {
 
 		case c := <-h.Unregister:
 			h.Mu.Lock()
-			if _, ok := h.Clients[c]; ok {
-				delete(h.Clients, c)
-				close(c.Send)
-				close(c.ProcessChan)
-			}
+
+			delete(h.Clients, c)
+
 			h.Mu.Unlock()
 		}
 	}
