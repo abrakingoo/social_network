@@ -114,11 +114,9 @@ const EventForm = ({ onClose, onEventCreated, groupTitle }) => {
         location: formData.location.trim()
       };
 
-      console.log('[EventForm] Creating event with data:', newEventData);
 
       const result = await groupService.createEvent(newEventData);
 
-      console.log('[EventForm] Event creation result:', result);
 
       // Reset form
       setFormData({

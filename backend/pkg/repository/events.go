@@ -65,3 +65,25 @@ func (q *Query) FetchAttendingMembersCount(eventID string) (int, error) {
 	return count, nil
 
 }
+
+// GetUserRsvpStatus checks the current user's RSVP status for an event
+func (q *Query) GetUserRsvpStatus(eventID, userID string) (string, error) {
+	query := `
+			SELECT status
+			FROM event_attendance
+			WHERE user_id = ? AND event_id = ?
+			LIMIT 1;
+	`
+
+	var status string
+	err := q.Db.QueryRow(query, userID, eventID).Scan(&status)
+	if err != nil {
+			if err == sql.ErrNoRows {
+					// User hasn't RSVP'd yet
+					return "not_going", nil
+			}
+			return "", fmt.Errorf("query error: %w", err)
+	}
+
+	return status, nil
+}

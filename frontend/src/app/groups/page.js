@@ -127,21 +127,15 @@ const Groups = () => {
   // Fetch groups with pagination and filters
   const fetchGroups = async ({ search = searchQuery, filter = activeTab } = {}) => {
     if (!currentUser || authLoading) {
-      console.log('[Groups.fetchGroups] Skipping fetch - no user or auth loading:', { currentUser, authLoading });
       return;
     }
 
     try {
-      console.log('[Groups.fetchGroups] Fetching groups:', { search, filter });
       setLoading(true);
 
       const result = await groupService.getAllGroups({
         search,
         filter
-      });
-
-      console.log('[Groups.fetchGroups] Received groups:', {
-        count: result.groups.length,
       });
 
       setGroups(result.groups);
@@ -165,12 +159,6 @@ const Groups = () => {
 
   // Initial fetch and tab change handler
   useEffect(() => {
-    console.log('[Groups] Component mounted/updated:', {
-      currentUser: currentUser?.id,
-      authLoading,
-      activeTab,
-      searchQuery
-    });
     fetchGroups();
   }, [currentUser, authLoading]);
 
