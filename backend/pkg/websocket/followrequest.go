@@ -152,3 +152,5 @@ func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 		c.SendError(res)
 	}
 }
+
+func (c *Client) CancelFollowRequest(msg map[string]any, q *repository.Query) {}
