@@ -6,16 +6,44 @@ import (
 	"social/pkg/model"
 )
 
-func (q *Query) FetchAllUsers(userID string) ([]model.AllUsers, error) {
+func (q *Query) FetchAllUsers(userID string) (model.AllUsers, error) {
 
-	var _ model.AllUsers
+	var (
+        users model.AllUsers
+        err   error  
+    )
 
-	// return folllowers 
 
-	// return following
+    // fetch all your followers
+    users.Followers, err = q.FetchFollowers(userID) 
+    if err != nil {
+        return model.AllUsers{}, err
+    }
+	// fetch all who you are following
+    users.Following, err = q.FetchFollowing(userID) 
+    if err != nil {
+        return model.AllUsers{}, err
+    }
+	
+    // return follower request sent
+    users.SentRequest, err = q.FetchSentFollowRequests(userID)
+    if err != nil {
+        return model.AllUsers{}, err
+    }
 
+    // return follower request recieved
+    users.ReceivedRequest, err = q.FetchReceivedFollowRequests(userID) 
+    if err != nil {
+        return model.AllUsers{}, err
+    }
 
-	return nil , nil
+    // fetch  non mutual users
+    users.NonMutual, err = q.FetchNonMutual(userID)
+    if err != nil {
+        return model.AllUsers{}, err
+    }
+
+	return users , nil
 }
 
 func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
