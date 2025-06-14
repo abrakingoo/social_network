@@ -431,13 +431,13 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 
 func (q *Query) GetFollowers(userid string, user *model.UserData) error {
 	// Fetch followers (people who follow the current user)
-	err := q.FetchFollowers(userid, user)
+	user.Followers, err := q.FetchFollowers(userid)
 	if err != nil {
 		return fmt.Errorf("failed to fetch followers: %w", err)
 	}
 
 	// Fetch following (people the current user follows)
-	err = q.FetchFollowing(userid, user)
+	user.Following, err = q.FetchFollowing(userid)
 	if err != nil {
 		return fmt.Errorf("failed to fetch following: %w", err)
 	}
