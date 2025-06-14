@@ -7,7 +7,7 @@ import (
 	"social/pkg/model"
 )
 
-func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
+func (q *Query) FetchFollowers(userID string)([]model.Follower , error) {
 	query := `
         SELECT 
             u.id, u.first_name, u.nickname, u.avatar, u.is_public
@@ -15,13 +15,14 @@ func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
         JOIN users u ON uf.follower_id = u.id
         WHERE uf.following_id = ? AND uf.status = 'accepted'
     `
-
+	
 	rows, err := q.Db.Query(query, userID)
 	if err != nil {
-		return fmt.Errorf("failed to query followers: %w", err)
+		return nil,  fmt.Errorf("failed to query followers: %w", err)
 	}
 	defer rows.Close()
 
+	var users []model.Follower
 	for rows.Next() {
 		var follower model.Follower
 		if err := rows.Scan(
@@ -31,15 +32,15 @@ func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
 			&follower.Avatar,
 			&follower.IsPublic,
 		); err != nil {
-			return fmt.Errorf("failed to scan follower: %w", err)
+			return nil, fmt.Errorf("failed to scan follower: %w", err)
 		}
-		userData.Followers = append(userData.Followers, follower)
+		users = append(users, follower)
 	}
 
-	return rows.Err()
+	return users, nil
 }
 
-func (q *Query) FetchFollowing(userID string, userData *model.UserData) error {
+func (q *Query) FetchFollowing(userID string) ([]model.Follower, error) {
 	query := `
         SELECT 
             u.id, u.first_name, u.nickname, u.avatar, u.is_public
@@ -50,10 +51,11 @@ func (q *Query) FetchFollowing(userID string, userData *model.UserData) error {
 
 	rows, err := q.Db.Query(query, userID)
 	if err != nil {
-		return fmt.Errorf("failed to query following: %w", err)
+		return nil, fmt.Errorf("failed to query following: %w", err)
 	}
 	defer rows.Close()
 
+	var users []model.Follower
 	for rows.Next() {
 		var following model.Follower
 		if err := rows.Scan(
@@ -63,12 +65,12 @@ func (q *Query) FetchFollowing(userID string, userData *model.UserData) error {
 			&following.Avatar,
 			&following.IsPublic,
 		); err != nil {
-			return fmt.Errorf("failed to scan following: %w", err)
+			return nil, fmt.Errorf("failed to scan following: %w", err)
 		}
-		userData.Following = append(userData.Following, following)
+		users = append(users , following)
 	}
 
-	return rows.Err()
+	return users, nil
 }
 
 func (q *Query) FollowExists(followerID, followingID string) (exists bool, status string, err error) {
