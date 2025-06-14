@@ -12,7 +12,7 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 		log.Printf("User %s sent: %v", c.UserID, msg)
 		switch msg["type"] {
 		case "follow_request":
-			c.FollowRequest(msg, q)
+			c.FollowRequest(msg, q, h)
 		case "respond_follow_request":
 			c.RespondFollowRequest(msg, q)
 		case "unfollow":

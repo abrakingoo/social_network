@@ -10,7 +10,7 @@ import (
 	"social/pkg/util"
 )
 
-func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
+func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
@@ -39,6 +39,14 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 		return
 	}
 
+	user := &model.UserData{}
+
+	err = q.FetchUserInfo(request.RecipientID, user)
+	if err != nil {
+		c.SendError("Error fetching recipient data")
+		return
+	}
+
 	if exists && status != "declined" {
 		c.SendError("Error: request already sent")
 		return
@@ -59,7 +67,15 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 		if err != nil {
 			res := fmt.Sprintf("Error while updating follow status: %v", err)
 			c.SendError(res)
+			return
 		}
+
+		h.ActionBasedNotification([]string{
+			request.RecipientID,
+		}, "follow_request", map[string]any{
+			"follower": user,
+		})
+		return
 	}
 
 	isPublic, err := q.CheckUserIsPublic(request.RecipientID)
@@ -80,6 +96,13 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 			request.RecipientID,
 			"accepted",
 		})
+
+		h.InfoBasedNotification([]string{
+			request.RecipientID,
+		}, map[string]any{
+			"avatar":  user.Avatar,
+			"message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName),
+		})
 	} else {
 		q.InsertData("user_follows", []string{
 			"id",
@@ -91,6 +114,12 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query) {
 			c.UserID,
 			request.RecipientID,
 			"pending",
+		})
+
+		h.ActionBasedNotification([]string{
+			request.RecipientID,
+		}, "follow_request", map[string]any{
+			"follower": user,
 		})
 	}
 }
