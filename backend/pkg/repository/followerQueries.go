@@ -10,7 +10,7 @@ import (
 func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
 	query := `
         SELECT 
-            u.id, u.first_name, u.last_name, u.nickname, u.avatar
+            u.id, u.first_name, u.nickname, u.avatar, u.is_public
         FROM user_follows uf
         JOIN users u ON uf.follower_id = u.id
         WHERE uf.following_id = ? AND uf.status = 'accepted'
@@ -27,9 +27,9 @@ func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
 		if err := rows.Scan(
 			&follower.ID,
 			&follower.FirstName,
-			&follower.LastName,
 			&follower.Nickname,
 			&follower.Avatar,
+			&follower.IsPublic,
 		); err != nil {
 			return fmt.Errorf("failed to scan follower: %w", err)
 		}
@@ -42,7 +42,7 @@ func (q *Query) FetchFollowers(userID string, userData *model.UserData) error {
 func (q *Query) FetchFollowing(userID string, userData *model.UserData) error {
 	query := `
         SELECT 
-            u.id, u.first_name, u.last_name, u.nickname, u.avatar
+            u.id, u.first_name, u.nickname, u.avatar, u.is_public
         FROM user_follows uf
         JOIN users u ON uf.following_id = u.id
         WHERE uf.follower_id = ? AND uf.status = 'accepted'
@@ -59,9 +59,9 @@ func (q *Query) FetchFollowing(userID string, userData *model.UserData) error {
 		if err := rows.Scan(
 			&following.ID,
 			&following.FirstName,
-			&following.LastName,
 			&following.Nickname,
 			&following.Avatar,
+			&following.IsPublic,
 		); err != nil {
 			return fmt.Errorf("failed to scan following: %w", err)
 		}
