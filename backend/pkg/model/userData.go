@@ -31,7 +31,7 @@ type Follower struct {
 type AllUsers struct {
 	Followers       []Follower `json:"followers"`
 	Following       []Follower `json:"following"`
-	ReceivedRequest []Follower `json:"recieved_reqeust"`
+	ReceivedRequest []Follower `json:"received_request"`
 	SentRequest     []Follower `json:"sent_request"`
 	NonMutual       []Follower `json:"non_mutual"`
 }

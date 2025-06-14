@@ -15,7 +15,7 @@ func (app *App) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := app.Queries.FetchAllUsers(userID)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusNoContent, "Error fetching users", Error)
+		 app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to fetch users", Error)
 		return
 	}
 
