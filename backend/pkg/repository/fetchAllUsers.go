@@ -62,7 +62,7 @@ func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
         		(uf.follower_id = u.id AND uf.following_id = ?) OR
         		(uf.follower_id = ? AND uf.following_id = u.id)
  		)
-		ORDER BY u.created_at DESC
+		ORDER BY u.created_at ASC
         LIMIT 100
 	`
 	rows, err := q.Db.Query(query, userID)

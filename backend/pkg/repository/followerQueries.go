@@ -14,6 +14,8 @@ func (q *Query) FetchFollowers(userID string)([]model.Follower , error) {
         FROM user_follows uf
         JOIN users u ON uf.follower_id = u.id
         WHERE uf.following_id = ? AND uf.status = 'accepted'
+		ORDER BY uf.created_at ASC
+        LIMIT 100
     `
 	
 	rows, err := q.Db.Query(query, userID)
@@ -47,6 +49,8 @@ func (q *Query) FetchFollowing(userID string) ([]model.Follower, error) {
         FROM user_follows uf
         JOIN users u ON uf.following_id = u.id
         WHERE uf.follower_id = ? AND uf.status = 'accepted'
+		ORDER BY uf.created_at ASC
+        LIMIT 100
     `
 
 	rows, err := q.Db.Query(query, userID)
