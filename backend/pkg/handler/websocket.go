@@ -36,10 +36,7 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.Hub.Register <- client
-	defer func() {
-		app.Hub.Unregister <- client
-		close(client.Send)
-	}()
+	defer client.Cleanup()
 
 	go client.WritePump()
 	go client.ProcessMessages(&app.Queries)
