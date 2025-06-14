@@ -7,7 +7,7 @@ import (
 )
 
 // processMessages dispatches on msg["type"]
-func (c *Client) ProcessMessages(q *repository.Query) {
+func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 	for msg := range c.ProcessChan {
 		log.Printf("User %s sent: %v", c.UserID, msg)
 		switch msg["type"] {
