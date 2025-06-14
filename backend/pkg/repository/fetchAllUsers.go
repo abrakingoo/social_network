@@ -65,12 +65,74 @@ func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 }
 
 
+// FetchSentFollowRequests returns a list of users to whom the given user has sent follow requests
+// with a 'pending' status. These are the users the given user wants to follow.
 func (q *Query) FetchSentFollowRequests(userID string) ([]model.Follower, error) {
+    query := `
+        SELECT 
+            u.id,
+            u.first_name,
+            u.nickname,
+            u.avatar,
+            u.is_public
+        FROM user_follows uf
+        JOIN users u ON uf.following_id = u.id
+        WHERE uf.follower_id = ?
+          AND uf.status = 'pending'
+		ORDER BY uf.created_at ASC
+		LIMIT 100
+    `
 
-	return nil, nil
+    rows, err := q.Db.Query(query, userID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var followers []model.Follower
+    for rows.Next() {
+        var f model.Follower
+        if err := rows.Scan(&f.ID, &f.FirstName, &f.Nickname, &f.Avatar, &f.IsPublic); err != nil {
+            return nil, err
+        }
+        followers = append(followers, f)
+    }
+
+    return followers, nil
 }
 
-func (q *Query) FetchReceivedFollowRequests(userId string) ([]model.Follower, error) {
+// FetchReceivedFollowRequests returns a list of users who have sent a follow request
+// to the given user. These are users who want to follow the given user and are waiting for approval.
+func (q *Query) FetchReceivedFollowRequests(userID string) ([]model.Follower, error) {
+    query := `
+        SELECT 
+            u.id,
+            u.first_name,
+            u.nickname,
+            u.avatar,
+            u.is_public
+        FROM user_follows uf
+        JOIN users u ON uf.follower_id = u.id
+        WHERE uf.following_id = ?
+          AND uf.status = 'pending'
+		ORDER BY uf.created_at ASC
+		LIMIT 100
+    `
 
-	return nil, nil
-} 
+    rows, err := q.Db.Query(query, userID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var followers []model.Follower
+    for rows.Next() {
+        var f model.Follower
+        if err := rows.Scan(&f.ID, &f.FirstName, &f.Nickname, &f.Avatar, &f.IsPublic); err != nil {
+            return nil, err
+        }
+        followers = append(followers, f)
+    }
+
+    return followers, nil
+}
