@@ -34,7 +34,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 
 	exists, err := q.CheckRow("group_join_requests", []string{
 		"group_id",
-		"user_id,",
+		"user_id",
 	}, []any{
 		request.GroupId,
 		c.UserID,
@@ -46,7 +46,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 
 	declined, err := q.CheckRow("group_join_requests", []string{
 		"group_id",
-		"user_id,",
+		"user_id",
 		"status",
 	}, []any{
 		request.GroupId,
