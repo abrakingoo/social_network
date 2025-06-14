@@ -8,7 +8,7 @@ import (
 	"social/pkg/util"
 )
 
-func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
+func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
@@ -66,6 +66,12 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
 		c.SendError("failed to send invitation")
 		return
 	}
+
+	h.ActionBasedNotification([]string{
+		request.RecipientID,
+	}, "group_invitation", map[string]any {
+		"group_id": request.GroupId,
+	})
 }
 
 func (c *Client) RespondSendInvitation(msg map[string]any, q *repository.Query) {

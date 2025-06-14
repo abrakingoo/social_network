@@ -20,7 +20,7 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 		case "exit_group":
 			c.ExitGroup(msg, q)
 		case "group_invitation":
-			c.SendInvitation(msg, q)
+			c.SendInvitation(msg, q, h)
 		case "respond_group_invitation":
 			c.RespondSendInvitation(msg, q)
 		case "group_join_request":
