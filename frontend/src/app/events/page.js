@@ -26,19 +26,16 @@ export default function Events() {
   // Fetch all events from all groups
   const fetchAllEvents = async () => {
     if (!currentUser || authLoading) {
-      console.log('[Events] Skipping fetch - auth not ready:', { currentUser, authLoading });
       return;
     }
 
     try {
-      console.log('[Events] Fetching all groups to get events...');
       setLoading(true);
 
       // Get all groups first
       const allGroupsResult = await groupService.getAllGroups();
       const allGroups = allGroupsResult.groups || [];
 
-      console.log('[Events] Found groups:', allGroups.length);
 
       // Collect all events from all groups
       const allEvents = [];
@@ -71,7 +68,6 @@ export default function Events() {
       // Sort events by date (closest first)
       allEvents.sort((a, b) => new Date(a.event_time) - new Date(b.event_time));
 
-      console.log('[Events] Total events found:', allEvents.length);
       setEvents(allEvents);
 
     } catch (error) {
