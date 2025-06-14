@@ -9,7 +9,7 @@ import (
 	"social/pkg/util"
 )
 
-func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
+func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hub) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
@@ -80,6 +80,12 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 			c.SendError("failed to update join request")
 			return
 		}
+
+		h.ActionBasedNotification([]string{
+			request.RecipientID,
+		}, "group_join_request", map[string]any{
+			"group_id": request.GroupId,
+		})
 	} else {
 		err = q.InsertData("group_join_requests", []string{
 			"id",
@@ -97,6 +103,12 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 			c.SendError("failed to send join request")
 			return
 		}
+		
+		h.ActionBasedNotification([]string{
+			request.RecipientID,
+		}, "group_join_request", map[string]any{
+			"group_id": request.GroupId,
+		})
 	}
 }
 

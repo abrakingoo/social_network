@@ -24,7 +24,7 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 		case "respond_group_invitation":
 			c.RespondSendInvitation(msg, q)
 		case "group_join_request":
-			c.GroupJoinRequest(msg, q)
+			c.GroupJoinRequest(msg, q, h)
 		case "respond_group_join_request":
 			c.RespondGroupJoinRequest(msg, q)
 		case "cancel_follow_request":
