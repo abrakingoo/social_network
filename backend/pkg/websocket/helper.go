@@ -17,20 +17,6 @@ func (c *Client) SendError(text string) {
 	}
 }
 
-func (c *Client) SendResponse(msgType string, payload map[string]string) {
-	payload["type"] = msgType
-	data, err := json.Marshal(payload)
-	if err != nil {
-		log.Println("sendResponse: JSON marshal error:", err)
-		return
-	}
-	select {
-	case c.Send <- data:
-	default:
-		log.Println("sendResponse: channel full")
-	}
-}
-
 func (c *Client) Cleanup() {
 	c.Once.Do(func() {
 		defer func() {
