@@ -3,6 +3,7 @@ package websocket
 func (h *Hub) ActionBasedNotification(recipients []string, action string, data any) {
 	payload := map[string]any{
 		"type":        "notification",
+		"case":        "action_based",
 		"action_type": action,
 		"data":        data,
 	}
@@ -10,4 +11,14 @@ func (h *Hub) ActionBasedNotification(recipients []string, action string, data a
 	h.BroadcastToSpecific(recipients, payload)
 }
 
-func (h *Hub) InfoBasedNotification(recipients []string, message string) {}
+func (h *Hub) InfoBasedNotification(recipients []string, message string) {
+	payload := map[string]any{
+		"type": "notification",
+		"case": "info_based",
+		"data": map[string]any{
+			"message": message,
+		},
+	}
+
+	h.BroadcastToSpecific(recipients, payload)
+}
