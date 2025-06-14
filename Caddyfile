@@ -1,32 +1,212 @@
 localhost :80, :443 {
+	@allowedAgents {
+		header User-Agent *Mozilla*
+		header User-Agent *curl*
+	}
+
+	@forbiddenAgents {
+		header User-Agent *Mozilla*
+		header User-Agent *curl*
+	}
+
 	root * ./frontend/.next
 
 	# Rate-limited backend API routes
 	handle /api/login {
 		rate_limit {
 			zone login {
+				match {
+					method POST OPTIONS
+				}
 				key {remote_host}
 				events 5 # 5 requests
-				window 5m # in 5 minute window 
+				window 1m # in 1 minute window 
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	handle /api/register {
 		rate_limit {
 			zone register {
+				match {
+					method POST OPTIONS
+				}
 				key {remote_host}
-				events 5
-				window 5m
+				events 2
+				window 1m
 			}
 		}
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/addPost {
+		rate_limit {
+			zone addPost {
+				match {
+					method POST OPTIONS
+				}
+				key {remote_host}
+				events 10
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/getPosts {
+		rate_limit {
+			zone getPosts {
+				match {
+					method GET OPTIONS
+				}
+				key {remote_host}
+				events 60
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/profile {
+		rate_limit {
+			zone getProfile {
+				match {
+					method GET OPTIONS
+				}
+				key {remote_host}
+				events 30
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/logout {
+		rate_limit {
+			zone logoutUser {
+				match {
+					method POST OPTIONS
+				}
+				key {remote_host}
+				events 20
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/addGroup {
+		rate_limit {
+			zone addGroup {
+				match {
+					method POST OPTIONS
+				}
+				key {remote_host}
+				events 5
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/getGroupData {
+		rate_limit {
+			zone getGroupData {
+				match {
+					method POST GET OPTIONS
+				}
+				key {remote_host}
+				events 20
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /pkg/db/media/ {
+		rate_limit {
+			zone getMedia {
+				match {
+					method GET OPTIONS
+				}
+				key {remote_host}
+				events 30
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/addEvent {
+		rate_limit {
+			zone addEvent {
+				match {
+					method POST OPTIONS
+				}
+				key {remote_host}
+				events 5
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/updateUser {
+		rate_limit {
+			zone updateUser {
+				match {
+					method PATCH OPTIONS
+				}
+				key {remote_host}
+				events 3
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/groups {
+		rate_limit {
+			zone groups {
+				match {
+					method GET OPTIONS
+				}
+				key {remote_host}
+				events 60
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	handle /api/deleteGroup {
+		rate_limit {
+			zone deleteGroup {
+				match {
+					method DELETE OPTIONS
+				}
+				key {remote_host}
+				events 2
+				window 1m
+			}
+		}
+		reverse_proxy @allowedAgents {$BACKEND_API}
+	}
+
+	# Websocket endpoint
+	@websockets {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+
+	handle /api/ws {
+		reverse_proxy @allowedAgents @websockets {$BACKEND_API}
 	}
 
 	# Other backend API routes (without rate limiting)
 	handle /api/* {
-		reverse_proxy {$BACKEND_API}
+		reverse_proxy @allowedAgents {$BACKEND_API}
 	}
 
 	# Serve Next.js static files
@@ -41,6 +221,8 @@ localhost :80, :443 {
 
 	# Default: proxy everything else to Next.js
 	handle {
-		reverse_proxy {$FRONTEND_API}
+		reverse_proxy @allowedAgents {$FRONTEND_API}
 	}
+
+	respond @forbiddenAgents "Access denied" 403
 }
