@@ -43,6 +43,7 @@ func (c *Client) Unfollow(msg map[string]any, q *repository.Query) {
 
 	if status != "accepted" {
 		c.SendError("You don't follow this user")
+		return
 	}
 
 	err = q.DeleteData("user_follows", []string{
