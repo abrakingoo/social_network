@@ -6,12 +6,19 @@ import (
 	"social/pkg/model"
 )
 
-func (q *Query) FetchAllUsers(userID string) ([]model.User, error) {
+func (q *Query) FetchAllUsers(userID string) ([]model.AllUsers, error) {
+
+	var users model.AllUsers
+
+	//return folllowers 
+
+	// return following
+
 
 	return nil , nil
 }
 
-func (q *Query) fetchNonMutual(userID string, allUsers *model.AllUsers) error {
+func (q *Query) fetchNonMutual(userID string) ([]model.Follower, error) {
 
 	var users []model.Follower
 	query := `
@@ -33,7 +40,7 @@ func (q *Query) fetchNonMutual(userID string, allUsers *model.AllUsers) error {
 	rows, err := q.Db.Query(query, userID)
 	if err != nil {
 		log.Printf("FetchAllUsers: db error: %v", err)
-		return fmt.Errorf("failed to fetch non mutuL users: %w", err)
+		return nil, fmt.Errorf("failed to fetch non mutuL users: %w", err)
 	}
 
 	defer rows.Close()
@@ -47,14 +54,13 @@ func (q *Query) fetchNonMutual(userID string, allUsers *model.AllUsers) error {
 		)
 
 		if err != nil {
-			return fmt.Errorf("failed to scan user: %w", err)
+			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
 
 		users = append(users, user)
 
 	}
 
-	allUsers.NonMutual = users
-
-	return nil
+	return users, nil
 }
+
