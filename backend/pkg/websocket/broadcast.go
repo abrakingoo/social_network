@@ -6,7 +6,7 @@ import (
 )
 
 // Broadcast a payload to all clients except skip (or nil to send to all)
-func (h *Hub) BroadcastToOthers(skip *Client, payload map[string]string) {
+func (h *Hub) BroadcastToOthers(skip *Client, payload map[string]any) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		log.Println("broadcastToOthers: marshal error:", err)
@@ -24,3 +24,5 @@ func (h *Hub) BroadcastToOthers(skip *Client, payload map[string]string) {
 		}
 	}
 }
+
+func (h *Hub) BroadcastToSpecific(users []*Client, payload map[string]any) {}
