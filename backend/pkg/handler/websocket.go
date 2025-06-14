@@ -1,4 +1,3 @@
-// handler/ws.go
 package handler
 
 import (
