@@ -131,6 +131,7 @@ func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 
 	if status == "accepted" || status == "declined" {
 		c.SendError("Error: already responded to this request")
+		return
 	}
 
 	err = q.UpdateData("user_follows", []string{
