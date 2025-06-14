@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"social/pkg/model"
 	"social/pkg/repository"
@@ -81,15 +82,18 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 		}
 	} else {
 		err = q.InsertData("group_join_requests", []string{
+			"id",
 			"group_id",
 			"user_id",
 			"status",
 		}, []any{
+			util.UUIDGen(),
 			request.GroupId,
 			c.UserID,
 			"pending",
 		})
 		if err != nil {
+			fmt.Println("This err: ", err)
 			c.SendError("failed to send join request")
 			return
 		}
