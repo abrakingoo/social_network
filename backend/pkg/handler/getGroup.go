@@ -20,13 +20,20 @@ func (app *App) GetGroupData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user ID from session
+	userID, err := app.GetSessionData(r)
+	if err != nil {
+		// If user is not logged in, we'll still fetch the group data but without user-specific info
+		userID = ""
+	}
+
 	id, err := app.Queries.FetchGroupId(groupTitle.Title)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusConflict, "Error fetching group ID", Error)
 		return
 	}
 
-	groupData, err := app.Queries.FetchGroupData(id)
+	groupData, err := app.Queries.FetchGroupDataWithUser(id, userID)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusNoContent, "Error fetching group data", Error)
 		return

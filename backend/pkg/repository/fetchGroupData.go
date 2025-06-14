@@ -11,6 +11,10 @@ import (
 )
 
 func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
+	return q.FetchGroupDataWithUser(groupid, "")
+}
+
+func (q *Query) FetchGroupDataWithUser(groupid string, userID string) (model.GroupData, error) {
 	var group model.GroupData
 	var err error
 
@@ -30,8 +34,8 @@ func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 		return model.GroupData{}, err
 	}
 
-	// fetch all group events information
-	if err := q.fetchGroupEvents(groupid, &group); err != nil {
+	// fetch all group events information with user RSVP status
+	if err := q.fetchGroupEvents(groupid, &group, userID); err != nil {
 		return model.GroupData{}, err
 	}
 
@@ -40,11 +44,11 @@ func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 
 func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
 	row := q.Db.QueryRow(`
-        SELECT g.id, g.title, g.description, 
+        SELECT g.id, g.title, g.description,
 		g.created_at, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM groups g
 		JOIN users u ON u.id = g.creator_id
-        WHERE g.id = ? 
+        WHERE g.id = ?
     `, groupid)
 
 	user := model.Creator{}
@@ -90,8 +94,8 @@ func (q *Query) fetchGroupPosts(groupid string) ([]model.Post, error) {
 
 func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 	query := `
-		SELECT 
-			p.id, p.content, 
+		SELECT
+			p.id, p.content,
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
 			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
 		FROM posts p
@@ -180,7 +184,7 @@ func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 
 func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error {
 	rows, err := q.Db.Query(`
-		SELECT 
+		SELECT
 			u.id, u.first_name, u.last_name, u.nickname, u.avatar, gm.role
 		FROM group_members gm
 		JOIN users u ON u.id = gm.user_id
@@ -211,7 +215,7 @@ func (q *Query) fetchGroupMembers(groupid string, group *model.GroupData) error 
 	return nil
 }
 
-func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
+func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData, userID string) error {
 	// First query: Get all events
 	eventRows, err := q.Db.Query(`
 		SELECT
@@ -239,6 +243,15 @@ func (q *Query) fetchGroupEvents(groupID string, group *model.GroupData) error {
 		)
 		if err != nil {
 			return err
+		}
+
+		// Get user's RSVP status for this event
+		if userID != "" {
+			status, err := q.GetUserRsvpStatus(event.ID, userID)
+			if err != nil {
+				return err
+			}
+			event.UserRsvpStatus = status
 		}
 
 		event.Attendees = []model.Creator{}
@@ -311,7 +324,7 @@ func (q *Query) FetchGroupId(title string) (string, error) {
 	row := q.Db.QueryRow(`
 		SELECT id
 		FROM groups
-		WHERE title = ? 
+		WHERE title = ?
 		LIMIT 1
 	`, title)
 
