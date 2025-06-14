@@ -153,4 +153,56 @@ func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 	}
 }
 
-func (c *Client) CancelFollowRequest(msg map[string]any, q *repository.Query) {}
+func (c *Client) CancelFollowRequest(msg map[string]any, q *repository.Query) {
+	dataBytes, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var request model.FollowRequest
+	if err := json.Unmarshal(dataBytes, &request); err != nil {
+		c.SendError("Invalid follow request data")
+		return
+	}
+
+	if request.RecipientID == c.UserID {
+		c.SendError("You can't cancel yourself")
+		return
+	}
+
+	if request.RecipientID == "" {
+		c.SendError("No recipient found")
+		return
+	}
+
+	exists, status, err := q.FollowExists(c.UserID, request.RecipientID)
+	if err != nil {
+		c.SendError("Error while checking following status")
+		return
+	}
+
+	if !exists {
+		c.SendError("You have not sent a request to this user")
+		return
+	}
+
+	if status == "pending" {
+		err = q.DeleteData("user_follows", []string{
+			"follower_id",
+			"following_id",
+			"status",
+		}, []any{
+			c.UserID,
+			request.RecipientID,
+			"pending",
+		})
+		if err != nil {
+			c.SendError("failed to cancel request")
+			return
+		}
+	} else {
+		c.SendError("You have not sent a request to this user")
+		return
+	}
+}
