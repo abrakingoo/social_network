@@ -15,7 +15,7 @@ func (c *Client) ProcessMessages(q *repository.Query) {
 			c.FollowRequest(msg, q)
 		case "respond_follow_request":
 			c.RespondFollowRequest(msg, q)
-		case "Unfollow":
+		case "unfollow":
 			c.Unfollow(msg, q)
 		case "exit_group":
 			c.ExitGroup(msg, q)
