@@ -58,6 +58,24 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 	}
 	user.ID = c.UserID
 
+	err = q.InsertData("notifications", []string{
+		"id",
+		"recipient_Id",
+		"actor_id",
+		"type",
+		"message",
+	}, []any{
+		util.UUIDGen(),
+		private.RecipientID,
+		c.UserID,
+		"private_message",
+		private.Message,
+	})
+	if err != nil {
+		c.SendError("failed to notify the recipient")
+		return
+	}
+
 	h.ActionBasedNotification([]string{
 		private.RecipientID,
 	}, "private_message", map[string]any{
