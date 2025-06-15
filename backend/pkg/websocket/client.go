@@ -9,6 +9,7 @@ import (
 
 type Client struct {
 	UserID      string
+	Groups      []string
 	Conn        *websocket.Conn
 	Send        chan []byte
 	ProcessChan chan map[string]any
