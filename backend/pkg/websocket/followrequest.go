@@ -47,6 +47,8 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 		return
 	}
 
+	notId := util.UUIDGen()
+
 	if exists && status != "declined" {
 		c.SendError("Error: request already sent")
 		return
@@ -67,6 +69,24 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 		if err != nil {
 			res := fmt.Sprintf("Error while updating follow status: %v", err)
 			c.SendError(res)
+			return
+		}
+
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			request.RecipientID,
+			c.UserID,
+			"follow_request",
+			"new follow request",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
 			return
 		}
 
@@ -97,6 +117,24 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 			"accepted",
 		})
 
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			request.RecipientID,
+			c.UserID,
+			"follow_request",
+			"new follower",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
+			return
+		}
+
 		h.InfoBasedNotification([]string{
 			request.RecipientID,
 		}, map[string]any{
@@ -104,7 +142,7 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 			"message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName),
 		})
 	} else {
-		q.InsertData("user_follows", []string{
+		err = q.InsertData("user_follows", []string{
 			"id",
 			"follower_id",
 			"following_id",
@@ -115,6 +153,28 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 			request.RecipientID,
 			"pending",
 		})
+		if err != nil {
+			c.SendError("Failed to send follow request")
+			return
+		}
+
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			request.RecipientID,
+			c.UserID,
+			"follow_request",
+			"new follow request",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
+			return
+		}
 
 		h.ActionBasedNotification([]string{
 			request.RecipientID,
