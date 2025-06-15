@@ -13,6 +13,7 @@ type GroupRequest struct {
 
 type PrivateMessage struct {
 	RecipientID string `json:"recipient_Id"`
+	SenderID    string `json:"sender_id"`
 	Message     string `json:"message"`
 }
 
