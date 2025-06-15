@@ -80,7 +80,7 @@ func (c *Client) GroupMessage(msg map[string]any, q *repository.Query, h *Hub) {
 
 	groupData, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("failed to marshal userdata: ", err)
+		log.Println("failed to marshal userdata: ", err)
 		c.SendError("Failed to notify active group members")
 		return
 	}
