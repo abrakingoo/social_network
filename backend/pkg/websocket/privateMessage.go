@@ -85,3 +85,5 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 		"message": html.EscapeString(private.Message),
 	})
 }
+
+func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {}
