@@ -2,10 +2,12 @@ package websocket
 
 import (
 	"encoding/json"
+	"html"
 	"strings"
 
 	"social/pkg/model"
 	"social/pkg/repository"
+	"social/pkg/util"
 )
 
 func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub) {
@@ -25,4 +27,41 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 		c.SendError("Cannot send empty message")
 		return
 	}
+
+	if private.RecipientID == "" {
+		c.SendError("recipient not found")
+		return
+	}
+
+	err = q.InsertData("private_messages", []string{
+		"id",
+		"sender_id",
+		"receiver_id",
+		"content",
+	}, []any{
+		util.UUIDGen(),
+		c.UserID,
+		private.RecipientID,
+		html.EscapeString(private.Message),
+	})
+	if err != nil {
+		c.SendError("failed to send message")
+		return
+	}
+
+	var user model.UserData
+
+	err = q.FetchUserInfo(c.UserID, &user)
+	if err != nil {
+		c.SendError("failed to show message to recipient")
+		return
+	}
+	user.ID = c.UserID
+
+	h.ActionBasedNotification([]string{
+		private.RecipientID,
+	}, "private_message", map[string]any{
+		"sender":  user,
+		"message": html.EscapeString(private.Message),
+	})
 }
