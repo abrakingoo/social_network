@@ -33,6 +33,8 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 			c.PrivateMessage(msg, q, h)
 		case "group_message":
 			c.GroupMessage(msg, q, h)
+		case "read_notification":
+			c.ReadNotification(msg, q)
 		default:
 			c.SendError("Unknown message type")
 		}
