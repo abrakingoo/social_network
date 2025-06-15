@@ -25,13 +25,25 @@ func (h *Hub) Run() {
 		case c := <-h.Register:
 			h.Mu.Lock()
 			h.Clients[c] = true
+			for _, groupID := range c.Groups {
+				if _, ok := h.Groups[groupID]; !ok {
+					h.Groups[groupID] = make(map[*Client]bool)
+				}
+				h.Groups[groupID][c] = true
+			}
 			h.Mu.Unlock()
 
 		case c := <-h.Unregister:
 			h.Mu.Lock()
-
 			delete(h.Clients, c)
-
+			for _, groupID := range c.Groups {
+				if members, ok := h.Groups[groupID]; ok {
+					delete(members, c)
+					if len(members) == 0 {
+						delete(h.Groups, groupID) // cleanup empty group
+					}
+				}
+			}
 			h.Mu.Unlock()
 		}
 	}
