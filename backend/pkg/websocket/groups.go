@@ -64,6 +64,8 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		return
 	}
 
+	notId := util.UUIDGen()
+
 	if exists {
 		err = q.UpdateData("group_join_requests", []string{
 			"group_id",
@@ -78,6 +80,24 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		})
 		if err != nil {
 			c.SendError("failed to update join request")
+			return
+		}
+
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			admin,
+			c.UserID,
+			"group_join_request",
+			"new request to join group",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
 			return
 		}
 
@@ -101,6 +121,24 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		if err != nil {
 			fmt.Println("This err: ", err)
 			c.SendError("failed to send join request")
+			return
+		}
+
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			admin,
+			c.UserID,
+			"group_join_request",
+			"new request to join group",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
 			return
 		}
 
