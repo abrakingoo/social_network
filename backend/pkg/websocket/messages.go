@@ -31,6 +31,8 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 			c.CancelFollowRequest(msg, q)
 		case "private_message":
 			c.PrivateMessage(msg, q, h)
+		case "group_message":
+			c.GroupMessage(msg, q, h)
 		default:
 			c.SendError("Unknown message type")
 		}
