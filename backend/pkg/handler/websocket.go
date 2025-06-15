@@ -26,8 +26,15 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	groupIDs, err := app.Queries.GetUserGroupIDs(userID)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "failed to load groups", Error)
+		return
+	}
+
 	client := &socket.Client{
 		UserID:      userID,
+		Groups:      groupIDs,
 		Conn:        conn,
 		Send:        make(chan []byte, 256),
 		ProcessChan: make(chan map[string]any, 100),
