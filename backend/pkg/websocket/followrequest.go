@@ -10,204 +10,176 @@ import (
 	"social/pkg/util"
 )
 
-func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) {
-	dataBytes, err := json.Marshal(msg["data"])
+// FollowService encapsulates follow request operations.
+// It keeps the repository and hub for notifications.
+type FollowService struct {
+	Query *repository.Query
+	Hub   *Hub
+}
+
+// decodeFollowRequest unmarshals the incoming message data into a FollowRequest struct.
+func (c *Client) decodeFollowRequest(msg map[string]any) (model.FollowRequest, bool) {
+	data, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
-		return
+		return model.FollowRequest{}, false
 	}
 
-	var request model.FollowRequest
-	if err := json.Unmarshal(dataBytes, &request); err != nil {
+	var req model.FollowRequest
+	if err := json.Unmarshal(data, &req); err != nil {
 		c.SendError("Invalid follow request data")
-		return
+		return model.FollowRequest{}, false
 	}
+	return req, true
+}
 
-	if request.RecipientID == c.UserID {
-		c.SendError("You can't follow yourself")
-		return
+// validateNotSelf ensures the user is not performing the action on themselves.
+func (c *Client) validateNotSelf(targetID string, action string) bool {
+	if targetID == c.UserID {
+		c.SendError(fmt.Sprintf("You can't %s yourself", action))
+		return false
 	}
-
-	if request.RecipientID == "" {
+	if targetID == "" {
 		c.SendError("No recipient found")
+		return false
+	}
+	return true
+}
+
+// sendNotification wraps inserting a notification row and issuing a hub event.
+func (svc *FollowService) sendNotification(notifID, recipientID, actorID, ntype, message string, payload map[string]any, actionBased bool) {
+	err := svc.Query.InsertData("notifications",
+		[]string{"id", "recipient_id", "actor_id", "type", "message"},
+		[]any{notifID, recipientID, actorID, ntype, message},
+	)
+	if err != nil {
+		// log or handle error sending notification insert
 		return
 	}
 
-	exists, status, err := q.FollowExists(c.UserID, request.RecipientID)
+	if actionBased {
+		svc.Hub.ActionBasedNotification([]string{recipientID}, ntype, payload)
+	} else {
+		svc.Hub.InfoBasedNotification([]string{recipientID}, payload)
+	}
+}
+
+// FollowRequest handles sending, re-sending, or auto-accepting follow requests.
+func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) {
+	// initialize service
+	svc := FollowService{Query: q, Hub: h}
+
+	req, ok := c.decodeFollowRequest(msg)
+	if !ok {
+		return
+	}
+
+	if !c.validateNotSelf(req.RecipientID, "follow") {
+		return
+	}
+
+	exists, status, err := q.FollowExists(c.UserID, req.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
 		return
 	}
 
-	user := &model.UserData{}
-
-	err = q.FetchUserInfo(request.RecipientID, user)
-	if err != nil {
+	// fetch user info for notifications
+	var user model.UserData
+	if err := q.FetchUserInfo(req.RecipientID, &user); err != nil {
 		c.SendError("Error fetching recipient data")
 		return
 	}
 
-	notId := util.UUIDGen()
+	notifID := util.UUIDGen()
 
-	if exists && status != "declined" {
-		c.SendError("Error: request already sent")
-		return
-	} else if exists && status == "declined" {
-		err = q.UpdateData("user_follows", []string{
-			"following_id",
-			"follower_id",
-		}, []any{
-			request.RecipientID,
-			c.UserID,
-		}, []string{
-			"status",
-			"updated_at",
-		}, []any{
-			"pending",
-			time.Now(),
-		})
-		if err != nil {
-			res := fmt.Sprintf("Error while updating follow status: %v", err)
-			c.SendError(res)
-			return
-		}
-
-		err = q.InsertData("notifications", []string{
-			"id",
-			"recipient_id",
-			"actor_id",
-			"type",
-			"message",
-		}, []any{
-			notId,
-			request.RecipientID,
-			c.UserID,
-			"follow_request",
-			"new follow request",
-		})
-		if err != nil {
-			c.SendError("failed to notify the recipient")
-			return
-		}
-
-		h.ActionBasedNotification([]string{
-			request.RecipientID,
-		}, "follow_request", map[string]any{
-			"follower": user,
-		})
+	// case: request already sent
+	if exists {
+		svc.handleExistingFollow(c, req, status, &user, notifID)
 		return
 	}
 
-	isPublic, err := q.CheckUserIsPublic(request.RecipientID)
+	// new follow path: check privacy and insert accordingly
+	svc.handleNewFollow(c, req, &user, notifID)
+}
+
+func (svc *FollowService) handleExistingFollow(c *Client, req model.FollowRequest, status string, user *model.UserData, notifID string) {
+	if status != "declined" {
+		c.SendError("Error: request already sent")
+		return
+	}
+
+	// re-open declined request
+	err := svc.Query.UpdateData(
+		"user_follows",
+		[]string{"following_id", "follower_id"},
+		[]any{req.RecipientID, c.UserID},
+		[]string{"status", "updated_at"},
+		[]any{"pending", time.Now()},
+	)
+	if err != nil {
+		c.SendError(fmt.Sprintf("Error while updating follow status: %v", err))
+		return
+	}
+
+	svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "new follow request",
+		map[string]any{"follower": user}, true,
+	)
+}
+
+func (svc *FollowService) handleNewFollow(c *Client, req model.FollowRequest, user *model.UserData, notifID string) {
+	// check if recipient is public
+	isPublic, err := svc.Query.CheckUserIsPublic(req.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking user data")
 		return
 	}
 
+	// prepare common values
+	followID := util.UUIDGen()
 	if isPublic {
-		q.InsertData("user_follows", []string{
-			"id",
-			"follower_id",
-			"following_id",
-			"status",
-		}, []any{
-			util.UUIDGen(),
-			c.UserID,
-			request.RecipientID,
-			"accepted",
-		})
-
-		err = q.InsertData("notifications", []string{
-			"id",
-			"recipient_id",
-			"actor_id",
-			"type",
-			"message",
-		}, []any{
-			notId,
-			request.RecipientID,
-			c.UserID,
-			"follow_request",
-			"new follower",
-		})
+		// auto-accept
+		err = svc.Query.InsertData("user_follows",
+			[]string{"id", "follower_id", "following_id", "status"},
+			[]any{followID, c.UserID, req.RecipientID, "accepted"},
+		)
 		if err != nil {
-			c.SendError("failed to notify the recipient")
+			c.SendError("Failed to create follow record")
 			return
 		}
 
-		h.InfoBasedNotification([]string{
-			request.RecipientID,
-		}, map[string]any{
-			"avatar":  user.Avatar,
-			"message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName),
-		})
+		svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "new follower",
+			map[string]any{"avatar": user.Avatar, "message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName)}, false,
+		)
 	} else {
-		err = q.InsertData("user_follows", []string{
-			"id",
-			"follower_id",
-			"following_id",
-			"status",
-		}, []any{
-			util.UUIDGen(),
-			c.UserID,
-			request.RecipientID,
-			"pending",
-		})
+		// pending request
+		err = svc.Query.InsertData("user_follows",
+			[]string{"id", "follower_id", "following_id", "status"},
+			[]any{followID, c.UserID, req.RecipientID, "pending"},
+		)
 		if err != nil {
 			c.SendError("Failed to send follow request")
 			return
 		}
 
-		err = q.InsertData("notifications", []string{
-			"id",
-			"recipient_id",
-			"actor_id",
-			"type",
-			"message",
-		}, []any{
-			notId,
-			request.RecipientID,
-			c.UserID,
-			"follow_request",
-			"new follow request",
-		})
-		if err != nil {
-			c.SendError("failed to notify the recipient")
-			return
-		}
-
-		h.ActionBasedNotification([]string{
-			request.RecipientID,
-		}, "follow_request", map[string]any{
-			"follower": user,
-		})
+		svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "new follow request",
+			map[string]any{"follower": user}, true,
+		)
 	}
 }
 
+// RespondFollowRequest handles accept or decline of a pending request.
 func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
-	dataBytes, err := json.Marshal(msg["data"])
-	if err != nil {
-		c.SendError("Invalid data encoding")
+	req, ok := c.decodeFollowRequest(msg)
+	if !ok {
 		return
 	}
 
-	var request model.FollowRequest
-	if err := json.Unmarshal(dataBytes, &request); err != nil {
-		c.SendError("Invalid follow request data")
+	if !c.validateNotSelf(req.RecipientID, "respond to") {
 		return
 	}
 
-	if request.RecipientID == c.UserID {
-		c.SendError("You can't respond to yourself")
-		return
-	}
-
-	if request.RecipientID == "" {
-		c.SendError("No recipient found")
-		return
-	}
-
-	exists, status, err := q.FollowExists(request.RecipientID, c.UserID)
+	exists, status, err := q.FollowExists(req.RecipientID, c.UserID)
 	if err != nil {
 		c.SendError("Error while checking following status")
 		return
@@ -217,81 +189,51 @@ func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 		c.SendError("Error: No follow request found.")
 		return
 	}
-
-	if status == "accepted" || status == "declined" {
+	if status != "pending" {
 		c.SendError("Error: already responded to this request")
 		return
 	}
 
-	err = q.UpdateData("user_follows", []string{
-		"follower_id",
-		"following_id",
-	}, []any{
-		request.RecipientID,
-		c.UserID,
-	}, []string{
-		"status",
-		"updated_at",
-	}, []any{
-		request.ResponseStatus,
-		time.Now(),
-	})
+	err = q.UpdateData(
+		"user_follows",
+		[]string{"follower_id", "following_id"},
+		[]any{req.RecipientID, c.UserID},
+		[]string{"status", "updated_at"},
+		[]any{req.ResponseStatus, time.Now()},
+	)
 	if err != nil {
-		res := fmt.Sprintf("Error while updating follow status: %v", err)
-		c.SendError(res)
+		c.SendError(fmt.Sprintf("Error while updating follow status: %v", err))
 	}
 }
 
+// CancelFollowRequest deletes a pending follow request.
 func (c *Client) CancelFollowRequest(msg map[string]any, q *repository.Query) {
-	dataBytes, err := json.Marshal(msg["data"])
-	if err != nil {
-		c.SendError("Invalid data encoding")
+	req, ok := c.decodeFollowRequest(msg)
+	if !ok {
 		return
 	}
 
-	var request model.FollowRequest
-	if err := json.Unmarshal(dataBytes, &request); err != nil {
-		c.SendError("Invalid follow request data")
+	if !c.validateNotSelf(req.RecipientID, "cancel") {
 		return
 	}
 
-	if request.RecipientID == c.UserID {
-		c.SendError("You can't cancel yourself")
-		return
-	}
-
-	if request.RecipientID == "" {
-		c.SendError("No recipient found")
-		return
-	}
-
-	exists, status, err := q.FollowExists(c.UserID, request.RecipientID)
+	exists, status, err := q.FollowExists(c.UserID, req.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
 		return
 	}
 
-	if !exists {
+	if !exists || status != "pending" {
 		c.SendError("You have not sent a request to this user")
 		return
 	}
 
-	if status == "pending" {
-		err = q.DeleteData("user_follows", []string{
-			"follower_id",
-			"following_id",
-			"status",
-		}, []any{
-			c.UserID,
-			request.RecipientID,
-			"pending",
-		})
-		if err != nil {
-			c.SendError("failed to cancel request")
-			return
-		}
-	} else {
-		c.SendError("You have not sent a request to this user")
-		return
+	err = q.DeleteData(
+		"user_follows",
+		[]string{"follower_id", "following_id", "status"},
+		[]any{c.UserID, req.RecipientID, "pending"},
+	)
+	if err != nil {
+		c.SendError("Failed to cancel request")
 	}
 }
