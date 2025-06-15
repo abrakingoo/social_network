@@ -18,5 +18,9 @@ type PrivateMessage struct {
 
 type GroupMessage struct {
 	GroupId string `json:"group_id"`
-	Message  string `json:"message"`
+	Message string `json:"message"`
+}
+
+type Notification struct {
+	NotificationId string `json:"notification_id"`
 }
