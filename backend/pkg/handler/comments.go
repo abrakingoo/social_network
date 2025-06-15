@@ -29,4 +29,16 @@ func (app *App) AddComment(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Empty comment not allowed")
 		return
 	}
+
+	err = app.Queries.InsertData("comments", []string{
+		"id",
+		"post_id",
+		"user_id",
+		"content",
+	}, []any{
+		comment.CommentId,
+		comment.PostId,
+		userID,
+		comment.Content,
+	})
 }
