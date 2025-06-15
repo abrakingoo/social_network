@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"html"
 	"net/http"
 	"strings"
 )
@@ -25,8 +26,8 @@ func (app *App) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(comment.Content) == "" {
-		app.JSONResponse(w, r, http.StatusBadRequest, "Empty comment not allowed")
+	if strings.TrimSpace(comment.Content) == "" || strings.TrimSpace(comment.CommentId) == "" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Empty comment not allowed", Error)
 		return
 	}
 
@@ -39,6 +40,9 @@ func (app *App) AddComment(w http.ResponseWriter, r *http.Request) {
 		comment.CommentId,
 		comment.PostId,
 		userID,
-		comment.Content,
+		html.EscapeString(comment.Content),
 	})
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusUnprocessableEntity, "Comment not added", Error)
+	}
 }
