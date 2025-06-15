@@ -1,5 +1,7 @@
 package websocket
 
+import "social/pkg/repository"
+
 func (h *Hub) ActionBasedNotification(recipients []string, action string, data any) {
 	payload := map[string]any{
 		"type":        "notification",
@@ -22,3 +24,5 @@ func (h *Hub) InfoBasedNotification(recipients []string, info any) {
 
 	h.BroadcastToSpecific(recipients, payload)
 }
+
+func (c *Client) ReadNotification(msg map[string]any, q *repository.Query) {}
