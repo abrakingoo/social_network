@@ -29,7 +29,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 	}
 
 	if admin == c.UserID {
-		c.SendError("Cannot to request to join your own group")
+		c.SendError("Cannot request to join your own group")
 		return
 	}
 
@@ -82,7 +82,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		}
 
 		h.ActionBasedNotification([]string{
-			request.RecipientID,
+			admin,
 		}, "group_join_request", map[string]any{
 			"group_id": request.GroupId,
 		})
@@ -103,9 +103,9 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 			c.SendError("failed to send join request")
 			return
 		}
-		
+
 		h.ActionBasedNotification([]string{
-			request.RecipientID,
+			admin,
 		}, "group_join_request", map[string]any{
 			"group_id": request.GroupId,
 		})
