@@ -49,6 +49,8 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 		return
 	}
 
+	notId := util.UUIDGen()
+
 	err = q.InsertData("group_invitations", []string{
 		"id",
 		"group_id",
@@ -67,9 +69,27 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 		return
 	}
 
+	err = q.InsertData("notifications", []string{
+		"id",
+		"recipient_id",
+		"actor_id",
+		"type",
+		"message",
+	}, []any{
+		notId,
+		request.RecipientID,
+		c.UserID,
+		"group_invitation",
+		"new group invitation request",
+	})
+	if err != nil {
+		c.SendError("failed to notify the recipient")
+		return
+	}
+
 	h.ActionBasedNotification([]string{
 		request.RecipientID,
-	}, "group_invitation", map[string]any {
+	}, "group_invitation", map[string]any{
 		"group_id": request.GroupId,
 	})
 }
