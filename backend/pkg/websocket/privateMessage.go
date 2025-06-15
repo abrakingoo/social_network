@@ -86,4 +86,37 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 	})
 }
 
-func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {}
+func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {
+	data, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var private model.PrivateMessage
+	if err = json.Unmarshal(data, &private); err != nil {
+		c.SendError("Invalid data format")
+		return
+	}
+
+	if private.SenderID == "" {
+		c.SendError("The sender not found")
+		return
+	}
+
+	err = q.UpdateData("private_messages", []string{
+		"sender_id",
+		"receiver_id",
+	}, []any{
+		private.SenderID,
+		c.UserID,
+	}, []string{
+		"is_read",
+	}, []any{
+		true,
+	})
+	if err != nil {
+		c.SendError("Failed to update chat read status")
+		return
+	}
+}
