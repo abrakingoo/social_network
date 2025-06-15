@@ -29,6 +29,8 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 			c.RespondGroupJoinRequest(msg, q)
 		case "cancel_follow_request":
 			c.CancelFollowRequest(msg, q)
+		case "private_message":
+			c.PrivateMessage(msg, q, h)
 		default:
 			c.SendError("Unknown message type")
 		}
