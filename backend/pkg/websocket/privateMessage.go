@@ -58,6 +58,7 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 	}
 	user.ID = c.UserID
 
+	notId := util.UUIDGen()
 	err = q.InsertData("notifications", []string{
 		"id",
 		"recipient_Id",
@@ -65,7 +66,7 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 		"type",
 		"message",
 	}, []any{
-		util.UUIDGen(),
+		notId,
 		private.RecipientID,
 		c.UserID,
 		"private_message",
@@ -79,6 +80,7 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 	h.ActionBasedNotification([]string{
 		private.RecipientID,
 	}, "private_message", map[string]any{
+		"id":      notId,
 		"sender":  user,
 		"message": html.EscapeString(private.Message),
 	})
