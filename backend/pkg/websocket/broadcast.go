@@ -51,3 +51,22 @@ func (h *Hub) SendIfActive(userID string, data []byte) {
 		}
 	}
 }
+
+func (h *Hub) BroadcastToGroup(skip *Client, groupID string, data []byte) {
+	h.Mu.RLock()
+	defer h.Mu.RUnlock()
+
+	clients, ok := h.Groups[groupID]
+	if !ok {
+		return
+	}
+	for client := range clients {
+		if client == skip {
+			continue
+		}
+		select {
+		case client.Send <- data:
+		default:
+		}
+	}
+}
