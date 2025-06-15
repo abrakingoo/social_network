@@ -4,6 +4,7 @@ import "sync"
 
 type Hub struct {
 	Clients    map[*Client]bool
+	Groups     map[string]map[*Client]bool
 	Register   chan *Client
 	Unregister chan *Client
 	Mu         sync.RWMutex
