@@ -13,6 +13,7 @@ type Hub struct {
 func NewHub() *Hub {
 	return &Hub{
 		Clients:    make(map[*Client]bool),
+		Groups:     make(map[string]map[*Client]bool),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
 	}
