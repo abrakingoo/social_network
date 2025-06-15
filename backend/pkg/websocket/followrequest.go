@@ -90,6 +90,7 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 		c.SendError("Error fetching recipient data")
 		return
 	}
+	user.ID = c.UserID
 
 	notifID := util.UUIDGen()
 
