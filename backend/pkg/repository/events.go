@@ -78,11 +78,11 @@ func (q *Query) GetUserRsvpStatus(eventID, userID string) (string, error) {
 	var status string
 	err := q.Db.QueryRow(query, userID, eventID).Scan(&status)
 	if err != nil {
-			if err == sql.ErrNoRows {
-					// User hasn't RSVP'd yet
-					return "not_going", nil
-			}
-			return "", fmt.Errorf("query error: %w", err)
+		if err == sql.ErrNoRows {
+			// User hasn't RSVP'd yet
+			return "not_going", nil
+		}
+		return "", fmt.Errorf("query error: %w", err)
 	}
 
 	return status, nil
