@@ -10,3 +10,18 @@ type GroupRequest struct {
 	ResponseStatus string `json:"status"`
 	RecipientID    string `json:"recipient_Id"`
 }
+
+type PrivateMessage struct {
+	RecipientID string `json:"recipient_Id"`
+	SenderID    string `json:"sender_id"`
+	Message     string `json:"message"`
+}
+
+type GroupMessage struct {
+	GroupId string `json:"group_id"`
+	Message string `json:"message"`
+}
+
+type Notification struct {
+	NotificationId string `json:"notification_id"`
+}

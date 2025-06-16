@@ -5,7 +5,6 @@ import (
 
 )
 
-
 func (app *App) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
 	if err != nil {

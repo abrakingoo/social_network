@@ -8,7 +8,7 @@ import (
 	"social/pkg/util"
 )
 
-func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
+func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
@@ -49,6 +49,8 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
 		return
 	}
 
+	notId := util.UUIDGen()
+
 	err = q.InsertData("group_invitations", []string{
 		"id",
 		"group_id",
@@ -66,6 +68,30 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query) {
 		c.SendError("failed to send invitation")
 		return
 	}
+
+	err = q.InsertData("notifications", []string{
+		"id",
+		"recipient_id",
+		"actor_id",
+		"type",
+		"message",
+	}, []any{
+		notId,
+		request.RecipientID,
+		c.UserID,
+		"group_invitation",
+		"new group invitation request",
+	})
+	if err != nil {
+		c.SendError("failed to notify the recipient")
+		return
+	}
+
+	h.ActionBasedNotification([]string{
+		request.RecipientID,
+	}, "group_invitation", map[string]any{
+		"group_id": request.GroupId,
+	})
 }
 
 func (c *Client) RespondSendInvitation(msg map[string]any, q *repository.Query) {

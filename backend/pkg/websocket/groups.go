@@ -9,7 +9,7 @@ import (
 	"social/pkg/util"
 )
 
-func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
+func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hub) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
@@ -29,7 +29,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 	}
 
 	if admin == c.UserID {
-		c.SendError("Cannot to request to join your own group")
+		c.SendError("Cannot request to join your own group")
 		return
 	}
 
@@ -64,6 +64,8 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 		return
 	}
 
+	notId := util.UUIDGen()
+
 	if exists {
 		err = q.UpdateData("group_join_requests", []string{
 			"group_id",
@@ -80,6 +82,30 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 			c.SendError("failed to update join request")
 			return
 		}
+
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			admin,
+			c.UserID,
+			"group_join_request",
+			"new request to join group",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
+			return
+		}
+
+		h.ActionBasedNotification([]string{
+			admin,
+		}, "group_join_request", map[string]any{
+			"group_id": request.GroupId,
+		})
 	} else {
 		err = q.InsertData("group_join_requests", []string{
 			"id",
@@ -97,6 +123,30 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query) {
 			c.SendError("failed to send join request")
 			return
 		}
+
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notId,
+			admin,
+			c.UserID,
+			"group_join_request",
+			"new request to join group",
+		})
+		if err != nil {
+			c.SendError("failed to notify the recipient")
+			return
+		}
+
+		h.ActionBasedNotification([]string{
+			admin,
+		}, "group_join_request", map[string]any{
+			"group_id": request.GroupId,
+		})
 	}
 }
 
