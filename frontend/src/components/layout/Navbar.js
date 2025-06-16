@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Bell,
   MessageSquare,
@@ -13,20 +13,20 @@ import {
   Settings,
   Search,
   Menu,
-  X
-} from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+  X,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/context/AuthContext';
-import { formatAvatarUrl } from '@/lib/utils';
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
+import { formatAvatarUrl } from "@/lib/utils";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,18 +35,19 @@ const Navbar = () => {
   const pathname = usePathname();
 
   // Check if on authentication pages
-  const isAuthPage = pathname.includes('/login') || pathname.includes('/register');
+  const isAuthPage =
+    pathname.includes("/login") || pathname.includes("/register");
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    router.push("/login");
   };
 
   const navItems = [
-    { icon: Home, label: 'Home', path: '/' },
-    { icon: Users, label: 'Friends', path: '/friends' },
-    { icon: MessageSquare, label: 'Messages', path: '/messages', badge: 3 },
-    { icon: Bell, label: 'Notifications', path: '/notifications', badge: 5 }
+    { icon: Home, label: "Home", path: "/" },
+    { icon: Users, label: "Friends", path: "/followers" },
+    { icon: MessageSquare, label: "Messages", path: "/messages", badge: 3 },
+    { icon: Bell, label: "Notifications", path: "/notifications", badge: 5 },
   ];
 
   // Simplified version of navbar for auth pages
@@ -64,10 +65,13 @@ const Navbar = () => {
     );
   }
 
-  const displayName = currentUser?.nickname || `${currentUser?.firstName} ${currentUser?.lastName}`;
-  const initials = currentUser?.firstName && currentUser?.lastName
-    ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
-    : '??';
+  const displayName =
+    currentUser?.nickname ||
+    `${currentUser?.firstName} ${currentUser?.lastName}`;
+  const initials =
+    currentUser?.firstName && currentUser?.lastName
+      ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
+      : "??";
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -75,7 +79,9 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo and search */}
           <div className="flex items-center flex-1">
-            <Link href="/" className="text-social font-bold text-2xl">social<span className="text-social-accent">network</span></Link>
+            <Link href="/" className="text-social font-bold text-2xl">
+              social<span className="text-social-accent">network</span>
+            </Link>
 
             {currentUser && (
               <div className="hidden md:block ml-6 flex-1 max-w-md">
@@ -118,7 +124,10 @@ const Navbar = () => {
             <div className="flex items-center ml-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="rounded-full p-0 hover:bg-transparent focus:bg-transparent">
+                  <Button
+                    variant="ghost"
+                    className="rounded-full p-0 hover:bg-transparent focus:bg-transparent"
+                  >
                     <Avatar className="h-8 w-8 cursor-default">
                       <AvatarImage src={formatAvatarUrl(currentUser.avatar)} />
                       <AvatarFallback>{initials}</AvatarFallback>
@@ -132,11 +141,11 @@ const Navbar = () => {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push('/profile')}>
+                  <DropdownMenuItem onClick={() => router.push("/profile")}>
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/settings')}>
+                  <DropdownMenuItem onClick={() => router.push("/settings")}>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </DropdownMenuItem>

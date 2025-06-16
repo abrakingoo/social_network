@@ -1,40 +1,58 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Camera, Users, Image as ImageIcon, MapPin, Calendar, Lock, Globe, Mail, Cake, UserCircle2 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import PostCard from '@/components/post/PostCard';
-import { useAuth } from '@/context/AuthContext';
-import { usePosts } from '@/context/PostContext';
-import { formatAvatarUrl } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import {
+  Camera,
+  Users,
+  Image as ImageIcon,
+  MapPin,
+  Calendar,
+  Lock,
+  Globe,
+  Mail,
+  Cake,
+  UserCircle2,
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import PostCard from "@/components/post/PostCard";
+import { useAuth } from "@/context/AuthContext";
+import { usePosts } from "@/context/PostContext";
+import { formatAvatarUrl } from "@/lib/utils";
 
 const Profile = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser, getUserById, getAllUsers, loading: authLoading } = useAuth();
+  const {
+    currentUser,
+    getUserById,
+    getAllUsers,
+    loading: authLoading,
+  } = useAuth();
   const { getUserPosts } = usePosts();
-  const [activeTab, setActiveTab] = useState('posts');
+  const [activeTab, setActiveTab] = useState("posts");
   const [profileUser, setProfileUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Extract username from pathname if available
   useEffect(() => {
     // Check if we're on a specific user's profile or the current user's profile
-    const pathParts = pathname.split('/');
+    const pathParts = pathname.split("/");
     const username = pathParts.length > 2 ? pathParts[2] : null;
 
     if (username) {
       const foundUser = getAllUsers().find(
-        u => `${u.firstName.toLowerCase()}-${u.lastName.toLowerCase()}` === username.toLowerCase()
+        (u) =>
+          `${u.firstName.toLowerCase()}-${u.lastName.toLowerCase()}` ===
+          username.toLowerCase(),
       );
 
       if (foundUser) {
         setProfileUser(foundUser);
       } else {
-        router.push('/not-found');
+        router.push("/not-found");
       }
     } else {
       setProfileUser(currentUser);
@@ -44,8 +62,8 @@ const Profile = () => {
 
   // Modify the useEffect to only redirect after auth is loaded
   useEffect(() => {
-    if (!authLoading && !currentUser) {  
-      router.push('/login');
+    if (!authLoading && !currentUser) {
+      router.push("/login");
     }
   }, [currentUser, router, authLoading]);
 
@@ -76,19 +94,26 @@ const Profile = () => {
   const userEmail = profileUser.email;
   const userDateOfBirth = profileUser.date_of_birth || profileUser.dateOfBirth;
   const userCreatedAt = profileUser.created_at || profileUser.createdAt;
-  const userAbout = profileUser.about_me || profileUser.about; 
+  const userAbout = profileUser.about_me || profileUser.about;
 
-  const h1Name = userNickname || userFirstName || ''; 
-  const subtitleName = (userFirstName && userLastName) ? `${userFirstName} ${userLastName}`.trim() : null; // For the subtitle
-  const avatarAltName = userNickname || subtitleName || h1Name || 'User'; // For Avatar alt
+  const h1Name = userNickname || userFirstName || "";
+  const subtitleName =
+    userFirstName && userLastName
+      ? `${userFirstName} ${userLastName}`.trim()
+      : null; // For the subtitle
+  const avatarAltName = userNickname || subtitleName || h1Name || "User"; // For Avatar alt
 
-  const initials = userFirstName && userLastName
-    ? `${userFirstName[0]}${userLastName[0]}`.toUpperCase()
-    : userNickname ? userNickname.substring(0, Math.min(2, userNickname.length)).toUpperCase() : '??';
+  const initials =
+    userFirstName && userLastName
+      ? `${userFirstName[0]}${userLastName[0]}`.toUpperCase()
+      : userNickname
+        ? userNickname
+            .substring(0, Math.min(2, userNickname.length))
+            .toUpperCase()
+        : "??";
 
   return (
     <div className="max-w-4xl mx-auto">
-
       {/* Cover photo */}
       <div className="relative">
         <div className="h-64 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-b-lg overflow-hidden">
@@ -110,7 +135,10 @@ const Profile = () => {
         <div className="absolute bottom-0 left-0 transform translate-y-1/2 ml-8">
           <div className="relative">
             <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-default">
-              <AvatarImage src={formatAvatarUrl(profileUser.avatar)} alt={avatarAltName} />
+              <AvatarImage
+                src={formatAvatarUrl(profileUser.avatar)}
+                alt={avatarAltName}
+              />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
 
@@ -139,14 +167,18 @@ const Profile = () => {
                 <Lock className="h-4 w-4" />
               )}
               <span>
-                {profileUser.isPublic ? 'Public Profile' : 'Private Profile'}
+                {profileUser.isPublic ? "Public Profile" : "Private Profile"}
               </span>
             </div>
 
             {userAbout && (
               <div className="mt-3">
-                <h3 className="text-sm font-semibold text-gray-800 mb-1">About Me</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{userAbout}</p>
+                <h3 className="text-sm font-semibold text-gray-800 mb-1">
+                  About Me
+                </h3>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {userAbout}
+                </p>
               </div>
             )}
 
@@ -154,15 +186,20 @@ const Profile = () => {
               {userFirstName && userLastName && (
                 <div className="flex items-center">
                   <UserCircle2 className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                  <span>{userFirstName} {userLastName}</span>
+                  <span>
+                    {userFirstName} {userLastName}
+                  </span>
                 </div>
               )}
               {userCreatedAt && (
                 <div className="flex items-center">
                   <Calendar className="h-4 w-4 mr-1.5 text-gray-500 flex-shrink-0" />
                   <span>
-                    Joined {new Date(userCreatedAt).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'long', day: 'numeric'
+                    Joined{" "}
+                    {new Date(userCreatedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
                     })}
                   </span>
                 </div>
@@ -174,7 +211,9 @@ const Profile = () => {
             {isOwnProfile ? (
               <Button variant="outline">Edit Profile</Button>
             ) : (
-              <Button className="bg-social hover:bg-social-dark">Add Friend</Button>
+              <Button className="bg-social hover:bg-social-dark">
+                Add Friend
+              </Button>
             )}
           </div>
         </div>
@@ -183,13 +222,19 @@ const Profile = () => {
           <div className="flex items-center">
             <Users className="h-5 w-5 mr-2 text-gray-500" />
             <div className="text-sm">
-              <span className="font-semibold">{profileUser.followers?.length || 0}</span> followers
+              <span className="font-semibold">
+                {profileUser.followers?.length || 0}
+              </span>{" "}
+              followers
             </div>
           </div>
           <div className="flex items-center">
             <Users className="h-5 w-5 mr-2 text-gray-500" />
             <div className="text-sm">
-              <span className="font-semibold">{profileUser.following?.length || 0}</span> following
+              <span className="font-semibold">
+                {profileUser.following?.length || 0}
+              </span>{" "}
+              following
             </div>
           </div>
           <div className="flex items-center">
@@ -203,20 +248,34 @@ const Profile = () => {
 
       {/* Profile tabs */}
       <div className="mt-4">
-        <Tabs defaultValue="posts" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs
+          defaultValue="posts"
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
           <TabsList className="bg-white shadow-sm rounded-lg p-1 w-full">
-            <TabsTrigger value="posts" className="flex-1">Posts</TabsTrigger>
-            <TabsTrigger value="about" className="flex-1">About</TabsTrigger>
-            <TabsTrigger value="friends" className="flex-1">Friends</TabsTrigger>
-            <TabsTrigger value="photos" className="flex-1">Photos</TabsTrigger>
+            <TabsTrigger value="posts" className="flex-1">
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="about" className="flex-1">
+              About
+            </TabsTrigger>
+            <TabsTrigger value="followers" className="flex-1">
+              Followers
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="flex-1">
+              Photos
+            </TabsTrigger>
           </TabsList>
           <div className="mt-4">
             <TabsContent value="posts" className="space-y-4">
               {userPosts.length > 0 ? (
-                userPosts.map(post => <PostCard key={post.id} post={post} />)
+                userPosts.map((post) => <PostCard key={post.id} post={post} />)
               ) : (
                 <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                  <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
+                  <h3 className="text-lg font-medium text-gray-700">
+                    No posts yet
+                  </h3>
                   <p className="text-gray-500 mt-1">
                     {isOwnProfile
                       ? "When you create posts, they'll appear here."
@@ -233,18 +292,22 @@ const Profile = () => {
             </TabsContent>
             <TabsContent value="about">
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-medium mb-4">About {profileUser.firstName}</h3>
+                <h3 className="text-lg font-medium mb-4">
+                  About {profileUser.firstName}
+                </h3>
 
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500">Bio</h4>
                     <p className="mt-1">
-                      {profileUser.about || 'No bio provided yet.'}
+                      {profileUser.about || "No bio provided yet."}
                     </p>
                   </div>
 
                   <div>
-                    <h4 className="text-md font-semibold text-gray-800 mb-4">Basic Info</h4>
+                    <h4 className="text-md font-semibold text-gray-800 mb-4">
+                      Basic Info
+                    </h4>
                     <dl className="divide-y divide-gray-200">
                       {userFirstName && (
                         <div className="py-3 flex items-center">
@@ -252,7 +315,9 @@ const Profile = () => {
                             <UserCircle2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                             First Name
                           </dt>
-                          <dd className="w-2/3 text-sm text-gray-900">{userFirstName}</dd>
+                          <dd className="w-2/3 text-sm text-gray-900">
+                            {userFirstName}
+                          </dd>
                         </div>
                       )}
                       {userLastName && (
@@ -261,7 +326,9 @@ const Profile = () => {
                             <UserCircle2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                             Last Name
                           </dt>
-                          <dd className="w-2/3 text-sm text-gray-900">{userLastName}</dd>
+                          <dd className="w-2/3 text-sm text-gray-900">
+                            {userLastName}
+                          </dd>
                         </div>
                       )}
                       {userNickname && (
@@ -270,7 +337,9 @@ const Profile = () => {
                             <UserCircle2 className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                             Nickname
                           </dt>
-                          <dd className="w-2/3 text-sm text-gray-900">{userNickname}</dd>
+                          <dd className="w-2/3 text-sm text-gray-900">
+                            {userNickname}
+                          </dd>
                         </div>
                       )}
                       {userEmail && (
@@ -279,7 +348,9 @@ const Profile = () => {
                             <Mail className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                             Email
                           </dt>
-                          <dd className="w-2/3 text-sm text-gray-900">{userEmail}</dd>
+                          <dd className="w-2/3 text-sm text-gray-900">
+                            {userEmail}
+                          </dd>
                         </div>
                       )}
                       {userDateOfBirth && (
@@ -289,9 +360,14 @@ const Profile = () => {
                             Date of Birth
                           </dt>
                           <dd className="w-2/3 text-sm text-gray-900">
-                            {new Date(userDateOfBirth).toLocaleDateString('en-US', {
-                              year: 'numeric', month: 'long', day: 'numeric',
-                            })}
+                            {new Date(userDateOfBirth).toLocaleDateString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              },
+                            )}
                           </dd>
                         </div>
                       )}
@@ -302,21 +378,30 @@ const Profile = () => {
                             Joined
                           </dt>
                           <dd className="w-2/3 text-sm text-gray-900">
-                            {new Date(userCreatedAt).toLocaleDateString('en-US', {
-                              year: 'numeric', month: 'long', day: 'numeric',
-                            })}
+                            {new Date(userCreatedAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              },
+                            )}
                           </dd>
                         </div>
                       )}
                       <div className="py-3 flex items-center">
-                          <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
-                            {profileUser.isPublic ? 
-                              <Globe className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" /> :
-                              <Lock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />}
-                            Profile Type
-                          </dt>
-                          <dd className="w-2/3 text-sm text-gray-900">{profileUser.isPublic ? 'Public' : 'Private'}</dd>
-                        </div>
+                        <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
+                          {profileUser.isPublic ? (
+                            <Globe className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          ) : (
+                            <Lock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                          )}
+                          Profile Type
+                        </dt>
+                        <dd className="w-2/3 text-sm text-gray-900">
+                          {profileUser.isPublic ? "Public" : "Private"}
+                        </dd>
+                      </div>
                     </dl>
                   </div>
 
@@ -328,13 +413,14 @@ const Profile = () => {
                 </div>
               </div>
             </TabsContent>
-            <TabsContent value="friends">
+            <TabsContent value="followers">
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-medium mb-4">Friends</h3>
+                <h3 className="text-lg font-medium mb-4">Followers</h3>
                 <div className="text-center py-8">
                   <p className="text-gray-500">
                     Friend list is empty.
-                    {isOwnProfile && " Connect with other users to grow your network!"}
+                    {isOwnProfile &&
+                      " Connect with other users to grow your network!"}
                   </p>
                 </div>
               </div>

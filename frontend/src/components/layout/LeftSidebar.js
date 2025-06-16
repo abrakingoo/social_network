@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { User, Users, BookOpen, Calendar, Image, Settings } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/context/AuthContext';
-import { formatAvatarUrl } from '@/lib/utils';
+import React from "react";
+import Link from "next/link";
+import { User, Users, BookOpen, Calendar, Image, Settings } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/context/AuthContext";
+import { formatAvatarUrl } from "@/lib/utils";
 
 const LeftSidebar = () => {
   const { currentUser } = useAuth();
@@ -15,47 +15,55 @@ const LeftSidebar = () => {
   const sidebarItems = [
     {
       icon: User,
-      label: 'My Profile',
-      path: '/profile'
+      label: "My Profile",
+      path: "/profile",
     },
     {
       icon: Users,
-      label: 'Friends',
-      path: '/friends'
+      label: "Followers",
+      path: "/followers",
     },
     {
       icon: BookOpen,
-      label: 'Groups',
-      path: '/groups'
+      label: "Groups",
+      path: "/groups",
     },
     {
       icon: Calendar,
-      label: 'Events',
-      path: '/events'
+      label: "Events",
+      path: "/events",
     },
     {
       icon: Image,
-      label: 'Photos',
-      path: '/photos'
+      label: "Photos",
+      path: "/photos",
     },
     {
       icon: Settings,
-      label: 'Settings',
-      path: '/settings'
-    }
+      label: "Settings",
+      path: "/settings",
+    },
   ];
 
-  const displayName = currentUser.nickname || `${currentUser.firstName} ${currentUser.lastName}`;
-  const initials = currentUser.firstName && currentUser.lastName
-    ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
-    : '??';
+  const displayName =
+    currentUser.nickname || `${currentUser.firstName} ${currentUser.lastName}`;
+  const initials =
+    currentUser.firstName && currentUser.lastName
+      ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
+      : "??";
 
   return (
     <div className="hidden md:block w-56 pr-2 flex-shrink-0">
       <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
-        <Link href="/profile" className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors">
+        <Link
+          href="/profile"
+          className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors"
+        >
           <Avatar>
-            <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={displayName} />
+            <AvatarImage
+              src={formatAvatarUrl(currentUser.avatar)}
+              alt={displayName}
+            />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="font-medium truncate">{displayName}</div>
@@ -76,7 +84,9 @@ const LeftSidebar = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
-        <h3 className="text-sm font-medium text-gray-500 mb-3 px-2">Your shortcuts</h3>
+        <h3 className="text-sm font-medium text-gray-500 mb-3 px-2">
+          Your shortcuts
+        </h3>
         <nav className="space-y-1">
           <Link
             href="/groups/dev"
