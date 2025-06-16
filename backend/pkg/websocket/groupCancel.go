@@ -51,4 +51,20 @@ func (c *Client) CancelGroupInvitation(msg map[string]any, q *repository.Query) 
 		c.SendError("This invitation was not found")
 		return
 	}
+
+	err = q.DeleteData("group_invitations", []string{
+		"group_id",
+		"receiver_id",
+		"sender_id",
+		"status",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+		c.UserID,
+		"pending",
+	})
+	if err != nil {
+		c.SendError("Failed to cancel invitation")
+		return
+	}
 }
