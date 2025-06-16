@@ -1,85 +1,45 @@
-'use client';
-
-
 import React, { useState, useEffect } from 'react';
-import { useWebSocket, EVENT_TYPES } from '@/utils/websocket';
-import { useAuth } from '@/context/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { groupService } from '@/services/groupService';
-import {
-  Users,
-  UserPlus,
-  Search,
-  Crown,
-  UserMinus,
-  Mail,
-  UserCheck,
-  UserX,
-  Loader2
-} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import groupService from '@/services/groupService';
+import { Users, UserPlus, Loader2, Check, X, Search } from 'lucide-react';
 
-const GroupManagementDialog = ({
-  isOpen,
-  onClose,
-  groupData,
-  onGroupUpdated
-}) => {
+export default function GroupManagementDialog({ isOpen, onClose, groupData, onGroupUpdated }) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const { send } = useWebSocket();
 
   // State management
   const [activeTab, setActiveTab] = useState('members');
-  const [searchQuery, setSearchQuery] = useState('');
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  const [sendingInvites, setSendingInvites] = useState(new Set());
-  const [pendingInvitations, setPendingInvitations] = useState([]);
-  const [joinRequests, setJoinRequests] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [invitingUsers, setInvitingUsers] = useState(new Set());
+  const [processingRequests, setProcessingRequests] = useState(new Set());
 
-  // Fetch available users (followers + following) when dialog opens
-  useEffect(() => {
-    if (isOpen && currentUser) {
-      fetchAvailableUsers();
-      fetchPendingInvitations();
-      fetchJoinRequests();
-    }
-  }, [isOpen, currentUser]);
+  // SIMPLIFIED: Join requests come directly from groupData prop (backend enhanced)
+  const joinRequests = groupData?.join_requests || [];
 
-const fetchAvailableUsers = async () => {
-  setLoadingUsers(true);
+  // Fetch available users for invitations
+  const fetchAvailableUsers = async () => {
+    setLoadingUsers(true);
     try {
-      // Use existing groupService function
       const users = await groupService.getAllUsers();
-      console.log('🔍 [DEBUG] Raw response from getAllUsers:', users);
 
-
-      // Handle case where users might be null/undefined (204 No Content response)
       if (!users || !Array.isArray(users)) {
-        console.log('No users found or invalid response format');
         setAvailableUsers([]);
         return;
       }
 
-      // Filter out users who are already members
       const memberIds = new Set(groupData.members?.map(m => m.id) || []);
       const filtered = users.filter(user =>
-        user.id !== currentUser.id && // Not current user
-        !memberIds.has(user.id) // Not already a member
+        user.id !== currentUser.id &&
+        !memberIds.has(user.id)
       );
 
       setAvailableUsers(filtered);
@@ -91,61 +51,84 @@ const fetchAvailableUsers = async () => {
         description: "Failed to load available users",
         variant: "destructive"
       });
-      // Set empty array on error to prevent crashes
       setAvailableUsers([]);
     } finally {
       setLoadingUsers(false);
     }
   };
 
-  const fetchPendingInvitations = async () => {
-    // In a real implementation, you'd fetch this from the backend
-    // For now, we'll use empty array as the backend doesn't expose this endpoint
-    setPendingInvitations([]);
-  };
-
-  const fetchJoinRequests = async () => {
-    // In a real implementation, you'd fetch this from the backend
-    // For now, we'll use empty array as the backend doesn't expose this endpoint
-    setJoinRequests([]);
-  };
-
-  const handleInviteUser = async (userId) => {
-    if (!groupData?.group_id) {
-      toast({
-        title: "Error",
-        description: "Group information not available",
-        variant: "destructive"
-      });
-      return;
+  // Load data when dialog opens
+  useEffect(() => {
+    if (isOpen && currentUser && groupData) {
+      fetchAvailableUsers();
     }
+  }, [isOpen, currentUser, groupData]);
 
-    setSendingInvites(prev => new Set(prev).add(userId));
+  // Handle join request responses
+  const handleJoinRequestResponse = async (requestId, userId, status) => {
+    setProcessingRequests(prev => new Set([...prev, requestId]));
 
     try {
-      // Use existing WebSocket invitation system
-      send(EVENT_TYPES.GROUP_INVITATION, {
-        group_id: groupData.group_id,
-        recipient_Id: userId
+      // Use WebSocket to respond to join request
+      await groupService.respondToJoinRequest(groupData.group_id, userId, status);
+
+      // If accepted, refresh group data to show new member
+      if (status === 'accepted' && onGroupUpdated) {
+        try {
+          const updatedDetails = await groupService.getGroupDetails(groupData.title);
+          onGroupUpdated(updatedDetails);
+        } catch (error) {
+          console.error('Error refreshing group data:', error);
+        }
+      }
+
+      toast({
+        title: status === 'accepted' ? "Request Accepted" : "Request Declined",
+        description: status === 'accepted'
+          ? "User has been added to the group"
+          : "Join request has been declined"
       });
+
+    } catch (error) {
+      console.error('Error responding to join request:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to respond to join request",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(requestId);
+        return newSet;
+      });
+    }
+  };
+
+  // Handle user invitations
+  const handleInviteUser = async (userId) => {
+    setInvitingUsers(prev => new Set([...prev, userId]));
+
+    try {
+      await groupService.inviteToGroup(groupData.group_id, userId);
 
       // Remove user from available list
       setAvailableUsers(prev => prev.filter(user => user.id !== userId));
 
       toast({
         title: "Invitation Sent",
-        description: "Group invitation has been sent successfully",
+        description: "User has been invited to join the group"
       });
 
     } catch (error) {
-      console.error('Error sending invitation:', error);
+      console.error('Error inviting user:', error);
       toast({
         title: "Error",
-        description: "Failed to send invitation",
+        description: error.message || "Failed to send invitation",
         variant: "destructive"
       });
     } finally {
-      setSendingInvites(prev => {
+      setInvitingUsers(prev => {
         const newSet = new Set(prev);
         newSet.delete(userId);
         return newSet;
@@ -153,46 +136,26 @@ const fetchAvailableUsers = async () => {
     }
   };
 
-  const handleRemoveMember = async (memberId) => {
-    if (!groupData?.group_id) return;
+  // Filter users based on search
+  const filteredUsers = availableUsers.filter(user =>
+    (user.firstname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     user.lastname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+     user.nickname?.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-    // This would require a new WebSocket event or API endpoint
-    // For now, show a message that this feature needs to be implemented
-    toast({
-      title: "Feature Pending",
-      description: "Member removal functionality needs to be implemented in the backend",
-      variant: "default"
-    });
-  };
-
-  const filteredUsers = availableUsers.filter(user => {
-    const fullName = `${user.firstname || ''} ${user.lastname || ''}`.toLowerCase();
-    const nickname = (user.nickname || '').toLowerCase();
-    const query = searchQuery.toLowerCase();
-
-    return fullName.includes(query) || nickname.includes(query);
-  });
-
-  const isUserAdmin = groupData?.user_role === 'admin';
-
-  if (!isUserAdmin) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Manage Group: {groupData?.title}
-          </DialogTitle>
+          <DialogTitle>Manage Group: {groupData?.title}</DialogTitle>
           <DialogDescription>
             Manage group members, send invitations, and handle join requests
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="members">
               Members ({groupData?.members?.length || 0})
@@ -201,144 +164,170 @@ const fetchAvailableUsers = async () => {
               Invite Users
             </TabsTrigger>
             <TabsTrigger value="requests">
-              Requests (0)
+              Requests ({joinRequests.length})
             </TabsTrigger>
           </TabsList>
 
-          {/* Current Members Tab */}
-          <TabsContent value="members" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-3">
-                {groupData?.members?.map((member) => (
-                  <Card key={member.id} className="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={member.avatar} />
-                          <AvatarFallback>
-                            {`${member.firstname?.[0] || ''}${member.lastname?.[0] || ''}`.toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">
-                            {member.firstname} {member.lastname}
-                            {member.role === 'admin' && (
-                              <Crown className="inline h-4 w-4 ml-1 text-yellow-500" />
-                            )}
-                          </div>
-                          {member.nickname && (
-                            <div className="text-sm text-gray-500">@{member.nickname}</div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
-                          {member.role}
-                        </Badge>
-                        {member.role !== 'admin' && member.id !== currentUser?.id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveMember(member.id)}
-                          >
-                            <UserMinus className="h-4 w-4" />
-                          </Button>
-                        )}
+          <TabsContent value="members" className="space-y-4">
+            <div className="space-y-3">
+              {groupData?.members && groupData.members.length > 0 ? (
+                groupData.members.map(member => (
+                  <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={member.avatar} />
+                        <AvatarFallback>
+                          {member.firstname?.[0]}{member.lastname?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {member.nickname || `${member.firstname} ${member.lastname}`}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {member.role === 'admin' ? 'Administrator' : 'Member'}
+                        </p>
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Invite Users Tab */}
-          <TabsContent value="invite" className="mt-4">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-500" />
-                <Input
-                  placeholder="Search users to invite..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1"
-                />
-              </div>
-
-              <ScrollArea className="h-[350px] pr-4">
-                {loadingUsers ? (
-                  <div className="flex items-center justify-center p-8">
-                    <Loader2 className="h-6 w-6 animate-spin" />
+                    {member.role === 'admin' && (
+                      <Badge variant="secondary">Admin</Badge>
+                    )}
                   </div>
-                ) : filteredUsers.length === 0 ? (
-                  <div className="text-center p-8 text-gray-500">
-                    {searchQuery ? 'No users found matching your search' : 'No users available to invite'}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredUsers.map((user) => (
-                      <Card key={user.id} className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={user.avatar} />
-                              <AvatarFallback>
-                                {/* Use exact backend field names */}
-                                {`${user.firstname?.[0] || ''}${user.lastname?.[0] || ''}`.toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">
-                                {/* Use exact backend field names */}
-                                {user.firstname} {user.lastname || ''}
-                              </div>
-                              {user.nickname && (
-                                <div className="text-sm text-gray-500">@{user.nickname}</div>
-                              )}
-                              <Badge variant="outline" className="text-xs">
-                                {user.is_public ? 'Public' : 'Private'}
-                              </Badge>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() => handleInviteUser(user.id)}
-                            disabled={sendingInvites.has(user.id)}
-                            className="bg-social hover:bg-social-dark"
-                          >
-                            {sendingInvites.has(user.id) ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Mail className="h-4 w-4 mr-2" />
-                                Invite
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">No members found</p>
+                </div>
+              )}
             </div>
           </TabsContent>
 
-          {/* Join Requests Tab */}
-          <TabsContent value="requests" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="text-center p-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>No pending join requests</p>
-                <p className="text-sm mt-1">
+          <TabsContent value="invite" className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search users to invite..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {loadingUsers ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map(user => (
+                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar} />
+                        <AvatarFallback>
+                          {user.firstname?.[0]}{user.lastname?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {user.nickname || `${user.firstname} ${user.lastname}`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleInviteUser(user.id)}
+                      disabled={invitingUsers.has(user.id)}
+                    >
+                      {invitingUsers.has(user.id) ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">
+                    {searchQuery ? 'No users found matching your search' : 'No users available to invite'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-4">
+            {joinRequests.length > 0 ? (
+              <div className="space-y-3">
+                {joinRequests.map(request => (
+                  <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={request.user?.avatar} />
+                        <AvatarFallback>
+                          {request.user?.firstname?.[0]}{request.user?.lastname?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {request.user?.nickname || `${request.user?.firstname} ${request.user?.lastname}`}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Requested {request.created_at ? new Date(request.created_at).toLocaleDateString() : 'recently'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleJoinRequestResponse(request.id, request.user_id, 'accepted')}
+                        disabled={processingRequests.has(request.id)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {processingRequests.has(request.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleJoinRequestResponse(request.id, request.user_id, 'declined')}
+                        disabled={processingRequests.has(request.id)}
+                        className="border-red-300 text-red-700 hover:bg-red-50"
+                      >
+                        {processingRequests.has(request.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No pending join requests</h3>
+                <p className="text-gray-500">
                   When users request to join this group, they'll appear here
                 </p>
               </div>
-            </ScrollArea>
+            )}
           </TabsContent>
         </Tabs>
+
+        <div className="flex justify-end pt-4">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default GroupManagementDialog;
+}
