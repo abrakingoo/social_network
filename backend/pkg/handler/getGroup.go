@@ -33,7 +33,7 @@ func (app *App) GetGroupData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupData, err := app.Queries.FetchGroupDataWithUser(id, userID)
+	groupData, err := app.Queries.FetchGroupData(id, userID)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusNoContent, "Error fetching group data", Error)
 		return
