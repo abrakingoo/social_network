@@ -1,15 +1,14 @@
 package repository
 
-import(
-	"social/pkg/model"
+import (
 	"fmt"
 	"log"
-) 
+	"social/pkg/model"
+)
 
-
-func (q *Query) FetchAllUsers() ([]model.User ,error) {
+func (q *Query) FetchAllUsers() ([]model.User, error) {
 	var users []model.User
-	
+
 	query := `
 		SELECT 
 			u.id, u.first_name, u.last_name, u.nickname, u.avatar,  
@@ -30,7 +29,7 @@ func (q *Query) FetchAllUsers() ([]model.User ,error) {
 		var user model.User
 
 		err := rows.Scan(
-			&user.ID, &user.FirstName, &user.LastName, &user.Nickname, 
+			&user.ID, &user.FirstName, &user.LastName, &user.Nickname,
 			&user.Avatar, &user.IsPublic,
 		)
 

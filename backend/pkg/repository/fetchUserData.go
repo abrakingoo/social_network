@@ -13,7 +13,7 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	var user model.UserData
 
 	// fetch the user data first
-	if err := q.fetchUserInfo(userid, &user); err != nil {
+	if err := q.FetchUserInfo(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
@@ -101,7 +101,7 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 }
 
 // fetchUserInfo first fetches userinfo from the user info table
-func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
+func (q *Query) FetchUserInfo(userid string, user *model.UserData) error {
 	row := q.Db.QueryRow(`
         SELECT email, first_name, last_name, 
 		date_of_birth, avatar, nickname , about_me, created_at , 
