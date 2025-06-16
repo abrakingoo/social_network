@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+
+	"social/pkg/util"
 )
 
 type Like struct {
@@ -60,7 +62,41 @@ func (app *App) LikeComment(w http.ResponseWriter, r *http.Request) {
 		if isTrue {
 			status = false
 		}
+
+		err = app.Queries.UpdateData("comment_likes", []string{
+			"comment_id",
+			"user_id",
+		}, []any{
+			like.CommentId,
+			userID,
+		}, []string{
+			"is_like",
+		}, []any{
+			status,
+		})
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to update like status", Error)
+			return
+		}
+	} else {
+		err = app.Queries.InsertData("comment_likes", []string{
+			"id",
+			"comment_id",
+			"user_id",
+			"is_like",
+		}, []any{
+			util.UUIDGen(),
+			like.CommentId,
+			userID,
+			true,
+		})
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to update like status", Error)
+			return
+		}
 	}
+
+	app.JSONResponse(w, r, http.StatusOK, "Like status updated successfully", Error)
 }
 
 func (app *App) LikePost(w http.ResponseWriter, r *http.Request) {}
