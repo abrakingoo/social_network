@@ -10,11 +10,8 @@ import (
 	"social/pkg/model"
 )
 
-func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
-	return q.FetchGroupDataWithUser(groupid, "")
-}
+func (q *Query) FetchGroupData(groupid string, userID string) (model.GroupData, error) {
 
-func (q *Query) FetchGroupDataWithUser(groupid string, userID string) (model.GroupData, error) {
 	var group model.GroupData
 	var err error
 
