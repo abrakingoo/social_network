@@ -68,3 +68,5 @@ func (c *Client) CancelGroupInvitation(msg map[string]any, q *repository.Query) 
 		return
 	}
 }
+
+func (c *Client) CancelGroupJoinRequest(msg map[string]any, q *repository.Query) {}
