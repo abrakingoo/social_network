@@ -51,7 +51,7 @@ func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 	var users []model.Follower
 	query := `
 		SELECT 
-			u.id, u.first_name, u.last_name, u.nickname, u.avatar,  
+			u.id, u.first_name, u.nickname, u.avatar,  
 			u.is_public
 		FROM users u
 		WHERE u.id != ? 
@@ -65,7 +65,7 @@ func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 		ORDER BY u.created_at ASC
         LIMIT 100
 	`
-	rows, err := q.Db.Query(query, userID)
+	rows, err := q.Db.Query(query, userID, userID, userID)
 	if err != nil {
 		log.Printf("FetchAllUsers: db error: %v", err)
 		return nil, fmt.Errorf("failed to fetch non mutuL users: %w", err)
