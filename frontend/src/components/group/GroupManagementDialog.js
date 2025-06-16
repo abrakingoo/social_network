@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { groupService } from '@/services/groupService';
 import {
   Users,
   UserPlus,
@@ -59,26 +60,30 @@ const GroupManagementDialog = ({
     }
   }, [isOpen, currentUser]);
 
-  const fetchAvailableUsers = async () => {
-    setLoadingUsers(true);
+const fetchAvailableUsers = async () => {
+  setLoadingUsers(true);
     try {
-      // Fetch current user's followers and following
-      const response = await fetch('/api/getAllUsers', {
-        credentials: 'include',
-      });
+      // Use existing groupService function
+      const users = await groupService.getAllUsers();
+      console.log('🔍 [DEBUG] Raw response from getAllUsers:', users);
 
-      if (response.ok) {
-        const users = await response.json();
 
-        // Filter out users who are already members
-        const memberIds = new Set(groupData.members?.map(m => m.id) || []);
-        const filtered = users.filter(user =>
-          user.id !== currentUser.id && // Not current user
-          !memberIds.has(user.id) // Not already a member
-        );
-
-        setAvailableUsers(filtered);
+      // Handle case where users might be null/undefined (204 No Content response)
+      if (!users || !Array.isArray(users)) {
+        console.log('No users found or invalid response format');
+        setAvailableUsers([]);
+        return;
       }
+
+      // Filter out users who are already members
+      const memberIds = new Set(groupData.members?.map(m => m.id) || []);
+      const filtered = users.filter(user =>
+        user.id !== currentUser.id && // Not current user
+        !memberIds.has(user.id) // Not already a member
+      );
+
+      setAvailableUsers(filtered);
+
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -86,6 +91,8 @@ const GroupManagementDialog = ({
         description: "Failed to load available users",
         variant: "destructive"
       });
+      // Set empty array on error to prevent crashes
+      setAvailableUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -159,7 +166,7 @@ const GroupManagementDialog = ({
   };
 
   const filteredUsers = availableUsers.filter(user => {
-    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+    const fullName = `${user.firstname || ''} ${user.lastname || ''}`.toLowerCase();
     const nickname = (user.nickname || '').toLowerCase();
     const query = searchQuery.toLowerCase();
 
@@ -276,12 +283,14 @@ const GroupManagementDialog = ({
                             <Avatar className="h-10 w-10">
                               <AvatarImage src={user.avatar} />
                               <AvatarFallback>
-                                {`${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()}
+                                {/* Use exact backend field names */}
+                                {`${user.firstname?.[0] || ''}${user.lastname?.[0] || ''}`.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">
-                                {user.first_name} {user.last_name}
+                                {/* Use exact backend field names */}
+                                {user.firstname} {user.lastname || ''}
                               </div>
                               {user.nickname && (
                                 <div className="text-sm text-gray-500">@{user.nickname}</div>
