@@ -37,6 +37,10 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 			c.ReadNotification(msg, q)
 		case "read_private_message":
 			c.ReadPrivateMessage(msg, q)
+		case "cancel_group_invitation":
+			c.CancelGroupInvitation(msg, q)
+		case "cancel_group_join_request":
+			c.CancelGroupJoinRequest(msg, q)
 		default:
 			c.SendError("Unknown message type")
 		}
