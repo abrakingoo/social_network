@@ -44,5 +44,8 @@ func (app *App) AddComment(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusUnprocessableEntity, "Comment not added", Error)
+		return
 	}
+
+	app.JSONResponse(w, r, http.StatusOK, "Comment added successfully", Success)
 }
