@@ -11,11 +11,11 @@ BEGIN
   WHERE id = NEW.event_id;
 END;
 
--- when they decide not to go 
+-- when they decide not to go
 CREATE TRIGGER trg_attendance_update_decrement
 AFTER UPDATE ON event_attendance
 FOR EACH ROW
-WHEN OLD.status = 'going' AND NEW.status = 'not going'
+WHEN OLD.status = 'going' AND NEW.status = 'not_going'
 BEGIN
   UPDATE events
   SET going_count = going_count - 1
@@ -26,7 +26,7 @@ END;
 CREATE TRIGGER trg_attendance_update_increment
 AFTER UPDATE ON event_attendance
 FOR EACH ROW
-WHEN OLD.status = 'not going' AND NEW.status = 'going'
+WHEN OLD.status = 'not_going' AND NEW.status = 'going'
 BEGIN
   UPDATE events
   SET going_count = going_count + 1

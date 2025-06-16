@@ -51,11 +51,9 @@ const GroupDetail = () => {
   // Full fetch for initial load
   const fetchGroupDetails = async () => {
     if (!currentUser || authLoading) {
-      console.log('[GroupDetail] Skipping fetch - auth not ready:', { currentUser, authLoading });
       return;
     }
 
-    console.log('[GroupDetail] Starting to fetch group details for slug:', groupSlug);
     setIsLoadingDetails(true);
     try {
       const allGroupsResult = await groupService.getAllGroups();
@@ -69,7 +67,7 @@ const GroupDetail = () => {
 
         const initialRsvpStatus = {};
         const eventsWithRsvpStatus = (details.Events || []).map(event => {
-          const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
+          const isRsvpdByUser = event.user_rsvp_status === 'going';
           initialRsvpStatus[event.id] = isRsvpdByUser;
           return { ...event, is_rsvpd: isRsvpdByUser };
         });
@@ -109,7 +107,6 @@ const GroupDetail = () => {
   // Lightweight events-only refresh function
   const refreshEventsOnly = async () => {
     if (!groupData || !groupData.title) {
-      console.log('[GroupDetail] Cannot refresh events - no group data available');
       return;
     }
 
@@ -118,7 +115,7 @@ const GroupDetail = () => {
       const details = await groupService.getGroupDetails(groupData.title);
       const updatedRsvpStatus = {};
       const eventsWithRsvpStatus = (details.Events || []).map(event => {
-        const isRsvpdByUser = currentUser ? (event.attendees || []).some(attendee => attendee.id === currentUser.id) : false;
+        const isRsvpdByUser = event.user_rsvp_status === 'going';
         updatedRsvpStatus[event.id] = isRsvpdByUser;
         return { ...event, is_rsvpd: isRsvpdByUser };
       });
@@ -268,7 +265,7 @@ const GroupDetail = () => {
     }
 
     const currentStatus = rsvpStatus[eventId] ? "going" : "not_going";
-    const newStatus = currentStatus === "going" ? "not_going" : "going";
+    const newStatus = currentStatus === "going" ? "not going" : "going";
 
     setRsvpStatus(prev => ({ ...prev, [eventId]: newStatus === "going" }));
 

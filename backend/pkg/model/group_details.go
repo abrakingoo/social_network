@@ -14,15 +14,16 @@ type GroupData struct {
 }
 
 type Events struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Creator     Creator   `json:"creator"`
-	EventTime   time.Time `json:"event_time"`
-	CreatedAt   time.Time `json:"created_at"`
-	RsvpCount   int       `json:"rsvp_count"`
-	Attendees   []Creator `json:"attendees"`
-	Location    string    `json:"location"`
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	Description    string    `json:"description"`
+	Creator        Creator   `json:"creator"`
+	EventTime      time.Time `json:"event_time"`
+	CreatedAt      time.Time `json:"created_at"`
+	RsvpCount      int       `json:"rsvp_count"`
+	Attendees      []Creator `json:"attendees"`
+	Location       string    `json:"location"`
+	UserRsvpStatus string    `json:"user_rsvp_status"`
 }
 
 type Groups struct {

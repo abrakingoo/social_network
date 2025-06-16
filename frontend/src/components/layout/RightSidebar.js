@@ -95,7 +95,7 @@ const RightSidebar = () => {
                       <p className="text-xs text-gray-500 mr-2">
                         {event.attendees ? event.attendees.length : 0} going
                       </p>
-                      {event.is_rsvpd && (
+                      {event.user_rsvp_status === 'going' && (
                         <Badge variant="outline" className="text-xs bg-green-50">
                           You're going
                         </Badge>
@@ -103,7 +103,7 @@ const RightSidebar = () => {
                     </div>
                   </div>
                 ))}
-                <Button variant="ghost" className="w-full text-sm">
+                <Button variant="ghost" className="w-full text-sm" onClick={() => window.location.href = `/events`}>
                   See all events
                 </Button>
               </div>
