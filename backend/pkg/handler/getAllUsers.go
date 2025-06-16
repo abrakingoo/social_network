@@ -2,18 +2,19 @@ package handler
 
 import (
 	"net/http"
-	"social/pkg/model"
+
 )
 
 func (app *App) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := app.Queries.FetchAllUsers()
+	userID, err := app.GetSessionData(r)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusNoContent, "Error fetching users", Error)
+		app.JSONResponse(w, r, http.StatusUnauthorized, "unathorized", Error)
 		return
 	}
 
-	if len(users) == 0 {
-		app.JSONResponse(w, r, http.StatusOK, []model.User{}, Success)
+	users, err := app.Queries.FetchAllUsers(userID)
+	if err != nil {
+		 app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to fetch users", Error)
 		return
 	}
 
