@@ -1,9 +1,9 @@
-// PRODUCTION: Ultimate WebSocket utility with perfect disconnect handling
+// Ultimate WebSocket utility with perfect disconnect handling
 // Handles all edge cases, proper cleanup sequence, complete logging - ZERO BUGS
 
 import { useEffect, useRef, useState } from 'react';
 
-// PRODUCTION: Rock-solid WebSocket manager with perfect disconnect
+// Rock-solid WebSocket manager with perfect disconnect
 class WebSocketManager {
   constructor() {
     this.ws = null;
@@ -14,7 +14,7 @@ class WebSocketManager {
     this.maxReconnectAttempts = 3;
     this.reconnectInterval = 3000;
 
-    // PRODUCTION: Connection state management
+    // Connection state management
     this.connectionState = {
       isConnected: false,
       isConnecting: false,
@@ -25,7 +25,7 @@ class WebSocketManager {
     };
   }
 
-  // PRODUCTION: Auth state with connection stability
+  // Auth state with connection stability
   setAuthState(isAuthenticated) {
     console.log(`WebSocket: Setting auth state to ${isAuthenticated}`);
 
@@ -41,7 +41,7 @@ class WebSocketManager {
     }
   }
 
-  // PRODUCTION: Debounced connection to prevent rapid attempts
+  // Debounced connection to prevent rapid attempts
   connect(url) {
     if (!this.isAuthenticated) {
       console.log('WebSocket: Not authenticated, skipping connection');
@@ -113,7 +113,7 @@ class WebSocketManager {
 
         this.notifyListeners('connection', { status: 'disconnected' });
 
-        // PRODUCTION: Smart reconnection logic (only if NOT manual disconnect)
+        // Smart reconnection logic (only if NOT manual disconnect)
         if (this.isAuthenticated &&
             !state.cleanupInProgress &&
             this.reconnectAttempts < this.maxReconnectAttempts &&
@@ -199,7 +199,7 @@ class WebSocketManager {
     }, 2000);
   }
 
-  // PRODUCTION: Robust event listener management
+  // Robust event listener management
   addListener(type, callback) {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
@@ -229,7 +229,7 @@ class WebSocketManager {
     }
   }
 
-  // PRODUCTION: Send with connection validation
+  // Send with connection validation
   send(type, data) {
     if (!this.isAuthenticated) {
       throw new Error('WebSocket: User not authenticated');
@@ -249,7 +249,7 @@ class WebSocketManager {
     }
   }
 
-  // PRODUCTION: Promise-based operations with proper error handling
+  // Promise-based operations with proper error handling
   async sendAndWait(type, data, timeout = 10000) {
     if (!this.isAuthenticated) {
       throw new Error('WebSocket: User not authenticated');
@@ -299,12 +299,12 @@ class WebSocketManager {
     });
   }
 
-  // PRODUCTION: Connection status getter
+  // Connection status getter
   isConnected() {
     return this.connectionState.isConnected && this.ws?.readyState === WebSocket.OPEN;
   }
 
-  // PRODUCTION: Debug info
+  // Debug info
   getConnectionInfo() {
     return {
       isAuthenticated: this.isAuthenticated,
@@ -321,7 +321,7 @@ class WebSocketManager {
 // Singleton instance
 export const wsManager = new WebSocketManager();
 
-// PRODUCTION: React hook with proper lifecycle management
+// React hook with proper lifecycle management
 export const useWebSocket = (type, callback) => {
   const [isConnected, setIsConnected] = useState(false);
   const callbackRef = useRef(callback);
@@ -404,7 +404,7 @@ export const EVENT_TYPES = {
   READ_PRIVATE_MESSAGE: 'read_private_message'
 };
 
-// PRODUCTION: WebSocket operations with proper error handling
+// WebSocket operations with proper error handling
 export const webSocketOperations = {
   async joinGroup(groupId) {
     return wsManager.sendAndWait(EVENT_TYPES.GROUP_JOIN_REQUEST, { group_id: groupId });
