@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
+import GroupManagementDialog from '@/components/group/GroupManagementDialog';
 import { Users, Calendar, Settings, Info, UserPlus, Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -41,6 +42,8 @@ const GroupDetail = () => {
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
   const [isRefreshingEvents, setIsRefreshingEvents] = useState(false);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+
 
   // Update both local state and global context
   const updateGroupData = (data) => {
@@ -380,7 +383,10 @@ const GroupDetail = () => {
 
             {groupData.user_role === 'admin' ? (
               <div className="flex space-x-2">
-                <Button className="bg-social hover:bg-social-dark">
+                <Button
+                  className="bg-social hover:bg-social-dark"
+                  onClick={() => setIsManageDialogOpen(true)}
+                >
                   <Settings className="h-4 w-4 mr-2" />
                   Manage Group
                 </Button>
@@ -621,6 +627,14 @@ const GroupDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+            {/* Group Management Dialog */}
+            <GroupManagementDialog
+        isOpen={isManageDialogOpen}
+        onClose={() => setIsManageDialogOpen(false)}
+        groupData={groupData}
+        onGroupUpdated={updateGroupData}
+      />
+
     </div>
   );
 };
