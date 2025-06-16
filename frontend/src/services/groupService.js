@@ -415,5 +415,46 @@ export const groupService = {
       }
       throw error;
     }
+  },
+  async getAllUsers() {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+
+      // Handle 204 No Content response (no users found)
+      if (response.status === 204) {
+        return []; // Return empty array instead of trying to parse empty body
+      }
+
+      const data = await response.json();
+      console.log('🔍 [DEBUG] Raw JSON response:', data);
+
+      // Extract users from the complex response structure
+      const userRelations = data.message || data;
+      console.log('🔍 [DEBUG] User relations:', userRelations);
+
+      // Combine all user categories into one array - using exactly what backend provides
+      const allUsers = [
+        ...(userRelations.followers || []),
+        ...(userRelations.following || []),
+        ...(userRelations.non_mutual || []),
+        ...(userRelations.received_request || []),
+        ...(userRelations.sent_request || [])
+      ];
+
+      console.log('🔍 [DEBUG] Combined users (no transformation):', allUsers);
+
+      // Return exactly what backend provides - NO TRANSFORMATION
+      return allUsers;
+
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
   }
 };
