@@ -35,7 +35,7 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		var msg map[string]string
+		var msg map[string]any
 		if err := json.Unmarshal(raw, &msg); err != nil {
 			c.SendError("Invalid JSON")
 			continue
