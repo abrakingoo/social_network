@@ -69,4 +69,49 @@ func (c *Client) CancelGroupInvitation(msg map[string]any, q *repository.Query) 
 	}
 }
 
-func (c *Client) CancelGroupJoinRequest(msg map[string]any, q *repository.Query) {}
+func (c *Client) CancelGroupJoinRequest(msg map[string]any, q *repository.Query) {
+	dataBytes, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var request model.GroupRequest
+	if err := json.Unmarshal(dataBytes, &request); err != nil {
+		c.SendError("Invalid follow request data")
+		return
+	}
+
+	exists, err := q.CheckRow("group_join_requests", []string{
+		"group_id",
+		"user_id",
+		"status",
+	}, []any{
+		request.GroupId,
+		c.UserID,
+		"pending",
+	})
+	if err != nil {
+		c.SendError("Error while checking join requests")
+		return
+	}
+
+	if !exists {
+		c.SendError("No join request to the group found")
+		return
+	}
+
+	err = q.DeleteData("group_join_requests", []string{
+		"group_id",
+		"user_id",
+		"status",
+	}, []any{
+		request.GroupId,
+		c.UserID,
+		"pending",
+	})
+	if err != nil {
+		c.SendError("Failed to cancel join request")
+		return
+	}
+}
