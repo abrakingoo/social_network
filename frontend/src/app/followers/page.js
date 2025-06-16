@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, Search, UserPlus, UserCheck, UserX } from "lucide-react";
 import { FadeLoader } from "react-spinners";
 
-const Friends = () => {
+const Followers = () => {
   const router = useRouter();
   const { currentUser, getAllUsers, loading: authLoading } = useAuth();
   const [users, setUsers] = useState([]);
@@ -107,7 +107,7 @@ const Friends = () => {
   // Handle accepting a friend request
   const handleAcceptFriend = (friendId) => {
     toast({
-      title: "Friend request accepted",
+      title: "Request accepted",
       description: "You are now friends!",
     });
   };
@@ -145,7 +145,7 @@ const Friends = () => {
     <div className="max-w-4xl mx-auto">
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-xl">Friends</CardTitle>
+          <CardTitle className="text-xl">Followers</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-6 relative">
@@ -153,7 +153,7 @@ const Friends = () => {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search friends"
+              placeholder="Search followers"
               className="pl-10"
             />
           </div>
@@ -164,8 +164,8 @@ const Friends = () => {
             onValueChange={setActiveTab}
           >
             <TabsList className="grid grid-cols-4 w-full mb-6">
-              <TabsTrigger value="all">All Friends</TabsTrigger>
-              <TabsTrigger value="requests">Friend Requests</TabsTrigger>
+              <TabsTrigger value="all">All Followers</TabsTrigger>
+              <TabsTrigger value="requests">Requests</TabsTrigger>
               <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
               <TabsTrigger value="sent">Sent Requests</TabsTrigger>
             </TabsList>
@@ -235,8 +235,8 @@ const Friends = () => {
                   <h3 className="text-lg font-medium">No friends found</h3>
                   <p className="text-gray-500 mt-1">
                     {searchQuery
-                      ? `No friends matching "${searchQuery}"`
-                      : "You don't have any friends yet"}
+                      ? `No follower matching "${searchQuery}"`
+                      : "You don't have any followers yet"}
                   </p>
                 </div>
               )}
@@ -398,4 +398,4 @@ const Friends = () => {
   );
 };
 
-export default Friends;
+export default Followers;
