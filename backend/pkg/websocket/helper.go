@@ -5,15 +5,23 @@ import (
 	"log"
 )
 
-func (c *Client) SendError(text string) {
-	payload, _ := json.Marshal(map[string]string{
+// Simple error sender using existing patterns
+func (c *Client) SendError(message string) {
+	errorMsg := map[string]interface{}{
 		"type":    "error",
-		"message": text,
-	})
+		"message": message,
+	}
+
+	data, err := json.Marshal(errorMsg)
+	if err != nil {
+		return
+	}
+
 	select {
-	case c.Send <- payload:
+	case c.Send <- data:
+		// Success
 	default:
-		log.Println("sendError: channel full")
+		// Channel full, ignore
 	}
 }
 

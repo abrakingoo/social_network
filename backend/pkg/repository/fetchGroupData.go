@@ -14,6 +14,7 @@ func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
 	return q.FetchGroupDataWithUser(groupid, "")
 }
 
+// ENHANCED: Now includes join requests for group admins
 func (q *Query) FetchGroupDataWithUser(groupid string, userID string) (model.GroupData, error) {
 	var group model.GroupData
 	var err error
@@ -39,7 +40,74 @@ func (q *Query) FetchGroupDataWithUser(groupid string, userID string) (model.Gro
 		return model.GroupData{}, err
 	}
 
+	// NEW: fetch join requests if user is group admin
+	if userID != "" {
+		if isAdmin := q.isUserGroupAdmin(groupid, userID); isAdmin {
+			joinRequests, err := q.fetchGroupJoinRequests(groupid)
+			if err != nil {
+				// Log error but don't fail the entire request
+				fmt.Printf("Warning: Failed to fetch join requests for group %s: %v\n", groupid, err)
+			} else {
+				group.JoinRequests = joinRequests
+			}
+		}
+	}
+
 	return group, nil
+}
+
+// NEW: Check if user is group admin
+func (q *Query) isUserGroupAdmin(groupID, userID string) bool {
+	var role string
+	query := `SELECT role FROM group_members WHERE group_id = ? AND user_id = ?`
+	err := q.Db.QueryRow(query, groupID, userID).Scan(&role)
+	return err == nil && role == "admin"
+}
+
+// NEW: Fetch pending join requests for group (admin only)
+func (q *Query) fetchGroupJoinRequests(groupID string) ([]model.JoinRequest, error) {
+	query := `
+		SELECT
+			gjr.id, gjr.user_id, gjr.created_at, gjr.status,
+			u.first_name, u.last_name, u.nickname, u.avatar
+		FROM group_join_requests gjr
+		JOIN users u ON gjr.user_id = u.id
+		WHERE gjr.group_id = ? AND gjr.status = 'pending'
+		ORDER BY gjr.created_at DESC
+	`
+
+	rows, err := q.Db.Query(query, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch join requests: %w", err)
+	}
+	defer rows.Close()
+
+	var joinRequests []model.JoinRequest
+
+	for rows.Next() {
+		var req model.JoinRequest
+		var user model.Creator
+
+		err := rows.Scan(
+			&req.ID, &req.UserID, &req.CreatedAt, &req.Status,
+			&user.FirstName, &user.LastName, &user.Nickname, &user.Avatar,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan join request: %w", err)
+		}
+
+		// Set user ID and attach user info
+		user.ID = req.UserID
+		req.User = user
+
+		joinRequests = append(joinRequests, req)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating join requests: %w", err)
+	}
+
+	return joinRequests, nil
 }
 
 func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
