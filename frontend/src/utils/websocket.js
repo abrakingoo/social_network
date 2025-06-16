@@ -1,4 +1,4 @@
-// WebSocket utility for real-time communication in the social network
+// WebSocket utility with smart timeout handling for backend that doesn't send success responses
 // Handles private chats, group chats, notifications (likes, comments, followings, events, etc.)
 
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +13,8 @@ class WebSocketManager {
     this.maxReconnectAttempts = 5;
     this.reconnectInterval = 3000; // 3 seconds
     this.pendingOperations = new Map(); // For promise-based operations
-    this.operationTimeout = 10000; // 10 seconds timeout for operations
+    this.defaultTimeout = 10000; // 10 seconds default
+    this.groupOperationTimeout = 3000; // 3 seconds for group operations (faster since backend doesn't respond on success)
   }
 
   // Initialize WebSocket connection
@@ -95,13 +96,15 @@ class WebSocketManager {
   isResponseForOperation(response, operation) {
     // Simple matching based on timing and operation type
     const timeDiff = Date.now() - operation.timestamp;
-    const isWithinTimeframe = timeDiff < this.operationTimeout;
+    const isWithinTimeframe = timeDiff < (operation.timeout || this.defaultTimeout);
 
     // Match based on operation type and response relevance
     const operationMatches = (
       (operation.type === 'group_join_request' && (response.type === 'error' || response.type === 'success')) ||
       (operation.type === 'exit_group' && (response.type === 'error' || response.type === 'success')) ||
-      (operation.type === 'group_invitation' && (response.type === 'error' || response.type === 'success'))
+      (operation.type === 'group_invitation' && (response.type === 'error' || response.type === 'success')) ||
+      (operation.type === 'follow_request' && (response.type === 'error' || response.type === 'success')) ||
+      (operation.type === 'unfollow' && (response.type === 'error' || response.type === 'success'))
     );
 
     return isWithinTimeframe && operationMatches;
@@ -150,8 +153,31 @@ class WebSocketManager {
     }
   }
 
-  // Send message and wait for response (promise-based)
-  async sendAndWait(type, data, timeout = this.operationTimeout) {
+  // Determine appropriate timeout based on operation type
+  getOperationTimeout(type) {
+    const groupOperations = [
+      'group_join_request',
+      'exit_group',
+      'group_invitation',
+      'respond_group_invitation',
+      'respond_group_join_request'
+    ];
+
+    return groupOperations.includes(type) ? this.groupOperationTimeout : this.defaultTimeout;
+  }
+
+  // Check if operation type can succeed silently (backend doesn't send success response)
+  isSilentSuccessOperation(type) {
+    return [
+      'group_join_request',
+      'exit_group',
+      'group_invitation',
+      'unfollow'
+    ].includes(type);
+  }
+
+  // Send message and wait for response (promise-based) with smart timeout handling
+  async sendAndWait(type, data, customTimeout = null) {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         reject(new Error('WebSocket is not connected'));
@@ -159,11 +185,23 @@ class WebSocketManager {
       }
 
       const operationId = Date.now() + Math.random();
+      const timeout = customTimeout || this.getOperationTimeout(type);
 
-      // Set up timeout
+      // Set up timeout with smart handling
       const timeoutId = setTimeout(() => {
         this.pendingOperations.delete(operationId);
-        reject(new Error('Operation timed out'));
+
+        // For operations that can succeed silently, treat timeout as potential success
+        if (this.isSilentSuccessOperation(type)) {
+          console.log(`[WebSocket] Operation ${type} timed out - treating as success (backend doesn't send success responses)`);
+          resolve({
+            success: true,
+            message: 'Operation completed successfully',
+            data: { timeout_success: true }
+          });
+        } else {
+          reject(new Error('Operation timed out'));
+        }
       }, timeout);
 
       // Store the operation
@@ -173,14 +211,15 @@ class WebSocketManager {
         timestamp: Date.now(),
         type,
         data,
-        timeoutId
+        timeoutId,
+        timeout
       });
 
       // Send the message
       try {
         const message = JSON.stringify({ type, data });
         this.ws.send(message);
-        console.log('WebSocket message sent (with response expected):', message);
+        console.log(`WebSocket message sent (timeout: ${timeout}ms):`, message);
       } catch (error) {
         clearTimeout(timeoutId);
         this.pendingOperations.delete(operationId);
