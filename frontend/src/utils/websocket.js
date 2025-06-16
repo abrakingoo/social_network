@@ -114,7 +114,7 @@ export const useWebSocket = (type, callback) => {
 
   useEffect(() => {
     // Replace with your backend WebSocket URL
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/ws';
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/api/ws';
     wsManager.connect(wsUrl);
 
     const connectionCallback = (data) => {
