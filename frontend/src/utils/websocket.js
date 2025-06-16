@@ -1,9 +1,7 @@
-// Ultimate WebSocket utility with perfect disconnect handling
-// Handles all edge cases, proper cleanup sequence, complete logging - ZERO BUGS
-
+// frontend/src/utils/websocket.js - FIXED: Remove toast hook, use events instead
 import { useEffect, useRef, useState } from 'react';
-
-// Rock-solid WebSocket manager with perfect disconnect
+import { useToast } from '@/hooks/use-toast';
+// Enhanced WebSocket manager with backend notification integration (FIXED: No toast hook)
 class WebSocketManager {
   constructor() {
     this.ws = null;
@@ -18,11 +16,15 @@ class WebSocketManager {
     this.connectionState = {
       isConnected: false,
       isConnecting: false,
-      isDisconnecting: false, // NEW: Track disconnect state
+      isDisconnecting: false,
       lastConnectionAttempt: 0,
       connectionDebounceMs: 200,
       cleanupInProgress: false
     };
+
+    // Group notification management for real-time updates
+    this.groupNotificationCallbacks = new Map();
+    this.activeGroupManagementDialogs = new Set();
   }
 
   // Auth state with connection stability
@@ -33,10 +35,8 @@ class WebSocketManager {
     this.isAuthenticated = isAuthenticated;
 
     if (wasAuthenticated && !isAuthenticated) {
-      // User logged out - immediate disconnect
       this.disconnect();
     } else if (!wasAuthenticated && isAuthenticated) {
-      // User logged in - reset connection attempts
       this.reconnectAttempts = 0;
     }
   }
@@ -51,14 +51,12 @@ class WebSocketManager {
     const state = this.connectionState;
     const now = Date.now();
 
-    // Prevent rapid connection attempts
     if (state.isConnecting || state.isConnected ||
         (now - state.lastConnectionAttempt) < state.connectionDebounceMs) {
       console.log('WebSocket: Connection attempt too soon, debouncing');
       return;
     }
 
-    // Clear any existing connection first
     if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
       console.log('WebSocket: Closing existing connection before new attempt');
       this.ws.close();
@@ -86,7 +84,13 @@ class WebSocketManager {
         try {
           const data = JSON.parse(event.data);
           console.log('WebSocket: Message received:', data);
-          this.notifyListeners(data.type, data.data);
+
+          // Handle backend notifications
+          if (data.type === 'notification') {
+            this.handleBackendNotification(data);
+          } else {
+            this.notifyListeners(data.type, data.data);
+          }
         } catch (error) {
           console.error('WebSocket: Error parsing message:', error);
         }
@@ -97,27 +101,23 @@ class WebSocketManager {
         state.isConnecting = false;
       };
 
-      // FIXED: Perfect onclose handling with completion logging
       this.ws.onclose = (event) => {
         console.log('WebSocket: Connection closed', event.code, event.reason);
 
-        // CRITICAL: Update all states
         state.isConnected = false;
         state.isConnecting = false;
-        state.isDisconnecting = false; // RESET disconnect flag
+        state.isDisconnecting = false;
 
-        // FIXED: Log completion of disconnect if it was intentional
         if (state.cleanupInProgress) {
           console.log('WebSocket: Disconnect completed successfully');
         }
 
         this.notifyListeners('connection', { status: 'disconnected' });
 
-        // Smart reconnection logic (only if NOT manual disconnect)
         if (this.isAuthenticated &&
             !state.cleanupInProgress &&
             this.reconnectAttempts < this.maxReconnectAttempts &&
-            event.code !== 1000) { // Don't reconnect on normal closure
+            event.code !== 1000) {
 
           this.reconnectAttempts++;
           const delay = this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1);
@@ -129,16 +129,13 @@ class WebSocketManager {
               this.connect(this.connectionUrl);
             }
           }, delay);
-        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          console.error('WebSocket: Max reconnection attempts reached');
         }
 
-        // FIXED: Only set ws to null AFTER all onclose logic is complete
         setTimeout(() => {
           if (state.cleanupInProgress) {
             this.ws = null;
           }
-        }, 50); // Small delay to ensure all cleanup is complete
+        }, 50);
       };
     } catch (error) {
       console.error('WebSocket: Failed to create connection:', error);
@@ -146,7 +143,99 @@ class WebSocketManager {
     }
   }
 
-  // FIXED: Perfect disconnect with proper sequencing and completion logging
+  // FIXED: Handle backend notifications without toast hook
+  handleBackendNotification(message) {
+    const { case: notificationCase, action_type, data } = message;
+
+    if (notificationCase === 'action_based') {
+      switch (action_type) {
+        case 'group_join_request':
+          this.handleJoinRequestNotification(data);
+          break;
+        case 'group_join_accept':
+          this.handleJoinAcceptNotification(data);
+          break;
+        case 'group_join_decline':
+          this.handleJoinDeclineNotification(data);
+          break;
+        default:
+          console.log('WebSocket: Unknown group notification:', message);
+      }
+    }
+  }
+
+  // FIXED: Handle join request notifications without toast - dispatch events instead
+  handleJoinRequestNotification(data) {
+    const { user, group, message } = data;
+
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent('group_join_request', {
+      title: "New Join Request",
+      description: message,
+      action: {
+        text: "Review",
+        callback: () => this.openGroupManagement(group.id)
+      },
+      data: { user, group }
+    });
+
+    // Trigger callbacks for active group management dialogs
+    const callbacks = this.groupNotificationCallbacks.get(group.id);
+    if (callbacks && callbacks.length > 0) {
+      callbacks.forEach(callback => {
+        try {
+          callback({
+            type: 'join_request',
+            data: { user, group }
+          });
+        } catch (error) {
+          console.error('Error in group notification callback:', error);
+        }
+      });
+    }
+
+    // Trigger page updates
+    this.triggerGroupPageUpdate(group.id, {
+      type: 'join_request_received',
+      data: { user, group }
+    });
+  }
+
+  // FIXED: Handle join accept/decline notifications without toast - dispatch events instead
+  handleJoinAcceptNotification(data) {
+    const { group, status, message } = data;
+
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent('group_join_response', {
+      title: status === 'accepted' ? "Request Accepted!" : "Request Declined",
+      description: message,
+      variant: status === 'accepted' ? "default" : "destructive",
+      action: status === 'accepted' ? {
+        text: "Visit Group",
+        callback: () => window.location.href = `/groups/${this.createSlug(group.title)}`
+      } : null,
+      data: { group, status }
+    });
+
+    // Update group page if user is currently viewing it
+    this.triggerGroupPageUpdate(group.id, {
+      type: 'membership_changed',
+      data: { status, group }
+    });
+  }
+
+  handleJoinDeclineNotification(data) {
+    this.handleJoinAcceptNotification(data);
+  }
+
+  // FIXED: Dispatch custom events for components to handle notifications
+  dispatchNotificationEvent(type, notificationData) {
+    window.dispatchEvent(new CustomEvent('wsNotification', {
+      detail: { type, notification: notificationData }
+    }));
+  }
+
+  // Perfect disconnect with proper sequencing
   disconnect() {
     console.log('WebSocket: Disconnecting...');
 
@@ -166,11 +255,9 @@ class WebSocketManager {
       const currentState = this.ws.readyState;
 
       if (currentState === WebSocket.OPEN || currentState === WebSocket.CONNECTING) {
-        // FIXED: Don't set ws to null immediately - let onclose handle it
         console.log('WebSocket: Closing connection...');
-        this.ws.close(1000, 'Logout'); // Normal closure with reason
+        this.ws.close(1000, 'Logout');
 
-        // FIXED: Fallback timeout in case onclose doesn't fire
         setTimeout(() => {
           if (this.ws && state.cleanupInProgress) {
             console.log('WebSocket: Force cleanup after timeout');
@@ -180,7 +267,6 @@ class WebSocketManager {
           }
         }, 1000);
       } else {
-        // Connection already closed or closing
         console.log('WebSocket: Connection already closed');
         this.ws = null;
         state.isDisconnecting = false;
@@ -193,13 +279,50 @@ class WebSocketManager {
 
     this.reconnectAttempts = 0;
 
-    // Reset cleanup flag after delay (for reconnection scenarios)
     setTimeout(() => {
       state.cleanupInProgress = false;
     }, 2000);
   }
 
-  // Robust event listener management
+  // Subscribe to group-specific notifications
+  subscribeToGroupNotifications(groupId, callback) {
+    if (!this.groupNotificationCallbacks.has(groupId)) {
+      this.groupNotificationCallbacks.set(groupId, []);
+    }
+    this.groupNotificationCallbacks.get(groupId).push(callback);
+
+    // Return unsubscribe function
+    return () => {
+      const callbacks = this.groupNotificationCallbacks.get(groupId);
+      if (callbacks) {
+        const index = callbacks.indexOf(callback);
+        if (index > -1) {
+          callbacks.splice(index, 1);
+        }
+      }
+    };
+  }
+
+  // Trigger updates on group pages
+  triggerGroupPageUpdate(groupId, notification) {
+    window.dispatchEvent(new CustomEvent('groupNotificationUpdate', {
+      detail: { groupId, notification }
+    }));
+  }
+
+  // Helper to create group slug from title
+  createSlug(title) {
+    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  // Helper to open group management
+  openGroupManagement(groupId) {
+    window.dispatchEvent(new CustomEvent('openGroupManagement', {
+      detail: { groupId }
+    }));
+  }
+
+  // Event listener management
   addListener(type, callback) {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
@@ -259,10 +382,12 @@ class WebSocketManager {
       throw new Error('WebSocket: Connection not available');
     }
 
+    // Operations that don't expect responses (silent operations)
     const silentOperations = [
       'group_join_request',
       'exit_group',
       'group_invitation',
+      'respond_group_join_request',
       'unfollow',
       'follow_request'
     ];
@@ -320,6 +445,52 @@ class WebSocketManager {
 
 // Singleton instance
 export const wsManager = new WebSocketManager();
+
+// FIXED: Custom hook for WebSocket notifications
+export const useWebSocketNotifications = () => {
+  const { toast } = useToast(); // NOW we can use the toast hook properly in a React component
+
+  useEffect(() => {
+    const handleNotification = (event) => {
+      const { type, notification } = event.detail;
+
+      if (type === 'group_join_request') {
+        toast({
+          title: notification.title,
+          description: notification.description,
+          action: notification.action ? (
+            <button
+              onClick={notification.action.callback}
+              className="text-sm bg-social text-white px-3 py-1 rounded hover:bg-social-dark"
+            >
+              {notification.action.text}
+            </button>
+          ) : null,
+        });
+      } else if (type === 'group_join_response') {
+        toast({
+          title: notification.title,
+          description: notification.description,
+          variant: notification.variant,
+          action: notification.action ? (
+            <button
+              onClick={notification.action.callback}
+              className="text-sm bg-social text-white px-3 py-1 rounded hover:bg-social-dark"
+            >
+              {notification.action.text}
+            </button>
+          ) : null,
+        });
+      }
+    };
+
+    window.addEventListener('wsNotification', handleNotification);
+
+    return () => {
+      window.removeEventListener('wsNotification', handleNotification);
+    };
+  }, [toast]);
+};
 
 // React hook with proper lifecycle management
 export const useWebSocket = (type, callback) => {

@@ -22,42 +22,68 @@ const Followers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Redirect to login if not authenticated
+  // FIXED: Proper authentication and data fetching
   useEffect(() => {
-    if (!authLoading && !currentUser == null) {
+    // Redirect to login if not authenticated
+    if (!authLoading && !currentUser) {
       router.push("/login");
+      return;
     }
 
-    const fetchUsers = async () => {
-      try {
-        const allUsers = await getAllUsers();
-        setUsers(allUsers);
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
-        setError("Failed to load users.");
-      } finally {
-        setTimeout(function () {
+    // Fetch users only if authenticated
+    if (currentUser) {
+      const fetchUsers = async () => {
+        try {
+          setLoading(true);
+          const allUsers = await getAllUsers();
+          setUsers(allUsers || []);
+        } catch (err) {
+          console.error("Failed to fetch users:", err);
+          setError("Failed to load users.");
+          toast({
+            title: "Error",
+            description: "Failed to load users. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          // CRITICAL FIX: Set loading to false immediately, NO DELAY!
           setLoading(false);
-        }, 5000);
-      }
-    };
-    fetchUsers();
-  }, [currentUser, router, getAllUsers]);
+        }
+      };
 
-  if (loading) {
-    <div className="flex justify-center items-center">
-      <FadeLoader />
-    </div>;
+      fetchUsers();
+    }
+  }, [currentUser, authLoading, router, getAllUsers, toast]);
+
+  // FIXED: Proper loading state with RETURN STATEMENT
+  if (authLoading || loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <FadeLoader />
+      </div>
+    );
   }
 
-  if (error) return <div>{error}</div>;
+  // FIXED: Proper error handling
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  // Don't render if user is not authenticated
-  if (!currentUser) {
+  // FIXED: Don't render if user is not authenticated
+  if (!authLoading && !currentUser) {
     return null;
   }
 
-  // Mock friends data
+  // Mock friends data (this should come from your API in real implementation)
   const mockFriends = [
     {
       id: "101",
@@ -112,284 +138,266 @@ const Followers = () => {
     });
   };
 
-  // Handle rejecting a friend request
-  const handleRejectFriend = (friendId) => {
+  // Handle declining a friend request
+  const handleDeclineFriend = (friendId) => {
     toast({
-      title: "Friend request rejected",
-      description: "The friend request has been rejected.",
+      title: "Request declined",
+      description: "Friend request declined.",
     });
   };
 
   // Handle sending a friend request
-  const handleAddFriend = (friendId) => {
+  const handleSendRequest = (userId) => {
     toast({
-      title: "Friend request sent",
-      description: "Your friend request has been sent.",
+      title: "Request sent",
+      description: "Friend request sent successfully!",
     });
   };
 
-  // Filter friends based on the active tab
-  const filteredFriends = mockFriends.filter((friend) => {
-    if (searchQuery) {
-      const fullName = `${friend.firstName} ${friend.lastName}`.toLowerCase();
-      if (!fullName.includes(searchQuery.toLowerCase())) return false;
-    }
+  // Filter friends based on search query
+  const filteredFriends = mockFriends.filter(
+    (friend) =>
+      friend.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      friend.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-    if (activeTab === "all") return true;
-    if (activeTab === "requests" && friend.status === "pending") return true;
-    if (activeTab === "suggestions") return false;
-    return friend.status === "accepted";
-  });
+  // Filter suggestions based on search query
+  const filteredSuggestions = userSuggestions.filter(
+    (user) =>
+      user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.nickname?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-xl">Followers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6 relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search followers"
-              className="pl-10"
-            />
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Users className="h-6 w-6" />
+          Friends & Followers
+        </h1>
+      </div>
 
-          <Tabs
-            defaultValue="all"
-            value={activeTab}
-            onValueChange={setActiveTab}
-          >
-            <TabsList className="grid grid-cols-4 w-full mb-6">
-              <TabsTrigger value="all">All Followers</TabsTrigger>
-              <TabsTrigger value="requests">Requests</TabsTrigger>
-              <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
-              <TabsTrigger value="sent">Sent Requests</TabsTrigger>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search friends..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="all">All ({mockFriends.length})</TabsTrigger>
+              <TabsTrigger value="friends">
+                Friends ({mockFriends.filter(f => f.status === 'accepted').length})
+              </TabsTrigger>
+              <TabsTrigger value="pending">
+                Pending ({mockFriends.filter(f => f.status === 'pending').length})
+              </TabsTrigger>
+              <TabsTrigger value="suggestions">
+                Suggestions ({userSuggestions.length})
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="space-y-4">
-              {filteredFriends.length > 0 ? (
-                filteredFriends.map((friend) => (
-                  <div
-                    key={friend.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                  >
-                    <div className="flex items-center">
-                      <Avatar className="h-12 w-12 mr-4">
-                        <AvatarImage src={friend.avatar} />
-                        <AvatarFallback>
-                          {friend.firstName[0]}
-                          {friend.lastName[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium">
-                          {friend.firstName} {friend.lastName}
-                        </h3>
-                        {friend.mutual > 0 && (
+              <div className="space-y-4">
+                {filteredFriends.length > 0 ? (
+                  filteredFriends.map((friend) => (
+                    <div
+                      key={friend.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={friend.avatar} />
+                          <AvatarFallback>
+                            {friend.firstName[0]}{friend.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">
+                            {friend.firstName} {friend.lastName}
+                          </p>
                           <p className="text-sm text-gray-500">
                             {friend.mutual} mutual friends
                           </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {friend.status === 'accepted' && (
+                          <Button variant="outline" size="sm">
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Friends
+                          </Button>
+                        )}
+                        {friend.status === 'pending' && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAcceptFriend(friend.id)}
+                            >
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Accept
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeclineFriend(friend.id)}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Decline
+                            </Button>
+                          </>
+                        )}
+                        {friend.status === 'requested' && (
+                          <Button variant="outline" size="sm" disabled>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Requested
+                          </Button>
                         )}
                       </div>
                     </div>
-
-                    <div className="flex space-x-2">
-                      {friend.status === "pending" ? (
-                        <>
-                          <Button
-                            onClick={() => handleAcceptFriend(friend.id)}
-                            className="bg-social hover:bg-social-dark"
-                            size="sm"
-                          >
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            Accept
-                          </Button>
-                          <Button
-                            onClick={() => handleRejectFriend(friend.id)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <UserX className="h-4 w-4 mr-1" />
-                            Decline
-                          </Button>
-                        </>
-                      ) : friend.status === "requested" ? (
-                        <Button variant="outline" size="sm">
-                          Requested
-                        </Button>
-                      ) : (
-                        <Button variant="outline" size="sm">
-                          Message
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-10">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No friends found</h3>
-                  <p className="text-gray-500 mt-1">
-                    {searchQuery
-                      ? `No follower matching "${searchQuery}"`
-                      : "You don't have any followers yet"}
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="requests" className="space-y-4">
-              {mockFriends.filter((f) => f.status === "pending").length > 0 ? (
-                mockFriends
-                  .filter((f) => f.status === "pending")
-                  .map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                    >
-                      <div className="flex items-center">
-                        <Avatar className="h-12 w-12 mr-4">
-                          <AvatarImage src={friend.avatar} />
-                          <AvatarFallback>
-                            {friend.firstName[0]}
-                            {friend.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">
-                            {friend.firstName} {friend.lastName}
-                          </h3>
-                          {friend.mutual > 0 && (
-                            <p className="text-sm text-gray-500">
-                              {friend.mutual} mutual friends
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={() => handleAcceptFriend(friend.id)}
-                          className="bg-social hover:bg-social-dark"
-                          size="sm"
-                        >
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          Accept
-                        </Button>
-                        <Button
-                          onClick={() => handleRejectFriend(friend.id)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <UserX className="h-4 w-4 mr-1" />
-                          Decline
-                        </Button>
-                      </div>
-                    </div>
                   ))
-              ) : (
-                <div className="text-center py-10">
-                  <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No friend requests</h3>
-                  <p className="text-gray-500 mt-1">
-                    You don't have any pending friend requests
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900">No friends found</h3>
+                    <p className="text-gray-500">
+                      {searchQuery ? "Try a different search term" : "Start connecting with people!"}
+                    </p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
-            <TabsContent value="suggestions" className="space-y-4">
-              {userSuggestions.length > 0 ? (
-                userSuggestions.map((user) => (
+            <TabsContent value="friends" className="space-y-4">
+              <div className="space-y-4">
+                {filteredFriends.filter(f => f.status === 'accepted').map((friend) => (
                   <div
-                    key={user.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
                   >
-                    <div className="flex items-center">
-                      <Avatar className="h-12 w-12 mr-4">
-                        <AvatarImage src={user.avatar} />
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={friend.avatar} />
                         <AvatarFallback>
-                          {user.firstName[0]}
-                          {user.lastName[0]}
+                          {friend.firstName[0]}{friend.lastName[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-medium">
-                          {user.firstName} {user.lastName}
-                        </h3>
+                        <p className="font-medium">
+                          {friend.firstName} {friend.lastName}
+                        </p>
                         <p className="text-sm text-gray-500">
-                          Suggested for you
+                          {friend.mutual} mutual friends
                         </p>
                       </div>
                     </div>
-
-                    <Button
-                      onClick={() => handleAddFriend(user.id)}
-                      className="bg-social hover:bg-social-dark"
-                      size="sm"
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Add Friend
-                    </Button>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-10">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">
-                    No suggestions available
-                  </h3>
-                  <p className="text-gray-500 mt-1">
-                    We don't have any suggestions for you at the moment
-                  </p>
-                </div>
-              )}
+                ))}
+              </div>
             </TabsContent>
 
-            <TabsContent value="sent" className="space-y-4">
-              {mockFriends.filter((f) => f.status === "requested").length >
-              0 ? (
-                mockFriends
-                  .filter((f) => f.status === "requested")
-                  .map((friend) => (
+            <TabsContent value="pending" className="space-y-4">
+              <div className="space-y-4">
+                {filteredFriends.filter(f => f.status === 'pending').map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>
+                          {friend.firstName[0]}{friend.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">
+                          {friend.firstName} {friend.lastName}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {friend.mutual} mutual friends
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleAcceptFriend(friend.id)}
+                      >
+                        <UserCheck className="h-4 w-4 mr-2" />
+                        Accept
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeclineFriend(friend.id)}
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="suggestions" className="space-y-4">
+              <div className="space-y-4">
+                {filteredSuggestions.length > 0 ? (
+                  filteredSuggestions.map((user) => (
                     <div
-                      key={friend.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                      key={user.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
                     >
-                      <div className="flex items-center">
-                        <Avatar className="h-12 w-12 mr-4">
-                          <AvatarImage src={friend.avatar} />
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.avatar} />
                           <AvatarFallback>
-                            {friend.firstName[0]}
-                            {friend.lastName[0]}
+                            {user.firstName?.[0] || user.nickname?.[0] || '?'}
+                            {user.lastName?.[0] || ''}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <h3 className="font-medium">
-                            {friend.firstName} {friend.lastName}
-                          </h3>
-                          <p className="text-sm text-gray-500">Request sent</p>
+                          <p className="font-medium">
+                            {user.nickname || `${user.firstName || ''} ${user.lastName || ''}`.trim()}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Suggested for you
+                          </p>
                         </div>
                       </div>
-
-                      <Button variant="outline" size="sm">
-                        Cancel Request
+                      <Button
+                        size="sm"
+                        onClick={() => handleSendRequest(user.id)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Friend
                       </Button>
                     </div>
                   ))
-              ) : (
-                <div className="text-center py-10">
-                  <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No sent requests</h3>
-                  <p className="text-gray-500 mt-1">
-                    You haven't sent any friend requests yet
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-8">
+                    <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900">No suggestions</h3>
+                    <p className="text-gray-500">
+                      Check back later for friend suggestions!
+                    </p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

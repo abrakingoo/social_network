@@ -1,10 +1,11 @@
-// Fixed GroupDetail component with persistent pending request state
+// frontend/src/app/groups/[slug]/page.js - FIXED: Use notification hook properly
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useGroup } from '@/context/GroupContext';
+import { webSocketOperations, wsManager, useWebSocketNotifications } from '@/utils/websocket'; // FIXED: Added useWebSocketNotifications
 import groupService from '@/services/groupService';
 import { findGroupBySlug } from '@/lib/slugUtils';
 import PostForm from '@/components/post/PostForm';
@@ -14,7 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // FIXED: Import useToast hook
 import GroupManagementDialog from '@/components/group/GroupManagementDialog';
 import { Users, Calendar, Settings, Info, UserPlus, Trash2, Loader2, Clock, CheckCircle } from 'lucide-react';
 import {
@@ -27,70 +28,11 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
 
-// Request states
+// Request states based on backend data
 const REQUEST_STATES = {
   NOT_REQUESTED: 'not_requested',
   PENDING: 'pending',
   JOINED: 'joined'
-};
-
-// FIXED: Persistent storage for pending requests (until backend includes this data)
-const PendingRequestManager = {
-  // Get storage key for a specific group-user combination
-  getStorageKey: (groupId, userId) => `pending_join_request_${groupId}_${userId}`,
-
-  // Set pending request with expiration (7 days)
-  setPendingRequest: (groupId, userId) => {
-    const key = PendingRequestManager.getStorageKey(groupId, userId);
-    const expirationTime = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days
-    localStorage.setItem(key, JSON.stringify({
-      timestamp: Date.now(),
-      expires: expirationTime,
-      status: 'pending'
-    }));
-  },
-
-  // Check if there's a valid pending request
-  hasPendingRequest: (groupId, userId) => {
-    const key = PendingRequestManager.getStorageKey(groupId, userId);
-    const stored = localStorage.getItem(key);
-
-    if (!stored) return false;
-
-    try {
-      const data = JSON.parse(stored);
-      // Check if not expired
-      if (Date.now() > data.expires) {
-        localStorage.removeItem(key);
-        return false;
-      }
-      return data.status === 'pending';
-    } catch {
-      localStorage.removeItem(key);
-      return false;
-    }
-  },
-
-  // Clear pending request (when joined or declined)
-  clearPendingRequest: (groupId, userId) => {
-    const key = PendingRequestManager.getStorageKey(groupId, userId);
-    localStorage.removeItem(key);
-  },
-
-  // Clean up expired entries
-  cleanupExpired: () => {
-    const keys = Object.keys(localStorage).filter(key => key.startsWith('pending_join_request_'));
-    keys.forEach(key => {
-      try {
-        const data = JSON.parse(localStorage.getItem(key));
-        if (Date.now() > data.expires) {
-          localStorage.removeItem(key);
-        }
-      } catch {
-        localStorage.removeItem(key);
-      }
-    });
-  }
 };
 
 // Non-member view component for users who haven't joined the group
@@ -141,7 +83,7 @@ const GroupDetail = () => {
   const groupSlug = params.slug;
   const { currentUser, loading: authLoading } = useAuth();
   const { setGroupData } = useGroup();
-  const { toast } = useToast();
+  const { toast } = useToast(); // FIXED: Now properly using useToast hook
   const [groupData, setLocalGroupData] = useState(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -153,10 +95,8 @@ const GroupDetail = () => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestState, setRequestState] = useState(REQUEST_STATES.NOT_REQUESTED);
 
-  // FIXED: Cleanup expired pending requests on component mount
-  useEffect(() => {
-    PendingRequestManager.cleanupExpired();
-  }, []);
+  // FIXED: Enable WebSocket notifications for this component
+  useWebSocketNotifications();
 
   // Update both local state and global context
   const updateGroupData = (data) => {
@@ -164,24 +104,74 @@ const GroupDetail = () => {
     setGroupData(data);
   };
 
-  // FIXED: Enhanced request state determination with persistent storage
+  // Determine request state from backend data (no localStorage)
   const determineRequestState = (groupData, currentUser) => {
     if (groupData.is_joined) {
-      // User is already joined, clear any pending request storage
-      if (currentUser && groupData.group_id) {
-        PendingRequestManager.clearPendingRequest(groupData.group_id, currentUser.id);
-      }
       return REQUEST_STATES.JOINED;
     }
 
-    // Check if we have a stored pending request
-    if (currentUser && groupData.group_id &&
-        PendingRequestManager.hasPendingRequest(groupData.group_id, currentUser.id)) {
-      return REQUEST_STATES.PENDING;
+    // Check if current user has a pending join request
+    if (groupData.join_requests && currentUser) {
+      const userRequest = groupData.join_requests.find(
+        request => request.user_id === currentUser.id && request.status === 'pending'
+      );
+      if (userRequest) {
+        return REQUEST_STATES.PENDING;
+      }
     }
 
     return REQUEST_STATES.NOT_REQUESTED;
   };
+
+  // Listen for real-time group updates
+  useEffect(() => {
+    if (!groupData?.id) return;
+
+    const handleGroupNotificationUpdate = (event) => {
+      const { groupId, notification } = event.detail;
+
+      if (groupId === groupData.id && notification.type === 'membership_changed') {
+        const { status } = notification.data;
+
+        if (status === 'accepted') {
+          // User's join request was accepted - update to joined state
+          setRequestState(REQUEST_STATES.JOINED);
+          const updatedData = { ...groupData, is_joined: true };
+          updateGroupData(updatedData);
+
+          // Refresh the page to get full member data
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else if (status === 'declined') {
+          // User's join request was declined - reset to not requested
+          setRequestState(REQUEST_STATES.NOT_REQUESTED);
+        }
+      }
+    };
+
+    window.addEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
+
+    return () => {
+      window.removeEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
+    };
+  }, [groupData?.id]);
+
+  // Listen for group management dialog open events
+  useEffect(() => {
+    const handleOpenGroupManagement = (event) => {
+      const { groupId } = event.detail;
+      if (groupId === groupData?.id && groupData?.user_role === 'admin') {
+        setIsManageDialogOpen(true);
+      }
+    };
+
+    window.addEventListener('openGroupManagement', handleOpenGroupManagement);
+
+    return () => {
+      window.removeEventListener('openGroupManagement', handleOpenGroupManagement);
+    };
+  }, [groupData?.id, groupData?.user_role]);
 
   // Full fetch for initial load
   const fetchGroupDetails = async () => {
@@ -219,13 +209,13 @@ const GroupDetail = () => {
 
         updateGroupData(groupDataWithUser);
 
-        // FIXED: Use enhanced request state determination
+        // Use backend data to determine request state
         const newRequestState = determineRequestState(groupDataWithUser, currentUser);
         setRequestState(newRequestState);
 
-        console.log('[GroupDetail] Request state determined:', {
+        console.log('[GroupDetail] Request state determined from backend:', {
           isJoined,
-          hasPendingInStorage: PendingRequestManager.hasPendingRequest(currentGroup.id, currentUser.id),
+          joinRequests: details.join_requests,
           finalState: newRequestState
         });
       } else {
@@ -273,10 +263,16 @@ const GroupDetail = () => {
         events: eventsWithRsvpStatus,
         group_post: Array.isArray(details.group_post) ? details.group_post : [],
         members: Array.isArray(details.members) ? details.members : [],
-        members_count: Array.isArray(details.members) ? details.members.length : 0
+        members_count: Array.isArray(details.members) ? details.members.length : 0,
+        join_requests: details.join_requests || [] // Update join requests
       };
 
       updateGroupData(updatedGroupData);
+
+      // Update request state based on new data
+      const newRequestState = determineRequestState(updatedGroupData, currentUser);
+      setRequestState(newRequestState);
+
     } catch (error) {
       console.error('[GroupDetail] Error refreshing events:', error);
       throw error;
@@ -332,7 +328,7 @@ const GroupDetail = () => {
     }
   };
 
-  // FIXED: Enhanced join/leave handler with persistent state management
+  // Use WebSocket API with optimistic updates for better UX
   const handleJoinLeaveGroup = async (isCurrentlyJoined) => {
     if (!groupData.group_id) {
       toast({
@@ -347,10 +343,9 @@ const GroupDetail = () => {
 
     try {
       if (isCurrentlyJoined) {
-        const result = await groupService.leaveGroup(groupData.group_id);
+        // Leave group using WebSocket
+        const result = await webSocketOperations.leaveGroup(groupData.group_id);
         if (result.success) {
-          // Clear any pending request storage and update state
-          PendingRequestManager.clearPendingRequest(groupData.group_id, currentUser.id);
           const updatedData = { ...groupData, is_joined: false };
           updateGroupData(updatedData);
           setRequestState(REQUEST_STATES.NOT_REQUESTED);
@@ -360,44 +355,39 @@ const GroupDetail = () => {
           });
         }
       } else {
-        // Handle join request - could be new request or already pending
-        try {
-          const result = await groupService.joinGroup(groupData.group_id);
-          if (result.success) {
-            // FIXED: Store pending request and update state
-            PendingRequestManager.setPendingRequest(groupData.group_id, currentUser.id);
-            setRequestState(REQUEST_STATES.PENDING);
-            toast({
-              title: "Request Sent",
-              description: "Your request to join has been sent to the group admin for approval!",
-            });
-          }
-        } catch (error) {
-          // Handle "Request already sent" as a special case
-          if (error.message.includes('already requested') || error.message.includes('Request already sent')) {
-            // FIXED: Store the pending state even for "already sent" responses
-            PendingRequestManager.setPendingRequest(groupData.group_id, currentUser.id);
-            setRequestState(REQUEST_STATES.PENDING);
-            toast({
-              title: "Request Pending",
-              description: "Your request to join this group is already pending approval.",
-              variant: "default"
-            });
-          } else {
-            throw error; // Re-throw other errors
-          }
+        // Optimistic update for better UX
+        setRequestState(REQUEST_STATES.PENDING);
+
+        // Join group (send request) using enhanced WebSocket
+        const result = await webSocketOperations.joinGroup(groupData.group_id);
+        if (result.success) {
+          toast({
+            title: "Request Sent",
+            description: "Your request to join has been sent to the group admin for approval!",
+          });
         }
       }
     } catch (error) {
       const actionText = isCurrentlyJoined ? 'leave' : 'request to join';
 
+      // Revert optimistic update on error
+      if (!isCurrentlyJoined) {
+        const currentState = determineRequestState(groupData, currentUser);
+        setRequestState(currentState);
+      }
+
       // Handle specific error cases with better UX
       let toastVariant = "destructive";
       let toastTitle = "Error";
 
-      if (error.message.includes('cannot request to join your own group')) {
+      if (error.message.includes('Cannot to request to join your own group')) {
         toastTitle = "Invalid Action";
-      } else if (error.message.includes('not connected')) {
+      } else if (error.message.includes('Request already sent')) {
+        // If request already exists, update state to pending
+        setRequestState(REQUEST_STATES.PENDING);
+        toastTitle = "Request Pending";
+        toastVariant = "default";
+      } else if (error.message.includes('Connection not available')) {
         toastTitle = "Connection Error";
       }
 
@@ -481,10 +471,6 @@ const GroupDetail = () => {
     setIsDeleting(true);
     try {
       await groupService.deleteGroup(groupData.title);
-      // Clean up any pending request storage for this group
-      if (groupData.group_id) {
-        PendingRequestManager.clearPendingRequest(groupData.group_id, currentUser.id);
-      }
       toast({
         title: "Group Deleted",
         description: `${groupData.title} has been successfully deleted.`,

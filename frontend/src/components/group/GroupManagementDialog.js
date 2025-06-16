@@ -1,3 +1,4 @@
+// frontend/src/components/group/GroupManagementDialog.js - CORRECTED: Full integration with backend
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { webSocketOperations, wsManager } from '@/utils/websocket';
 import groupService from '@/services/groupService';
-import { Users, UserPlus, Loader2, Check, X, Search } from 'lucide-react';
+import { Users, UserPlus, Loader2, Check, X, Search, Bell } from 'lucide-react';
 
 export default function GroupManagementDialog({ isOpen, onClose, groupData, onGroupUpdated }) {
   const { currentUser } = useAuth();
@@ -22,8 +24,84 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
   const [invitingUsers, setInvitingUsers] = useState(new Set());
   const [processingRequests, setProcessingRequests] = useState(new Set());
 
-  // SIMPLIFIED: Join requests come directly from groupData prop (backend enhanced)
-  const joinRequests = groupData?.join_requests || [];
+  // NEW: Real-time join requests state
+  const [joinRequests, setJoinRequests] = useState([]);
+  const [newRequestCount, setNewRequestCount] = useState(0);
+
+  // Initialize join requests from groupData
+  useEffect(() => {
+    if (groupData?.join_requests) {
+      setJoinRequests(groupData.join_requests);
+      setNewRequestCount(0);
+    }
+  }, [groupData?.join_requests]);
+
+  // NEW: Subscribe to real-time group notifications
+  useEffect(() => {
+    if (!isOpen || !groupData?.id) return;
+
+    const unsubscribe = wsManager.subscribeToGroupNotifications(
+      groupData.id,
+      handleRealTimeNotification
+    );
+
+    return unsubscribe;
+  }, [isOpen, groupData?.id]);
+
+  // NEW: Handle real-time notifications
+  const handleRealTimeNotification = (notification) => {
+    if (notification.type === 'join_request') {
+      const { user, group } = notification.data;
+
+      // Create new join request object matching backend structure
+      const newRequest = {
+        id: `temp_${Date.now()}`, // Temporary ID until we refresh
+        user_id: user.id,
+        user: {
+          id: user.id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          nickname: user.nickname,
+          avatar: user.avatar
+        },
+        created_at: new Date().toISOString(),
+        status: 'pending'
+      };
+
+      // Add to join requests list
+      setJoinRequests(prev => [newRequest, ...prev]);
+
+      // Update new request count if not on requests tab
+      if (activeTab !== 'requests') {
+        setNewRequestCount(prev => prev + 1);
+
+        // Show notification
+        toast({
+          title: "New Join Request",
+          description: `${user.firstname} ${user.lastname} wants to join the group`,
+          action: (
+            <Button
+              size="sm"
+              onClick={() => {
+                setActiveTab('requests');
+                setNewRequestCount(0);
+              }}
+              className="bg-social hover:bg-social-dark"
+            >
+              Review
+            </Button>
+          ),
+        });
+      }
+    }
+  };
+
+  // Reset new request count when switching to requests tab
+  useEffect(() => {
+    if (activeTab === 'requests') {
+      setNewRequestCount(0);
+    }
+  }, [activeTab]);
 
   // Fetch available users for invitations
   const fetchAvailableUsers = async () => {
@@ -64,19 +142,27 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     }
   }, [isOpen, currentUser, groupData]);
 
-  // Handle join request responses
+  // ENHANCED: Handle join request responses with optimistic updates
   const handleJoinRequestResponse = async (requestId, userId, status) => {
     setProcessingRequests(prev => new Set([...prev, requestId]));
 
+    // Optimistic update - remove from list immediately
+    setJoinRequests(prev => prev.filter(req => req.id !== requestId));
+
     try {
-      // Use WebSocket to respond to join request
-      await groupService.respondToJoinRequest(groupData.group_id, userId, status);
+      // Use WebSocket to respond
+      await webSocketOperations.respondToJoinRequest(groupData.id, userId, status);
 
       // If accepted, refresh group data to show new member
       if (status === 'accepted' && onGroupUpdated) {
         try {
           const updatedDetails = await groupService.getGroupDetails(groupData.title);
-          onGroupUpdated(updatedDetails);
+          onGroupUpdated({
+            ...groupData,
+            ...updatedDetails,
+            members: updatedDetails.members || [],
+            join_requests: updatedDetails.join_requests || []
+          });
         } catch (error) {
           console.error('Error refreshing group data:', error);
         }
@@ -91,9 +177,26 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
 
     } catch (error) {
       console.error('Error responding to join request:', error);
+
+      // Revert optimistic update on error
+      const originalRequest = groupData.join_requests?.find(req => req.id === requestId);
+      if (originalRequest) {
+        setJoinRequests(prev => [originalRequest, ...prev]);
+      }
+
+      let errorMessage = "Failed to respond to join request";
+
+      if (error.message.includes('Only group admin can respond')) {
+        errorMessage = "Only group admin can respond to join requests";
+      } else if (error.message.includes('No request to respond to')) {
+        errorMessage = "This join request no longer exists";
+      } else if (error.message.includes('Connection not available')) {
+        errorMessage = "Connection error. Please try again.";
+      }
+
       toast({
         title: "Error",
-        description: error.message || "Failed to respond to join request",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -105,12 +208,12 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     }
   };
 
-  // Handle user invitations
+  // Handle user invitations using WebSocket API
   const handleInviteUser = async (userId) => {
     setInvitingUsers(prev => new Set([...prev, userId]));
 
     try {
-      await groupService.inviteToGroup(groupData.group_id, userId);
+      await webSocketOperations.inviteToGroup(groupData.id, userId);
 
       // Remove user from available list
       setAvailableUsers(prev => prev.filter(user => user.id !== userId));
@@ -122,9 +225,19 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
 
     } catch (error) {
       console.error('Error inviting user:', error);
+
+      let errorMessage = "Failed to send invitation";
+      if (error.message.includes('Only group admin can send')) {
+        errorMessage = "Only group admin can send invitations";
+      } else if (error.message.includes('User is already a member')) {
+        errorMessage = "User is already a member of this group";
+      } else if (error.message.includes('Connection not available')) {
+        errorMessage = "Connection error. Please try again.";
+      }
+
       toast({
         title: "Error",
-        description: error.message || "Failed to send invitation",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -163,8 +276,16 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
             <TabsTrigger value="invite">
               Invite Users
             </TabsTrigger>
-            <TabsTrigger value="requests">
+            <TabsTrigger value="requests" className="relative">
               Requests ({joinRequests.length})
+              {newRequestCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs flex items-center justify-center"
+                >
+                  {newRequestCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -177,12 +298,13 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={member.avatar} />
                         <AvatarFallback>
-                          {member.firstname?.[0]}{member.lastname?.[0]}
+                          {member.firstname?.[0] || member.first_name?.[0]}
+                          {member.lastname?.[0] || member.last_name?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">
-                          {member.nickname || `${member.firstname} ${member.lastname}`}
+                          {member.nickname || `${member.firstname || member.first_name} ${member.lastname || member.last_name}`}
                         </p>
                         <p className="text-sm text-gray-500">
                           {member.role === 'admin' ? 'Administrator' : 'Member'}
@@ -226,12 +348,13 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={user.avatar} />
                         <AvatarFallback>
-                          {user.firstname?.[0]}{user.lastname?.[0]}
+                          {user.firstname?.[0] || user.first_name?.[0]}
+                          {user.lastname?.[0] || user.last_name?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">
-                          {user.nickname || `${user.firstname} ${user.lastname}`}
+                          {user.nickname || `${user.firstname || user.first_name} ${user.lastname || user.last_name}`}
                         </p>
                       </div>
                     </div>
@@ -239,6 +362,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
                       size="sm"
                       onClick={() => handleInviteUser(user.id)}
                       disabled={invitingUsers.has(user.id)}
+                      className="bg-social hover:bg-social-dark"
                     >
                       {invitingUsers.has(user.id) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -268,12 +392,13 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={request.user?.avatar} />
                         <AvatarFallback>
-                          {request.user?.firstname?.[0]}{request.user?.lastname?.[0]}
+                          {request.user?.firstname?.[0] || request.user?.first_name?.[0]}
+                          {request.user?.lastname?.[0] || request.user?.last_name?.[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">
-                          {request.user?.nickname || `${request.user?.firstname} ${request.user?.lastname}`}
+                          {request.user?.nickname || `${request.user?.firstname || request.user?.first_name} ${request.user?.lastname || request.user?.last_name}`}
                         </p>
                         <p className="text-sm text-gray-500">
                           Requested {request.created_at ? new Date(request.created_at).toLocaleDateString() : 'recently'}
