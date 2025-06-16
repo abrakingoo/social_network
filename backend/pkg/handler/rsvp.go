@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"social/pkg/util"
@@ -18,7 +17,6 @@ func (app *App) Rsvp(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := app.GetSessionData(r)
 	if err != nil {
-		fmt.Println(err)
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
 	}
