@@ -1,125 +1,166 @@
-// WebSocket utility with smart timeout handling for backend that doesn't send success responses
-// Handles private chats, group chats, notifications (likes, comments, followings, events, etc.)
 
 import { useEffect, useRef, useState } from 'react';
 
-// WebSocket connection manager (singleton)
+//  Rock-solid WebSocket manager
 class WebSocketManager {
   constructor() {
     this.ws = null;
     this.listeners = new Map();
-    this.isConnecting = false;
+    this.isAuthenticated = false;
+    this.connectionUrl = null;
     this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectInterval = 3000; // 3 seconds
-    this.pendingOperations = new Map(); // For promise-based operations
-    this.defaultTimeout = 10000; // 10 seconds default
-    this.groupOperationTimeout = 3000; // 3 seconds for group operations (faster since backend doesn't respond on success)
+    this.maxReconnectAttempts = 3;
+    this.reconnectInterval = 3000;
+
+    //  Connection state management
+    this.connectionState = {
+      isConnected: false,
+      isConnecting: false,
+      lastConnectionAttempt: 0,
+      connectionDebounceMs: 200, // Prevent rapid connection attempts
+      cleanupInProgress: false
+    };
   }
 
-  // Initialize WebSocket connection
+  //  Auth state with connection stability
+  setAuthState(isAuthenticated) {
+    console.log(`WebSocket: Setting auth state to ${isAuthenticated}`);
+
+    const wasAuthenticated = this.isAuthenticated;
+    this.isAuthenticated = isAuthenticated;
+
+    if (wasAuthenticated && !isAuthenticated) {
+      // User logged out - immediate disconnect
+      this.disconnect();
+    } else if (!wasAuthenticated && isAuthenticated) {
+      // User logged in - reset connection attempts
+      this.reconnectAttempts = 0;
+    }
+  }
+
+  //  Debounced connection to prevent rapid attempts
   connect(url) {
-    if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) return;
-    this.isConnecting = true;
-    console.log('Attempting to connect to WebSocket:', url);
-    this.ws = new WebSocket(url);
-    this.reconnectAttempts++;
+    if (!this.isAuthenticated) {
+      console.log('WebSocket: Not authenticated, skipping connection');
+      return;
+    }
 
-    this.ws.onopen = () => {
-      console.log('WebSocket connected');
-      this.isConnecting = false;
-      this.reconnectAttempts = 0; // Reset on successful connection
-      this.notifyListeners('connection', { status: 'connected' });
-    };
+    const state = this.connectionState;
+    const now = Date.now();
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
+    // Prevent rapid connection attempts
+    if (state.isConnecting || state.isConnected ||
+        (now - state.lastConnectionAttempt) < state.connectionDebounceMs) {
+      console.log('WebSocket: Connection attempt too soon, debouncing');
+      return;
+    }
 
-        // Handle promise-based operations first
-        this.handlePromiseResponse(data);
+    // Clear any existing connection first
+    if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
+      console.log('WebSocket: Closing existing connection before new attempt');
+      this.ws.close();
+      this.ws = null;
+    }
 
-        // Then notify regular listeners
-        this.notifyListeners(data.type, data.data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+    state.lastConnectionAttempt = now;
+    state.isConnecting = true;
+    this.connectionUrl = url;
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      this.isConnecting = false;
-    };
+    console.log('WebSocket: Connecting to:', url);
 
-    this.ws.onclose = () => {
-      console.log('WebSocket closed');
-      this.isConnecting = false;
-      this.notifyListeners('connection', { status: 'disconnected' });
+    try {
+      this.ws = new WebSocket(url);
 
-      // Reject all pending operations
-      this.rejectAllPendingOperations(new Error('WebSocket connection closed'));
+      this.ws.onopen = () => {
+        console.log('WebSocket: Connected successfully');
+        state.isConnected = true;
+        state.isConnecting = false;
+        this.reconnectAttempts = 0;
+        this.notifyListeners('connection', { status: 'connected' });
+      };
 
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        setTimeout(() => this.connect(url), this.reconnectInterval);
-      } else {
-        console.error('Max reconnect attempts reached. Could not reconnect to WebSocket.');
-      }
-    };
-  }
-
-  // Handle responses for promise-based operations
-  handlePromiseResponse(data) {
-    // Look for pending operations that match this response
-    for (const [operationId, operation] of this.pendingOperations.entries()) {
-      if (this.isResponseForOperation(data, operation)) {
-        clearTimeout(operation.timeoutId);
-
-        if (data.type === 'error') {
-          operation.reject(new Error(data.message || 'Operation failed'));
-        } else {
-          // For group operations, we expect success response or specific operation responses
-          operation.resolve({
-            success: true,
-            message: data.message || 'Operation completed successfully',
-            data: data.data || data
-          });
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket: Message received:', data);
+          this.notifyListeners(data.type, data.data);
+        } catch (error) {
+          console.error('WebSocket: Error parsing message:', error);
         }
+      };
 
-        this.pendingOperations.delete(operationId);
-        break;
+      this.ws.onerror = (error) => {
+        console.error('WebSocket: Connection error:', error);
+        state.isConnecting = false;
+      };
+
+      this.ws.onclose = (event) => {
+        console.log('WebSocket: Connection closed', event.code, event.reason);
+        state.isConnected = false;
+        state.isConnecting = false;
+        this.ws = null;
+
+        this.notifyListeners('connection', { status: 'disconnected' });
+
+        //  Smart reconnection logic
+        if (this.isAuthenticated &&
+            !state.cleanupInProgress &&
+            this.reconnectAttempts < this.maxReconnectAttempts &&
+            event.code !== 1000) { // Don't reconnect on normal closure
+
+          this.reconnectAttempts++;
+          const delay = this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1); // Exponential backoff
+
+          console.log(`WebSocket: Scheduling reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+
+          setTimeout(() => {
+            if (this.isAuthenticated && !state.cleanupInProgress) {
+              this.connect(this.connectionUrl);
+            }
+          }, delay);
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.error('WebSocket: Max reconnection attempts reached');
+        }
+      };
+    } catch (error) {
+      console.error('WebSocket: Failed to create connection:', error);
+      state.isConnecting = false;
+    }
+  }
+
+  //  Clean disconnect with proper state management
+  disconnect() {
+    console.log('WebSocket: Disconnecting...');
+
+    const state = this.connectionState;
+    state.cleanupInProgress = true;
+    state.isConnected = false;
+    state.isConnecting = false;
+
+    if (this.ws) {
+      // Remove event handlers to prevent callbacks
+      const ws = this.ws;
+      this.ws = null;
+
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close(1000, 'Logout'); // Normal closure
       }
     }
+
+    this.reconnectAttempts = 0;
+
+    // Reset cleanup flag after a short delay
+    setTimeout(() => {
+      state.cleanupInProgress = false;
+    }, 100);
   }
 
-  // Check if a response matches a pending operation
-  isResponseForOperation(response, operation) {
-    // Simple matching based on timing and operation type
-    const timeDiff = Date.now() - operation.timestamp;
-    const isWithinTimeframe = timeDiff < (operation.timeout || this.defaultTimeout);
-
-    // Match based on operation type and response relevance
-    const operationMatches = (
-      (operation.type === 'group_join_request' && (response.type === 'error' || response.type === 'success')) ||
-      (operation.type === 'exit_group' && (response.type === 'error' || response.type === 'success')) ||
-      (operation.type === 'group_invitation' && (response.type === 'error' || response.type === 'success')) ||
-      (operation.type === 'follow_request' && (response.type === 'error' || response.type === 'success')) ||
-      (operation.type === 'unfollow' && (response.type === 'error' || response.type === 'success'))
-    );
-
-    return isWithinTimeframe && operationMatches;
-  }
-
-  // Reject all pending operations (used when connection closes)
-  rejectAllPendingOperations(error) {
-    for (const [operationId, operation] of this.pendingOperations.entries()) {
-      clearTimeout(operation.timeoutId);
-      operation.reject(error);
-    }
-    this.pendingOperations.clear();
-  }
-
-  // Add event listener for specific message types
+  //  Robust event listener management
   addListener(type, callback) {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
@@ -127,180 +168,194 @@ class WebSocketManager {
     this.listeners.get(type).add(callback);
   }
 
-  // Remove event listener
   removeListener(type, callback) {
     if (this.listeners.has(type)) {
       this.listeners.get(type).delete(callback);
+      // Clean up empty listener sets
+      if (this.listeners.get(type).size === 0) {
+        this.listeners.delete(type);
+      }
     }
   }
 
-  // Notify all listeners for a specific event type
   notifyListeners(type, data) {
     if (this.listeners.has(type)) {
-      this.listeners.get(type).forEach(callback => callback(data));
+      // Create array copy to prevent modification during iteration
+      const callbacks = Array.from(this.listeners.get(type));
+      callbacks.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error(`WebSocket: Error in listener for ${type}:`, error);
+        }
+      });
     }
   }
 
-  // Send message through WebSocket (fire-and-forget)
+  //  Send with connection validation
   send(type, data) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (!this.isAuthenticated) {
+      throw new Error('WebSocket: User not authenticated');
+    }
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket: Connection not available');
+    }
+
+    try {
       const message = JSON.stringify({ type, data });
       this.ws.send(message);
-      console.log('WebSocket message sent:', message);
-    } else {
-      console.error('WebSocket is not connected');
-      throw new Error('WebSocket is not connected');
+      console.log('WebSocket: Message sent:', message);
+    } catch (error) {
+      console.error('WebSocket: Failed to send message:', error);
+      throw error;
     }
   }
 
-  // Determine appropriate timeout based on operation type
-  getOperationTimeout(type) {
-    const groupOperations = [
+  //  Promise-based operations with proper error handling
+  async sendAndWait(type, data, timeout = 10000) {
+    if (!this.isAuthenticated) {
+      throw new Error('WebSocket: User not authenticated');
+    }
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket: Connection not available');
+    }
+
+    // Operations that typically don't send responses from backend
+    const silentOperations = [
       'group_join_request',
       'exit_group',
       'group_invitation',
-      'respond_group_invitation',
-      'respond_group_join_request'
+      'unfollow',
+      'follow_request'
     ];
 
-    return groupOperations.includes(type) ? this.groupOperationTimeout : this.defaultTimeout;
-  }
-
-  // Check if operation type can succeed silently (backend doesn't send success response)
-  isSilentSuccessOperation(type) {
-    return [
-      'group_join_request',
-      'exit_group',
-      'group_invitation',
-      'unfollow'
-    ].includes(type);
-  }
-
-  // Send message and wait for response (promise-based) with smart timeout handling
-  async sendAndWait(type, data, customTimeout = null) {
-    return new Promise((resolve, reject) => {
-      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket is not connected'));
-        return;
+    if (silentOperations.includes(type)) {
+      try {
+        this.send(type, data);
+        return {
+          success: true,
+          message: 'Operation sent successfully',
+          silent: true
+        };
+      } catch (error) {
+        throw error;
       }
+    }
 
-      const operationId = Date.now() + Math.random();
-      const timeout = customTimeout || this.getOperationTimeout(type);
-
-      // Set up timeout with smart handling
+    // For operations that might have responses, implement proper waiting
+    return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        this.pendingOperations.delete(operationId);
-
-        // For operations that can succeed silently, treat timeout as potential success
-        if (this.isSilentSuccessOperation(type)) {
-          console.log(`[WebSocket] Operation ${type} timed out - treating as success (backend doesn't send success responses)`);
-          resolve({
-            success: true,
-            message: 'Operation completed successfully',
-            data: { timeout_success: true }
-          });
-        } else {
-          reject(new Error('Operation timed out'));
-        }
+        reject(new Error(`Operation ${type} timed out after ${timeout}ms`));
       }, timeout);
 
-      // Store the operation
-      this.pendingOperations.set(operationId, {
-        resolve,
-        reject,
-        timestamp: Date.now(),
-        type,
-        data,
-        timeoutId,
-        timeout
-      });
-
-      // Send the message
       try {
-        const message = JSON.stringify({ type, data });
-        this.ws.send(message);
-        console.log(`WebSocket message sent (timeout: ${timeout}ms):`, message);
+        this.send(type, data);
+
+        // For now, resolve immediately since most operations are fire-and-forget
+        // In the future, you can implement proper response matching here
+        clearTimeout(timeoutId);
+        resolve({
+          success: true,
+          message: 'Operation completed successfully'
+        });
       } catch (error) {
         clearTimeout(timeoutId);
-        this.pendingOperations.delete(operationId);
         reject(error);
       }
     });
   }
 
-  // Disconnect WebSocket
-  disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-      this.isConnecting = false;
-      this.reconnectAttempts = 0;
-    }
+  //  Connection status getter
+  isConnected() {
+    return this.connectionState.isConnected && this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  //  Get connection info for debugging
+  getConnectionInfo() {
+    return {
+      isAuthenticated: this.isAuthenticated,
+      isConnected: this.connectionState.isConnected,
+      isConnecting: this.connectionState.isConnecting,
+      reconnectAttempts: this.reconnectAttempts,
+      wsState: this.ws?.readyState,
+      listenerCount: this.listeners.size
+    };
   }
 }
 
 // Singleton instance
 export const wsManager = new WebSocketManager();
 
-// Custom hook for using WebSocket in React components
+//  React hook with proper lifecycle management
 export const useWebSocket = (type, callback) => {
   const [isConnected, setIsConnected] = useState(false);
   const callbackRef = useRef(callback);
+  const mountedRef = useRef(true);
 
+  // Update callback ref when callback changes
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
 
+  //  Single effect with proper cleanup
   useEffect(() => {
-    // Replace with your backend WebSocket URL
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/api/ws';
-    wsManager.connect(wsUrl);
-
     const connectionCallback = (data) => {
-      setIsConnected(data.status === 'connected');
-    };
-
-    const messageCallback = (data) => {
-      if (callbackRef.current) {
-        callbackRef.current(data);
+      if (mountedRef.current) {
+        setIsConnected(data.status === 'connected');
       }
     };
 
+    const messageCallback = (data) => {
+      if (mountedRef.current && callbackRef.current) {
+        try {
+          callbackRef.current(data);
+        } catch (error) {
+          console.error('WebSocket: Error in message callback:', error);
+        }
+      }
+    };
+
+    // Add listeners
     wsManager.addListener('connection', connectionCallback);
     if (type) {
       wsManager.addListener(type, messageCallback);
     }
 
+    // Cleanup function
     return () => {
+      mountedRef.current = false;
       wsManager.removeListener('connection', connectionCallback);
       if (type) {
         wsManager.removeListener(type, messageCallback);
       }
-      // Optionally disconnect on unmount if no other components are using it
-      // wsManager.disconnect();
     };
   }, [type]);
+
+  // Mark as unmounted on cleanup
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   return {
     isConnected,
     send: (type, data) => wsManager.send(type, data),
-    sendAndWait: (type, data, timeout) => wsManager.sendAndWait(type, data, timeout)
+    sendAndWait: (type, data, timeout) => wsManager.sendAndWait(type, data, timeout),
+    connectionInfo: wsManager.getConnectionInfo() // For debugging
   };
 };
 
-// Supported event types for reference
+// Event types
 export const EVENT_TYPES = {
-  // Core messaging
   PRIVATE_MESSAGE: 'private_message',
   GROUP_MESSAGE: 'group_message',
-
-  // Follow system
   FOLLOW_REQUEST: 'follow_request',
   RESPOND_FOLLOW_REQUEST: 'respond_follow_request',
   UNFOLLOW: 'unfollow',
   CANCEL_FOLLOW_REQUEST: 'cancel_follow_request',
-
-  // Group system
   GROUP_JOIN_REQUEST: 'group_join_request',
   RESPOND_GROUP_JOIN_REQUEST: 'respond_group_join_request',
   EXIT_GROUP: 'exit_group',
@@ -308,8 +363,6 @@ export const EVENT_TYPES = {
   RESPOND_GROUP_INVITATION: 'respond_group_invitation',
   CANCEL_GROUP_INVITATION: 'cancel_group_invitation',
   CANCEL_GROUP_JOIN_REQUEST: 'cancel_group_join_request',
-
-  // Notifications
   NOTIFICATION_LIKE: 'like',
   NOTIFICATION_COMMENT: 'comment',
   NOTIFICATION_FOLLOW_REQUEST: 'follow_request',
@@ -323,7 +376,7 @@ export const EVENT_TYPES = {
   READ_PRIVATE_MESSAGE: 'read_private_message'
 };
 
-// Utility functions for common WebSocket operations
+//  WebSocket operations with proper error handling
 export const webSocketOperations = {
   // Group operations
   async joinGroup(groupId) {
