@@ -13,7 +13,7 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 	var user model.UserData
 
 	// fetch the user data first
-	if err := q.fetchUserInfo(userid, &user); err != nil {
+	if err := q.FetchUserInfo(userid, &user); err != nil {
 		return model.UserData{}, err
 	}
 
@@ -101,7 +101,7 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 }
 
 // fetchUserInfo first fetches userinfo from the user info table
-func (q *Query) fetchUserInfo(userid string, user *model.UserData) error {
+func (q *Query) FetchUserInfo(userid string, user *model.UserData) error {
 	row := q.Db.QueryRow(`
         SELECT email, first_name, last_name, 
 		date_of_birth, avatar, nickname , about_me, created_at , 
@@ -431,13 +431,14 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 
 func (q *Query) GetFollowers(userid string, user *model.UserData) error {
 	// Fetch followers (people who follow the current user)
-	err := q.FetchFollowers(userid, user)
+	var err error
+	user.Followers, err = q.FetchFollowers(userid)
 	if err != nil {
 		return fmt.Errorf("failed to fetch followers: %w", err)
 	}
 
 	// Fetch following (people the current user follows)
-	err = q.FetchFollowing(userid, user)
+	user.Following, err = q.FetchFollowing(userid)
 	if err != nil {
 		return fmt.Errorf("failed to fetch following: %w", err)
 	}

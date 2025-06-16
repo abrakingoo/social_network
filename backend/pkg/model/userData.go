@@ -3,6 +3,7 @@ package model
 import "time"
 
 type UserData struct {
+	ID            string     `json:"id"`
 	FirstName     string     `json:"first_name"`
 	LastName      string     `json:"last_name"`
 	Email         string     `json:"email"`
@@ -23,7 +24,15 @@ type UserData struct {
 type Follower struct {
 	ID        string `json:"id"`
 	FirstName string `json:"firstname"`
-	LastName  string `json:"lastname"`
 	Nickname  string `json:"nickname"`
 	Avatar    string `json:"avatar"`
+	IsPublic  bool   `json:"is_public"`
+}
+
+type AllUsers struct {
+	Followers       []Follower `json:"followers"`
+	Following       []Follower `json:"following"`
+	ReceivedRequest []Follower `json:"received_request"`
+	SentRequest     []Follower `json:"sent_request"`
+	NonMutual       []Follower `json:"non_mutual"`
 }

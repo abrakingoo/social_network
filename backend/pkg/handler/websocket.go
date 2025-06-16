@@ -1,4 +1,3 @@
-// handler/ws.go
 package handler
 
 import (
@@ -27,21 +26,25 @@ func (app *App) HandleWebsocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	groupIDs, err := app.Queries.GetUserGroupIDs(userID)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusInternalServerError, "failed to load groups", Error)
+		return
+	}
+
 	client := &socket.Client{
 		UserID:      userID,
+		Groups:      groupIDs,
 		Conn:        conn,
 		Send:        make(chan []byte, 256),
-		ProcessChan: make(chan map[string]string, 100),
+		ProcessChan: make(chan map[string]any, 100),
 		Hubb:        app.Hub,
 	}
 
 	app.Hub.Register <- client
-	defer func() {
-		app.Hub.Unregister <- client
-		close(client.Send)
-	}()
+	defer client.Cleanup()
 
 	go client.WritePump()
-	go client.ProcessMessages()
+	go client.ProcessMessages(&app.Queries, app.Hub)
 	client.ReadPump()
 }
