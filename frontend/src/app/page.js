@@ -27,7 +27,9 @@ const HomeContent = () => {
     window.addEventListener("resize", checkIfMobile);
 
     // Cleanup
-    return () => window.removeEventListener("resize", checkIfMobile);
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
   }, []);
 
   // Show loading state when checking authentication
@@ -54,7 +56,9 @@ const HomeContent = () => {
           ></div>
         }
       >
-        <PostForm />
+        <div id="postForm">
+          <PostForm />
+        </div>
       </Suspense>
 
       {/* Feed */}
