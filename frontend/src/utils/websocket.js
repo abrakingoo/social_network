@@ -1,7 +1,8 @@
-// frontend/src/utils/websocket.js - FIXED: Remove toast hook, use events instead
+// frontend/src/utils/websocket.js - CORRECTED: Perfect backend integration
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-// Enhanced WebSocket manager with backend notification integration (FIXED: No toast hook)
+
+// Enhanced WebSocket manager with EXACT backend integration
 class WebSocketManager {
   constructor() {
     this.ws = null;
@@ -85,11 +86,14 @@ class WebSocketManager {
           const data = JSON.parse(event.data);
           console.log('WebSocket: Message received:', data);
 
-          // Handle backend notifications
+          // Handle backend notifications with EXACT format matching
           if (data.type === 'notification') {
             this.handleBackendNotification(data);
+          } else if (data.type === 'error') {
+            // Backend sends errors with exact format: { "type": "error", "message": "..." }
+            this.notifyListeners('error', { message: data.message });
           } else {
-            this.notifyListeners(data.type, data.data);
+            this.notifyListeners(data.type, data.data || data);
           }
         } catch (error) {
           console.error('WebSocket: Error parsing message:', error);
@@ -143,7 +147,7 @@ class WebSocketManager {
     }
   }
 
-  // FIXED: Handle backend notifications without toast hook
+  // CORRECTED: Handle backend notifications with EXACT format matching
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
 
@@ -158,35 +162,38 @@ class WebSocketManager {
         case 'group_join_decline':
           this.handleJoinDeclineNotification(data);
           break;
+        case 'group_invitation':
+          this.handleGroupInvitationNotification(data);
+          break;
         default:
           console.log('WebSocket: Unknown group notification:', message);
       }
     }
   }
 
-  // FIXED: Handle join request notifications without toast - dispatch events instead
+  // Handle join request notifications matching backend format
   handleJoinRequestNotification(data) {
-    const { user, group, message } = data;
+    const { group_id } = data;
 
     // Dispatch event for components to handle
     this.dispatchNotificationEvent('group_join_request', {
       title: "New Join Request",
-      description: message,
+      description: "Someone wants to join your group",
       action: {
         text: "Review",
-        callback: () => this.openGroupManagement(group.id)
+        callback: () => this.openGroupManagement(group_id)
       },
-      data: { user, group }
+      data: data
     });
 
     // Trigger callbacks for active group management dialogs
-    const callbacks = this.groupNotificationCallbacks.get(group.id);
+    const callbacks = this.groupNotificationCallbacks.get(group_id);
     if (callbacks && callbacks.length > 0) {
       callbacks.forEach(callback => {
         try {
           callback({
             type: 'join_request',
-            data: { user, group }
+            data: data
           });
         } catch (error) {
           console.error('Error in group notification callback:', error);
@@ -195,40 +202,70 @@ class WebSocketManager {
     }
 
     // Trigger page updates
-    this.triggerGroupPageUpdate(group.id, {
+    this.triggerGroupPageUpdate(group_id, {
       type: 'join_request_received',
-      data: { user, group }
+      data: data
     });
   }
 
-  // FIXED: Handle join accept/decline notifications without toast - dispatch events instead
+  // Handle join accept/decline notifications
   handleJoinAcceptNotification(data) {
-    const { group, status, message } = data;
+    const { group_id } = data;
 
     // Dispatch event for components to handle
     this.dispatchNotificationEvent('group_join_response', {
-      title: status === 'accepted' ? "Request Accepted!" : "Request Declined",
-      description: message,
-      variant: status === 'accepted' ? "default" : "destructive",
-      action: status === 'accepted' ? {
+      title: "Request Accepted!",
+      description: "Your request to join the group was accepted",
+      variant: "default",
+      action: {
         text: "Visit Group",
-        callback: () => window.location.href = `/groups/${this.createSlug(group.title)}`
-      } : null,
-      data: { group, status }
+        callback: () => window.location.href = `/groups/${this.createSlug('group-' + group_id)}`
+      },
+      data: data
     });
 
     // Update group page if user is currently viewing it
-    this.triggerGroupPageUpdate(group.id, {
+    this.triggerGroupPageUpdate(group_id, {
       type: 'membership_changed',
-      data: { status, group }
+      data: { status: 'accepted', group_id }
     });
   }
 
   handleJoinDeclineNotification(data) {
-    this.handleJoinAcceptNotification(data);
+    const { group_id } = data;
+
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent('group_join_response', {
+      title: "Request Declined",
+      description: "Your request to join the group was declined",
+      variant: "destructive",
+      data: data
+    });
+
+    // Update group page if user is currently viewing it
+    this.triggerGroupPageUpdate(group_id, {
+      type: 'membership_changed',
+      data: { status: 'declined', group_id }
+    });
   }
 
-  // FIXED: Dispatch custom events for components to handle notifications
+  // Handle group invitation notifications
+  handleGroupInvitationNotification(data) {
+    const { group_id } = data;
+
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent('group_invitation', {
+      title: "Group Invitation",
+      description: "You've been invited to join a group",
+      action: {
+        text: "View",
+        callback: () => window.location.href = `/notifications`
+      },
+      data: data
+    });
+  }
+
+  // Dispatch custom events for components to handle notifications
   dispatchNotificationEvent(type, notificationData) {
     window.dispatchEvent(new CustomEvent('wsNotification', {
       detail: { type, notification: notificationData }
@@ -355,11 +392,11 @@ class WebSocketManager {
   // Send with connection validation
   send(type, data) {
     if (!this.isAuthenticated) {
-      throw new Error('WebSocket: User not authenticated');
+      throw new Error('User not authenticated');
     }
 
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket: Connection not available');
+      throw new Error('Connection not available');
     }
 
     try {
@@ -372,39 +409,73 @@ class WebSocketManager {
     }
   }
 
-  // Promise-based operations with proper error handling
-  async sendAndWait(type, data, timeout = 10000) {
+  // CORRECTED: Handle backend's silent operations properly
+  async sendAndWait(type, data, timeout = 8000) {
     if (!this.isAuthenticated) {
-      throw new Error('WebSocket: User not authenticated');
+      throw new Error('User not authenticated');
     }
 
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket: Connection not available');
+      throw new Error('Connection not available');
     }
 
-    // Operations that don't expect responses (silent operations)
+    // Operations that backend processes silently (no success response)
     const silentOperations = [
       'group_join_request',
       'exit_group',
       'group_invitation',
       'respond_group_join_request',
+      'respond_group_invitation',
       'unfollow',
-      'follow_request'
+      'follow_request',
+      'cancel_group_invitation',
+      'cancel_group_join_request'
     ];
 
     if (silentOperations.includes(type)) {
-      try {
-        this.send(type, data);
-        return {
-          success: true,
-          message: 'Operation sent successfully',
-          silent: true
+      return new Promise((resolve, reject) => {
+        let resolved = false;
+        let errorReceived = false;
+
+        // Listen for errors
+        const errorListener = (errorData) => {
+          if (!resolved && !errorReceived) {
+            errorReceived = true;
+            resolved = true;
+            this.removeListener('error', errorListener);
+            reject(new Error(errorData.message || 'Operation failed'));
+          }
         };
-      } catch (error) {
-        throw error;
-      }
+
+        this.addListener('error', errorListener);
+
+        // Set timeout for silent success
+        const timeoutId = setTimeout(() => {
+          if (!resolved && !errorReceived) {
+            resolved = true;
+            this.removeListener('error', errorListener);
+            resolve({
+              success: true,
+              message: 'Operation completed successfully',
+              silent: true
+            });
+          }
+        }, timeout);
+
+        try {
+          this.send(type, data);
+        } catch (error) {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeoutId);
+            this.removeListener('error', errorListener);
+            reject(error);
+          }
+        }
+      });
     }
 
+    // For operations that do send responses
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Operation ${type} timed out after ${timeout}ms`));
@@ -446,9 +517,9 @@ class WebSocketManager {
 // Singleton instance
 export const wsManager = new WebSocketManager();
 
-// FIXED: Custom hook for WebSocket notifications
+// Custom hook for WebSocket notifications
 export const useWebSocketNotifications = () => {
-  const { toast } = useToast(); // NOW we can use the toast hook properly in a React component
+  const { toast } = useToast();
 
   useEffect(() => {
     const handleNotification = (event) => {
@@ -472,6 +543,19 @@ export const useWebSocketNotifications = () => {
           title: notification.title,
           description: notification.description,
           variant: notification.variant,
+          action: notification.action ? (
+            <button
+              onClick={notification.action.callback}
+              className="text-sm bg-social text-white px-3 py-1 rounded hover:bg-social-dark"
+            >
+              {notification.action.text}
+            </button>
+          ) : null,
+        });
+      } else if (type === 'group_invitation') {
+        toast({
+          title: notification.title,
+          description: notification.description,
           action: notification.action ? (
             <button
               onClick={notification.action.callback}
@@ -547,7 +631,7 @@ export const useWebSocket = (type, callback) => {
   };
 };
 
-// Event types
+// Event types matching backend exactly
 export const EVENT_TYPES = {
   PRIVATE_MESSAGE: 'private_message',
   GROUP_MESSAGE: 'group_message',
@@ -562,49 +646,122 @@ export const EVENT_TYPES = {
   RESPOND_GROUP_INVITATION: 'respond_group_invitation',
   CANCEL_GROUP_INVITATION: 'cancel_group_invitation',
   CANCEL_GROUP_JOIN_REQUEST: 'cancel_group_join_request',
-  NOTIFICATION_LIKE: 'like',
-  NOTIFICATION_COMMENT: 'comment',
-  NOTIFICATION_FOLLOW_REQUEST: 'follow_request',
-  NOTIFICATION_FOLLOW_ACCEPT: 'follow_accept',
-  NOTIFICATION_GROUP_INVITE: 'group_invite',
-  NOTIFICATION_GROUP_JOIN_REQUEST: 'group_join_request',
-  NOTIFICATION_GROUP_JOIN_ACCEPT: 'group_join_accept',
-  NOTIFICATION_EVENT_CREATE: 'event_create',
-  NOTIFICATION_EVENT_RESPONSE: 'event_response',
   READ_NOTIFICATION: 'read_notification',
   READ_PRIVATE_MESSAGE: 'read_private_message'
 };
 
-// WebSocket operations with proper error handling
+// CORRECTED: WebSocket operations with exact backend payload format
 export const webSocketOperations = {
   async joinGroup(groupId) {
-    return wsManager.sendAndWait(EVENT_TYPES.GROUP_JOIN_REQUEST, { group_id: groupId });
+    try {
+      const result = await wsManager.sendAndWait(EVENT_TYPES.GROUP_JOIN_REQUEST, {
+        group_id: groupId
+      });
+      return result;
+    } catch (error) {
+      // Map backend error messages exactly
+      const message = error.message;
+      if (message === 'Request already sent') {
+        throw new Error('You have already requested to join this group.');
+      } else if (message === 'Cannot request to join your own group') {
+        throw new Error('You cannot request to join your own group.');
+      } else if (message === 'User not authenticated') {
+        throw new Error('Please log in to join groups.');
+      } else if (message === 'Connection not available') {
+        throw new Error('Connection lost. Please refresh the page and try again.');
+      }
+      throw error;
+    }
   },
 
   async leaveGroup(groupId) {
-    return wsManager.sendAndWait(EVENT_TYPES.EXIT_GROUP, { group_id: groupId });
+    try {
+      const result = await wsManager.sendAndWait(EVENT_TYPES.EXIT_GROUP, {
+        group_id: groupId
+      });
+      return result;
+    } catch (error) {
+      // Map backend error messages exactly
+      const message = error.message;
+      if (message === 'Admins can\'t exit group') {
+        throw new Error('Group administrators cannot leave their own group. Please transfer ownership or delete the group.');
+      } else if (message === 'Not a member of the group') {
+        throw new Error('You are not a member of this group.');
+      } else if (message === 'User not authenticated') {
+        throw new Error('Please log in to leave groups.');
+      } else if (message === 'Connection not available') {
+        throw new Error('Connection lost. Please refresh the page and try again.');
+      }
+      throw error;
+    }
   },
 
   async inviteToGroup(groupId, userId) {
-    return wsManager.sendAndWait(EVENT_TYPES.GROUP_INVITATION, {
-      group_id: groupId,
-      recipient_Id: userId
-    });
+    try {
+      const result = await wsManager.sendAndWait(EVENT_TYPES.GROUP_INVITATION, {
+        group_id: groupId,
+        recipient_Id: userId
+      });
+      return result;
+    } catch (error) {
+      // Map backend error messages exactly
+      const message = error.message;
+      if (message === 'Only group admin can send join invitations') {
+        throw new Error('Only group admin can send invitations');
+      } else if (message === 'User is already a member') {
+        throw new Error('User is already a member of this group');
+      } else if (message === 'User not authenticated') {
+        throw new Error('Please log in to send invitations.');
+      } else if (message === 'Connection not available') {
+        throw new Error('Connection lost. Please refresh the page and try again.');
+      }
+      throw error;
+    }
   },
 
   async respondToGroupInvitation(groupId, status) {
-    return wsManager.sendAndWait(EVENT_TYPES.RESPOND_GROUP_INVITATION, {
-      group_id: groupId,
-      status
-    });
+    try {
+      const result = await wsManager.sendAndWait(EVENT_TYPES.RESPOND_GROUP_INVITATION, {
+        group_id: groupId,
+        status: status
+      });
+      return result;
+    } catch (error) {
+      // Map backend error messages exactly
+      const message = error.message;
+      if (message === 'User not authenticated') {
+        throw new Error('Please log in to respond to invitations.');
+      } else if (message === 'Connection not available') {
+        throw new Error('Connection lost. Please refresh the page and try again.');
+      }
+      throw error;
+    }
   },
 
   async respondToJoinRequest(groupId, userId, status) {
-    return wsManager.sendAndWait(EVENT_TYPES.RESPOND_GROUP_JOIN_REQUEST, {
-      group_id: groupId,
-      recipient_Id: userId,
-      status
-    });
+    try {
+      const result = await wsManager.sendAndWait(EVENT_TYPES.RESPOND_GROUP_JOIN_REQUEST, {
+        group_id: groupId,
+        recipient_Id: userId,
+        status: status
+      });
+      return result;
+    } catch (error) {
+      // Map backend error messages exactly
+      const message = error.message;
+      if (message === 'Only group admin can respond to join requests') {
+        throw new Error('Only group admin can respond to join requests');
+      } else if (message === 'The user is already a member') {
+        throw new Error('User is already a member of this group');
+      } else if (message === 'No request to respond to') {
+        throw new Error('No request found to respond to');
+      } else if (message === 'User not authenticated') {
+        throw new Error('Please log in to respond to requests.');
+      } else if (message === 'Connection not available') {
+        throw new Error('Connection lost. Please refresh the page and try again.');
+      }
+      throw error;
+    }
   },
 
   async sendFollowRequest(userId) {
