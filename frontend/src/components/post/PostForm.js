@@ -12,7 +12,7 @@ import { usePosts, PRIVACY_LEVELS } from "@/context/PostContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatAvatarUrl } from "@/lib/utils";
 
-const PostForm = () => {
+const PostForm = ({ onPostCreated }) => {
   const [content, setContent] = useState("");
   const [privacy, setPrivacy] = useState(PRIVACY_LEVELS.PUBLIC);
   const [images, setImages] = useState([]);
@@ -77,6 +77,10 @@ const PostForm = () => {
         setPrivacy(PRIVACY_LEVELS.PUBLIC);
         setImages([]);
         setImageFiles([]);
+        // Notify parent component of successful post creation
+        if (onPostCreated) {
+          onPostCreated();
+        }
       }
     } catch (error) {
       console.error("Error submitting post:", error);
