@@ -101,18 +101,21 @@ const GroupDetail = () => {
         const { status } = notification.data;
 
         if (status === 'accepted') {
-          // User's join request was accepted - update to joined state
           setRequestState(REQUEST_STATES.JOINED);
           const updatedData = { ...groupData, is_joined: true };
           updateGroupData(updatedData);
-
-          // Refresh the page to get full member data
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
         } else if (status === 'declined') {
-          // User's join request was declined - reset to not requested
           setRequestState(REQUEST_STATES.NOT_REQUESTED);
+          const updatedData = { ...groupData, is_joined: false };
+          updateGroupData(updatedData);
+        }
+      }
+      // Handle real-time leave group
+      if (groupId === groupData.id && notification.type === 'group_left') {
+        if (notification.data.user_id === currentUser.id) {
+          setRequestState(REQUEST_STATES.NOT_REQUESTED);
+          const updatedData = { ...groupData, is_joined: false };
+          updateGroupData(updatedData);
         }
       }
     };
@@ -122,7 +125,7 @@ const GroupDetail = () => {
     return () => {
       window.removeEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
     };
-  }, [groupData?.id]);
+  }, [groupData?.id, currentUser?.id]);
 
   // Listen for group management dialog open events
   useEffect(() => {
@@ -311,12 +314,13 @@ const GroupDetail = () => {
 
     try {
       if (isCurrentlyJoined) {
+        // Optimistic update for better UX
+        setRequestState(REQUEST_STATES.NOT_REQUESTED);
+        const updatedData = { ...groupData, is_joined: false };
+        updateGroupData(updatedData);
         // Leave group using corrected WebSocket operation
         const result = await webSocketOperations.leaveGroup(groupData.group_id);
         if (result.success) {
-          const updatedData = { ...groupData, is_joined: false };
-          updateGroupData(updatedData);
-          setRequestState(REQUEST_STATES.NOT_REQUESTED);
           toast({
             title: "Success",
             description: "You have left the group successfully.",
@@ -325,6 +329,8 @@ const GroupDetail = () => {
       } else {
         // Optimistic update for better UX
         setRequestState(REQUEST_STATES.PENDING);
+        // Do NOT set is_joined: true here!
+        // Only update is_joined when backend confirms acceptance
 
         // Join group using corrected WebSocket operation
         const result = await webSocketOperations.joinGroup(groupData.group_id);
@@ -339,9 +345,16 @@ const GroupDetail = () => {
       const actionText = isCurrentlyJoined ? 'leave' : 'request to join';
 
       // Revert optimistic update on error
-      if (!isCurrentlyJoined) {
+      if (isCurrentlyJoined) {
+        setRequestState(REQUEST_STATES.JOINED);
+        const updatedData = { ...groupData, is_joined: true };
+        updateGroupData(updatedData);
+      } else {
+        // Only revert to NOT_REQUESTED or PENDING, never set is_joined: true
         const currentState = determineRequestState(groupData, currentUser);
         setRequestState(currentState);
+        const updatedData = { ...groupData, is_joined: false };
+        updateGroupData(updatedData);
       }
 
       // Use the exact error message from the corrected WebSocket operations
