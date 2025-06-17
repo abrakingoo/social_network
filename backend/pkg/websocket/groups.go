@@ -2,8 +2,6 @@ package websocket
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"social/pkg/model"
 	"social/pkg/repository"
 	"social/pkg/util"
@@ -33,81 +31,54 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		return
 	}
 
-	exists, err := q.CheckRow("group_join_requests", []string{
-		"group_id",
-		"user_id",
-	}, []any{
-		request.GroupId,
-		c.UserID,
-	})
-	if err != nil {
-		c.SendError("Error while checking status")
-		return
-	}
-
-	declined, err := q.CheckRow("group_join_requests", []string{
+	// Only block if there is a 'pending' or 'accepted' request
+	pendingOrAccepted, err := q.CheckRow("group_join_requests", []string{
 		"group_id",
 		"user_id",
 		"status",
 	}, []any{
 		request.GroupId,
 		c.UserID,
-		"declined",
+		"pending",
 	})
 	if err != nil {
 		c.SendError("Error while checking status")
 		return
 	}
+	if !pendingOrAccepted {
+		pendingOrAccepted, err = q.CheckRow("group_join_requests", []string{
+		"group_id",
+		"user_id",
+		"status",
+	}, []any{
+		request.GroupId,
+		c.UserID,
+			"accepted",
+	})
+	if err != nil {
+		c.SendError("Error while checking status")
+		return
+		}
+	}
 
-	if exists && !declined {
+	if pendingOrAccepted {
 		c.SendError("Request already sent")
 		return
 	}
 
 	notId := util.UUIDGen()
 
-	if exists {
-		err = q.UpdateData("group_join_requests", []string{
+	// Remove any declined requests before inserting a new one
+	_ = q.DeleteData("group_join_requests", []string{
 			"group_id",
 			"user_id",
+		"status",
 		}, []any{
 			request.GroupId,
 			c.UserID,
-		}, []string{
-			"status",
-		}, []any{
-			"pending",
-		})
-		if err != nil {
-			c.SendError("failed to update join request")
-			return
-		}
+		"declined",
+	})
 
-		err = q.InsertData("notifications", []string{
-			"id",
-			"recipient_id",
-			"actor_id",
-			"type",
-			"message",
-		}, []any{
-			notId,
-			admin,
-			c.UserID,
-			"group_join_request",
-			"new request to join group",
-		})
-		if err != nil {
-			c.SendError("failed to notify the recipient")
-			return
-		}
-
-		h.ActionBasedNotification([]string{
-			admin,
-		}, "group_join_request", map[string]any{
-			"group_id": request.GroupId,
-			"request": fetchLatestJoinRequest(q, request.GroupId, c.UserID),
-		})
-	} else {
 		err = q.InsertData("group_join_requests", []string{
 			"id",
 			"group_id",
@@ -120,7 +91,6 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 			"pending",
 		})
 		if err != nil {
-			fmt.Println("This err: ", err)
 			c.SendError("failed to send join request")
 			return
 		}
@@ -147,12 +117,11 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 			admin,
 		}, "group_join_request", map[string]any{
 			"group_id": request.GroupId,
-			"request": fetchLatestJoinRequest(q, request.GroupId, c.UserID),
+		"request": fetchLatestJoinRequest(q, request.GroupId, c.UserID),
 		})
-	}
 }
 
-func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query) {
+func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query, h *Hub) {
 	dataBytes, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
@@ -242,6 +211,21 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 			c.SendError("Error adding user as a member to the group")
 			return
 		}
+		// Send real-time notification to the user
+		h.ActionBasedNotification([]string{
+			request.RecipientID,
+		}, "group_join_accept", map[string]any{
+			"group_id": request.GroupId,
+			"status": "accepted",
+		})
+	} else if request.ResponseStatus == "declined" {
+		// Send real-time notification to the user for declined
+		h.ActionBasedNotification([]string{
+			request.RecipientID,
+		}, "group_join_accept", map[string]any{
+			"group_id": request.GroupId,
+			"status": "declined",
+		})
 	}
 }
 
