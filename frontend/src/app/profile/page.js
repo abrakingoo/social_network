@@ -87,7 +87,7 @@ const Profile = () => {
   }
 
   const isOwnProfile = currentUser.id === profileUser.id;
-  const userPosts = getUserPosts(profileUser.id);
+  const userPosts = isOwnProfile && currentUser && currentUser.userposts ? currentUser.userposts : getUserPosts(profileUser.id);
   const userFirstName = profileUser.first_name || profileUser.firstName;
   const userLastName = profileUser.last_name || profileUser.lastName;
   const userNickname = profileUser.nickname;
