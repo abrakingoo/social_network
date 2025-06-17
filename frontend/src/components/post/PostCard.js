@@ -249,7 +249,7 @@ const PostCard = ({ post }) => {
                     <img
                       src={`${API_BASE_URL}/${image}`}
                       alt={`Post image ${index + 1}`}
-                      className={`w-full h-full object-cover ${aspectRatio} transition-transform group-hover:scale-105`}
+                      className={`w-full h-full object-contain ${aspectRatio} transition-transform group-hover:scale-105`}
                     />
                     {normalizedPost.media.length > 4 && index === 3 && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
