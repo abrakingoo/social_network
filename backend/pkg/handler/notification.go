@@ -15,5 +15,5 @@ func (app *App) Notifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
+	app.JSONResponse(w, r, http.StatusOK, notifications, Success)
 }
