@@ -24,7 +24,7 @@ type UserNotification struct {
 	ID         string         `json:"id"`
 	ActorId    string         `json:"sender_id"`
 	Type       string         `json:"type"`
-	EntityID   sql.NullInt64  `json:"entity_id,omitempty"` 
+	EntityID   sql.NullInt64  `json:"entity_id,omitempty"`
 	EntityType sql.NullString `json:"entity_type,omitempty"`
 	IsRead     bool           `json:"is_read"`
 	Message    string         `json:"message"`
