@@ -26,6 +26,9 @@ var allowedRoutes = map[string][]string{
 	"/api/ws":           {"GET", "OPTIONS"},
 	"/api/rsvp":         {"POST", "OPTIONS"},
 	"/api/users":        {"GET", "OPTIONS"},
+	"/api/addComment":   {"POST", "OPTIONS"},
+	"/api/likeComment":  {"POST", "OPTIONS"},
+	"/api/likePost":     {"POST", "OPTIONS"},
 }
 
 type App struct {
@@ -90,6 +93,9 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/ws", app.AuthMiddleware(http.HandlerFunc(app.HandleWebsocket)))
 	mux.Handle("/api/rsvp", app.AuthMiddleware(http.HandlerFunc(app.Rsvp)))
 	mux.Handle("/api/users", app.AuthMiddleware(http.HandlerFunc(app.GetAllUsers)))
+	mux.Handle("/api/addComment", app.AuthMiddleware(http.HandlerFunc(app.AddComment)))
+	mux.Handle("/api/likeComment", app.AuthMiddleware(http.HandlerFunc(app.LikeComment)))
+	mux.Handle("/api/likePost", app.AuthMiddleware(http.HandlerFunc(app.LikePost)))
 
 	return mux
 }
