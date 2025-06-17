@@ -2,6 +2,7 @@
 
 import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import PostCardLightbox from "@/components/post/PostCardLightbox";
 import {
   Camera,
   Users,
@@ -37,6 +38,8 @@ const Profile = () => {
   const [profileUser, setProfileUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showPostForm, setShowPostForm] = useState(false); // Add state for post form visibility
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0); // Add state for lightbox index
 
   // Function to handle successful post creation
   const handlePostCreated = () => {
@@ -460,7 +463,11 @@ const Profile = () => {
                         key={index}
                         src={photo}
                         alt="User photo"
-                        className="w-full h-48 object-cover rounded-lg"
+                        className="w-full h-48 object-cover rounded-lg cursor-pointer"
+                        onClick={() => {
+                          setLightboxOpen(true);
+                          setLightboxIndex(index);
+                        }}
                       />
                     ))
                   ) : (
@@ -472,6 +479,15 @@ const Profile = () => {
                     </div>
                   )}
                 </div>
+                {/* Lightbox for photos */}
+                <PostCardLightbox
+                  open={lightboxOpen}
+                  images={userPhotos}
+                  index={lightboxIndex}
+                  onClose={() => setLightboxOpen(false)}
+                  onPrev={() => setLightboxIndex((prev) => (prev - 1 + userPhotos.length) % userPhotos.length)}
+                  onNext={() => setLightboxIndex((prev) => (prev + 1) % userPhotos.length)}
+                />
               </div>
             </TabsContent>
           </div>
