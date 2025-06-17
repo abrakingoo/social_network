@@ -47,12 +47,3 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 
 }
 
-// id TEXT PRIMARY KEY NOT NULL UNIQUE,
-//     recipient_id TEXT NOT NULL, 
-//     actor_id TEXT,              
-//     type TEXT NOT NULL,            
-//     entity_id INTEGER,             
-//     entity_type TEXT,              
-//     is_read BOOLEAN DEFAULT 0,     
-//     message TEXT,                 
-//     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
