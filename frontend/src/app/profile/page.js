@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Camera,
@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PostCard from "@/components/post/PostCard";
+import PostForm from "@/components/post/PostForm"; // Import PostForm component
 import { useAuth } from "@/context/AuthContext";
 import { usePosts } from "@/context/PostContext";
 import { formatAvatarUrl } from "@/lib/utils";
@@ -35,6 +36,12 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [profileUser, setProfileUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPostForm, setShowPostForm] = useState(false); // Add state for post form visibility
+
+  // Function to handle successful post creation
+  const handlePostCreated = () => {
+    setShowPostForm(false); 
+  };
 
   // Extract username from pathname if available
   useEffect(() => {
@@ -277,22 +284,32 @@ const Profile = () => {
           </TabsList>
           <div className="mt-4">
             <TabsContent value="posts" className="space-y-4">
+              {isOwnProfile && showPostForm && (
+                <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+                  <Suspense fallback={<div className="p-4 text-center">Loading form...</div>}>
+                    <PostForm onPostCreated={handlePostCreated} />
+                  </Suspense>
+                </div>
+              )}
               {userPosts.length > 0 ? (
                 userPosts.map((post) => <PostCard key={post.id} post={post} />)
-              ) : (
-                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                  <h3 className="text-lg font-medium text-gray-700">
-                    No posts yet
-                  </h3>
-                  <p className="text-gray-500 mt-1">
+              ) : !showPostForm && (
+                <div className="text-center p-8 bg-white rounded-lg shadow-sm">
+                  <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
+                  <p className="text-gray-500 mt-2">
                     {isOwnProfile
                       ? "When you create posts, they'll appear here."
-                      : "This user hasn't posted anything yet."}
+                      : `${profileUser.firstName} hasn't posted anything yet.`}
                   </p>
-
                   {isOwnProfile && (
-                    <Button className="mt-4 bg-social hover:bg-social-dark">
-                      Create Your First Post
+                    <Button
+                      onClick={() => {
+                        // Toggle the visibility of the post form on the profile page
+                        setShowPostForm(!showPostForm);
+                      }}
+                      className="mt-4 bg-social hover:bg-social-dark text-white"
+                    >
+                      Create your first post
                     </Button>
                   )}
                 </div>
