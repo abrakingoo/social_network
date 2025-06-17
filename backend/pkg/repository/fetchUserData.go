@@ -105,13 +105,13 @@ func (q *Query) FetchUserInfo(userid string, user *model.UserData) error {
 	row := q.Db.QueryRow(`
         SELECT email, first_name, last_name, 
 		date_of_birth, avatar, nickname , about_me, created_at , 
-		is_public 
+		is_public ,	background_image 
         FROM users 
         WHERE id = ? 
         LIMIT 1
     `, userid)
 
-	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.CreatedAt, &user.IsPublic)
+	err := row.Scan(&user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.CreatedAt, &user.IsPublic, &user.BackgroundImage)
 	if err == sql.ErrNoRows {
 		return errors.New("no user data found")
 	}
