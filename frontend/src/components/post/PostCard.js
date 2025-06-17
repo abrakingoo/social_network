@@ -61,7 +61,7 @@ const PostCard = ({ post }) => {
       id: inputPost.id || `post-${Math.random().toString(36).substring(2, 9)}`,
       author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
-      createdAt: inputPost.createdAt || inputPost.timestamp || new Date().toISOString(),
+      createdAt: inputPost.createdAt || inputPost.created_at || inputPost.timestamp || new Date().toISOString(),
       likesCount: inputPost.likesCount || 0,
       dislikesCount: inputPost.dislikesCount || 0,
       commentsCount: inputPost.commentsCount || 0,
