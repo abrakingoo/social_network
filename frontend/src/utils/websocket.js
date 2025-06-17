@@ -210,42 +210,26 @@ class WebSocketManager {
 
   // Handle join accept/decline notifications
   handleJoinAcceptNotification(data) {
-    const { group_id } = data;
+    const { group_id, status } = data;
 
     // Dispatch event for components to handle
     this.dispatchNotificationEvent('group_join_response', {
-      title: "Request Accepted!",
-      description: "Your request to join the group was accepted",
-      variant: "default",
-      action: {
+      title: status === 'accepted' ? "Request Accepted!" : "Request Declined",
+      description: status === 'accepted'
+        ? "Your request to join the group was accepted"
+        : "Your request to join the group was declined",
+      variant: status === 'accepted' ? "default" : "destructive",
+      action: status === 'accepted' ? {
         text: "Visit Group",
         callback: () => window.location.href = `/groups/${this.createSlug('group-' + group_id)}`
-      },
+      } : undefined,
       data: data
     });
 
     // Update group page if user is currently viewing it
     this.triggerGroupPageUpdate(group_id, {
       type: 'membership_changed',
-      data: { status: 'accepted', group_id }
-    });
-  }
-
-  handleJoinDeclineNotification(data) {
-    const { group_id } = data;
-
-    // Dispatch event for components to handle
-    this.dispatchNotificationEvent('group_join_response', {
-      title: "Request Declined",
-      description: "Your request to join the group was declined",
-      variant: "destructive",
-      data: data
-    });
-
-    // Update group page if user is currently viewing it
-    this.triggerGroupPageUpdate(group_id, {
-      type: 'membership_changed',
-      data: { status: 'declined', group_id }
+      data: { status: status, group_id }
     });
   }
 
