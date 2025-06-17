@@ -10,25 +10,6 @@ import (
 )
 
 var allowedRoutes = map[string][]string{
-	"/api/login":        {"POST", "OPTIONS"},
-	"/api/register":     {"POST", "OPTIONS"},
-	"/api/addPost":      {"POST", "OPTIONS"},
-	"/api/getPosts":     {"GET", "OPTIONS"},
-	"/api/profile":      {"GET", "OPTIONS"},
-	"/api/logout":       {"POST", "OPTIONS"},
-	"/api/addGroup":     {"POST", "OPTIONS"},
-	"/api/getGroupData": {"GET", "POST", "OPTIONS"},
-	"/pkg/db/media/":    {"GET", "OPTIONS"},
-	"/api/addEvent":     {"POST", "OPTIONS"},
-	"/api/updateUser":   {"PATCH", "OPTIONS"},
-	"/api/groups":       {"GET", "OPTIONS"},
-	"/api/deleteGroup":  {"DELETE", "OPTIONS"},
-	"/api/ws":           {"GET", "OPTIONS"},
-	"/api/rsvp":         {"POST", "OPTIONS"},
-	"/api/users":        {"GET", "OPTIONS"},
-	"/api/addComment":   {"POST", "OPTIONS"},
-	"/api/likeComment":  {"POST", "OPTIONS"},
-	"/api/likePost":     {"POST", "OPTIONS"},
 	"/api/login":         {"POST", "OPTIONS"},
 	"/api/register":      {"POST", "OPTIONS"},
 	"/api/addPost":       {"POST", "OPTIONS"},
@@ -45,6 +26,9 @@ var allowedRoutes = map[string][]string{
 	"/api/ws":            {"GET", "OPTIONS"},
 	"/api/rsvp":          {"POST", "OPTIONS"},
 	"/api/users":         {"GET", "OPTIONS"},
+	"/api/addComment":    {"POST", "OPTIONS"},
+	"/api/likeComment":   {"POST", "OPTIONS"},
+	"/api/likePost":      {"POST", "OPTIONS"},
 	"/api/notifications": {"GET", "OPTIONS"},
 }
 
