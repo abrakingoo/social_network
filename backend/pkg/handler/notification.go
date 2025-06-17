@@ -8,4 +8,12 @@ func (app *App) Notifications(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
 	}
+
+	notifications, err := app.Queries.GetUserNotifications(userID)
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusConflict, "Error while fetching notifications")
+		return
+	}
+
+	
 }
