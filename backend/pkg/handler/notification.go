@@ -11,7 +11,7 @@ func (app *App) Notifications(w http.ResponseWriter, r *http.Request) {
 
 	notifications, err := app.Queries.GetUserNotifications(userID)
 	if err != nil {
-		app.JSONResponse(w, r, http.StatusConflict, "Error while fetching notifications")
+		app.JSONResponse(w, r, http.StatusConflict, "Error while fetching notifications", Error)
 		return
 	}
 
