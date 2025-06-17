@@ -10,11 +10,8 @@ import (
 	"social/pkg/model"
 )
 
-func (q *Query) FetchGroupData(groupid string) (model.GroupData, error) {
-	return q.FetchGroupDataWithUser(groupid, "")
-}
+func (q *Query) FetchGroupData(groupid string, userID string) (model.GroupData, error) {
 
-func (q *Query) FetchGroupDataWithUser(groupid string, userID string) (model.GroupData, error) {
 	var group model.GroupData
 	var err error
 
@@ -37,6 +34,16 @@ func (q *Query) FetchGroupDataWithUser(groupid string, userID string) (model.Gro
 	// fetch all group events information with user RSVP status
 	if err := q.fetchGroupEvents(groupid, &group, userID); err != nil {
 		return model.GroupData{}, err
+	}
+
+	var admin bool
+	// check if logged in user is the group admin
+	admin, err = q.CheckRow("groups", []string{"id", "creator_id"}, []any{groupid, userID})
+	if err != nil {
+		return group, err
+	}
+	if admin {
+		q.FetchGroupJoinRequest(groupid, &group)
 	}
 
 	return group, nil
@@ -338,4 +345,54 @@ func (q *Query) FetchGroupId(title string) (string, error) {
 	}
 
 	return id, nil
+}
+
+func (q *Query) FetchGroupJoinRequest(groupID string, group *model.GroupData) error {
+	query := `SELECT 
+				gjr.id as request_id,
+				gjr.user_id,
+				gjr.created_at,
+				gjr.status,
+				u.id,
+				u.firstname,
+				u.lastname, 
+				u.nickname,
+				u.avatar
+			FROM group_join_requests gjr 
+			JOIN users u ON gjr.user_id = u.id 
+			WHERE gjr.group_id = ? AND gjr.status = 'pending'`
+
+	rows, err := q.Db.Query(query, groupID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch group join request: %w", err)
+	}
+	defer rows.Close()
+
+	var joinRequests []model.GroupJoinRequest
+
+	for rows.Next() {
+		var r model.GroupJoinRequest
+		err := rows.Scan(
+			&r.ID,
+			&r.UserID,
+			&r.CreatedAt,
+			&r.Status,
+			&r.User.ID,
+			&r.User.Firstname,
+			&r.User.Lastname,
+			&r.User.Nickname,
+			&r.User.Avatar,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to scan join request row: %w", err)
+		}
+		joinRequests = append(joinRequests, r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("error iterating over join request rows: %w", err)
+	}
+
+	group.JoinRequest = joinRequests
+	return nil
 }
