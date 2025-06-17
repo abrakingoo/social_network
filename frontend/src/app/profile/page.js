@@ -94,8 +94,16 @@ const Profile = () => {
   const userEmail = profileUser.email;
   const userDateOfBirth = profileUser.date_of_birth || profileUser.dateOfBirth;
   const userCreatedAt = profileUser.created_at || profileUser.createdAt;
-  const userAbout = profileUser.about_me || profileUser.about;
 
+  // Extract all photos from user's posts for the Photos tab
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const userPhotos = userPosts.flatMap(post => post.media || post.images || []).map(photo => {
+    // Check if photo is an object with a URL property or a direct string
+    const photoUrl = typeof photo === 'object' && photo.URL ? photo.URL : (typeof photo === 'object' && photo.url ? photo.url : photo);
+    return `${API_BASE_URL}/${photoUrl}`;
+  });
+
+  const userAbout = profileUser.about_me || profileUser.about;
   const h1Name = userNickname || userFirstName || "";
   const subtitleName =
     userFirstName && userLastName
@@ -240,7 +248,7 @@ const Profile = () => {
           <div className="flex items-center">
             <ImageIcon className="h-5 w-5 mr-2 text-gray-500" />
             <div className="text-sm">
-              <span className="font-semibold">0</span> photos
+              <span className="font-semibold">{userPhotos.length}</span> photos
             </div>
           </div>
         </div>
@@ -428,10 +436,23 @@ const Profile = () => {
             <TabsContent value="photos">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-medium mb-4">Photos</h3>
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No photos uploaded yet.</p>
-                  {isOwnProfile && (
-                    <Button className="mt-4">Upload Photos</Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userPhotos.length > 0 ? (
+                    userPhotos.map((photo, index) => (
+                      <img
+                        key={index}
+                        src={photo}
+                        alt="User photo"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No photos uploaded yet.</p>
+                      {isOwnProfile && (
+                        <Button className="mt-4">Upload Photos</Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
