@@ -105,6 +105,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 			admin,
 		}, "group_join_request", map[string]any{
 			"group_id": request.GroupId,
+			"request": fetchLatestJoinRequest(q, request.GroupId, c.UserID),
 		})
 	} else {
 		err = q.InsertData("group_join_requests", []string{
@@ -146,6 +147,7 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 			admin,
 		}, "group_join_request", map[string]any{
 			"group_id": request.GroupId,
+			"request": fetchLatestJoinRequest(q, request.GroupId, c.UserID),
 		})
 	}
 }
@@ -241,4 +243,18 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 			return
 		}
 	}
+}
+
+// Helper function to fetch the latest join request with user info
+func fetchLatestJoinRequest(q *repository.Query, groupID, userID string) *model.GroupJoinRequest {
+	var group model.GroupData
+	if err := q.FetchGroupJoinRequest(groupID, &group); err != nil {
+		return nil
+	}
+	for _, req := range group.JoinRequest {
+		if req.UserID == userID {
+			return &req
+		}
+	}
+	return nil
 }
