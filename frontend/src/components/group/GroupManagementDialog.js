@@ -34,7 +34,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
   useEffect(() => {
     const requests = groupData?.JoinRequest || groupData?.join_request || [];
     setJoinRequests(requests);
-    setNewRequestCount(0);
+      setNewRequestCount(0);
   }, [groupData?.JoinRequest, groupData?.join_request]);
 
   // Subscribe to real-time group notifications with exact backend format
@@ -81,7 +81,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
           }
         } else {
           // Fallback: Refresh group data to get the latest join requests
-          refreshGroupData();
+        refreshGroupData();
         }
 
         // Update new request count if not on requests tab
