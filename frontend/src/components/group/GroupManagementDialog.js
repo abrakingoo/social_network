@@ -1,4 +1,4 @@
-// frontend/src/components/group/GroupManagementDialog.js - CORRECTED: Full integration with backend
+// frontend/src/components/group/GroupManagementDialog.js - CORRECTED: Use backend's exact field name 'JoinRequest'
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,12 @@ import { useAuth } from '@/context/AuthContext';
 import { webSocketOperations, wsManager } from '@/utils/websocket';
 import groupService from '@/services/groupService';
 import { Users, UserPlus, Loader2, Check, X, Search, Bell } from 'lucide-react';
+import { useGroup } from '@/context/GroupContext';
 
 export default function GroupManagementDialog({ isOpen, onClose, groupData, onGroupUpdated }) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const { setGroupData } = useGroup();
 
   // State management
   const [activeTab, setActiveTab] = useState('members');
@@ -24,19 +26,18 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
   const [invitingUsers, setInvitingUsers] = useState(new Set());
   const [processingRequests, setProcessingRequests] = useState(new Set());
 
-  // NEW: Real-time join requests state
+  // CORRECTED: Join requests state management using correct field name
   const [joinRequests, setJoinRequests] = useState([]);
   const [newRequestCount, setNewRequestCount] = useState(0);
 
-  // Initialize join requests from groupData
+  // CORRECTED: Initialize join requests from groupData.JoinRequest or groupData.join_request
   useEffect(() => {
-    if (groupData?.join_requests) {
-      setJoinRequests(groupData.join_requests);
-      setNewRequestCount(0);
-    }
-  }, [groupData?.join_requests]);
+    const requests = groupData?.JoinRequest || groupData?.join_request || [];
+    setJoinRequests(requests);
+    setNewRequestCount(0);
+  }, [groupData?.JoinRequest, groupData?.join_request]);
 
-  // NEW: Subscribe to real-time group notifications
+  // Subscribe to real-time group notifications with exact backend format
   useEffect(() => {
     if (!isOpen || !groupData?.id) return;
 
@@ -48,50 +49,63 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     return unsubscribe;
   }, [isOpen, groupData?.id]);
 
-  // NEW: Handle real-time notifications
+  // Handle real-time notifications with exact backend format
   const handleRealTimeNotification = (notification) => {
     if (notification.type === 'join_request') {
-      const { user, group } = notification.data;
+      const { group_id, request } = notification.data;
 
-      // Create new join request object matching backend structure
-      const newRequest = {
-        id: `temp_${Date.now()}`, // Temporary ID until we refresh
-        user_id: user.id,
-        user: {
-          id: user.id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          nickname: user.nickname,
-          avatar: user.avatar
-        },
-        created_at: new Date().toISOString(),
-        status: 'pending'
-      };
+      // Only handle notifications for this specific group
+      if (group_id === groupData.id) {
+        // If request object is present, add it instantly to state and global group data
+        if (request && request.id) {
+          setJoinRequests(prev => {
+            if (prev.some(r => r.id === request.id)) return prev;
+            return [request, ...prev];
+          });
+          // Update global group data (context)
+          setGroupData(prev => {
+            if (!prev) return prev;
+            const prevRequests = prev.JoinRequest || prev.join_request || [];
+            if (prevRequests.some(r => r.id === request.id)) return prev;
+            return {
+              ...prev,
+              JoinRequest: [request, ...prevRequests]
+            };
+          });
+          // Also update parent if needed
+          if (onGroupUpdated) {
+            onGroupUpdated({
+              ...groupData,
+              JoinRequest: [request, ...(groupData.JoinRequest || groupData.join_request || [])]
+            });
+          }
+        } else {
+          // Fallback: Refresh group data to get the latest join requests
+          refreshGroupData();
+        }
 
-      // Add to join requests list
-      setJoinRequests(prev => [newRequest, ...prev]);
+        // Update new request count if not on requests tab
+        if (activeTab !== 'requests') {
+          setNewRequestCount(prev => prev + 1);
 
-      // Update new request count if not on requests tab
-      if (activeTab !== 'requests') {
-        setNewRequestCount(prev => prev + 1);
-
-        // Show notification
-        toast({
-          title: "New Join Request",
-          description: `${user.firstname} ${user.lastname} wants to join the group`,
-          action: (
-            <Button
-              size="sm"
-              onClick={() => {
-                setActiveTab('requests');
-                setNewRequestCount(0);
-              }}
-              className="bg-social hover:bg-social-dark"
-            >
-              Review
-            </Button>
-          ),
-        });
+          // Show notification
+          toast({
+            title: "New Join Request",
+            description: "Someone wants to join your group",
+            action: (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setActiveTab('requests');
+                  setNewRequestCount(0);
+                }}
+                className="bg-social hover:bg-social-dark"
+              >
+                Review
+              </Button>
+            ),
+          });
+        }
       }
     }
   };
@@ -102,6 +116,28 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
       setNewRequestCount(0);
     }
   }, [activeTab]);
+
+  // CORRECTED: Refresh group data to get latest join requests (accept both field names)
+  const refreshGroupData = async () => {
+    if (!groupData?.title) return;
+
+    try {
+      const updatedDetails = await groupService.getGroupDetails(groupData.title);
+      const requests = updatedDetails.JoinRequest || updatedDetails.join_request || [];
+      setJoinRequests(requests);
+
+      // Update parent component with fresh data
+      if (onGroupUpdated) {
+        onGroupUpdated({
+          ...groupData,
+          ...updatedDetails,
+          JoinRequest: requests
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing group data:', error);
+    }
+  };
 
   // Fetch available users for invitations
   const fetchAvailableUsers = async () => {
@@ -135,14 +171,15 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     }
   };
 
-  // Load data when dialog opens
+  // Load data when dialog opens (always fetch latest)
   useEffect(() => {
     if (isOpen && currentUser && groupData) {
+      refreshGroupData(); // <-- Always fetch latest join requests
       fetchAvailableUsers();
     }
   }, [isOpen, currentUser, groupData]);
 
-  // ENHANCED: Handle join request responses with optimistic updates
+  // Handle join request responses using exact backend format
   const handleJoinRequestResponse = async (requestId, userId, status) => {
     setProcessingRequests(prev => new Set([...prev, requestId]));
 
@@ -150,22 +187,25 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     setJoinRequests(prev => prev.filter(req => req.id !== requestId));
 
     try {
-      // Use WebSocket to respond
+      // Use WebSocket to respond with exact backend payload format
       await webSocketOperations.respondToJoinRequest(groupData.id, userId, status);
 
       // If accepted, refresh group data to show new member
       if (status === 'accepted' && onGroupUpdated) {
-        try {
-          const updatedDetails = await groupService.getGroupDetails(groupData.title);
-          onGroupUpdated({
-            ...groupData,
-            ...updatedDetails,
-            members: updatedDetails.members || [],
-            join_requests: updatedDetails.join_requests || []
-          });
-        } catch (error) {
-          console.error('Error refreshing group data:', error);
-        }
+        setTimeout(async () => {
+          try {
+            const updatedDetails = await groupService.getGroupDetails(groupData.title);
+            const requests = updatedDetails.JoinRequest || updatedDetails.join_request || [];
+            onGroupUpdated({
+              ...groupData,
+              ...updatedDetails,
+              members: updatedDetails.members || [],
+              JoinRequest: requests
+            });
+          } catch (error) {
+            console.error('Error refreshing group data:', error);
+          }
+        }, 500); // Small delay to ensure backend has processed
       }
 
       toast({
@@ -178,25 +218,16 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     } catch (error) {
       console.error('Error responding to join request:', error);
 
-      // Revert optimistic update on error
-      const originalRequest = groupData.join_requests?.find(req => req.id === requestId);
+      // CORRECTED: Revert optimistic update on error using correct field name
+      const originalRequest = (groupData.JoinRequest || groupData.join_request || []).find(req => req.id === requestId);
       if (originalRequest) {
         setJoinRequests(prev => [originalRequest, ...prev]);
       }
 
-      let errorMessage = "Failed to respond to join request";
-
-      if (error.message.includes('Only group admin can respond')) {
-        errorMessage = "Only group admin can respond to join requests";
-      } else if (error.message.includes('No request to respond to')) {
-        errorMessage = "This join request no longer exists";
-      } else if (error.message.includes('Connection not available')) {
-        errorMessage = "Connection error. Please try again.";
-      }
-
+      // Show appropriate error message
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to respond to join request",
         variant: "destructive"
       });
     } finally {
@@ -208,7 +239,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     }
   };
 
-  // Handle user invitations using WebSocket API
+  // Handle user invitations using exact backend format
   const handleInviteUser = async (userId) => {
     setInvitingUsers(prev => new Set([...prev, userId]));
 
@@ -226,18 +257,10 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     } catch (error) {
       console.error('Error inviting user:', error);
 
-      let errorMessage = "Failed to send invitation";
-      if (error.message.includes('Only group admin can send')) {
-        errorMessage = "Only group admin can send invitations";
-      } else if (error.message.includes('User is already a member')) {
-        errorMessage = "User is already a member of this group";
-      } else if (error.message.includes('Connection not available')) {
-        errorMessage = "Connection error. Please try again.";
-      }
-
+      // Show appropriate error message
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error.message || "Failed to send invitation",
         variant: "destructive"
       });
     } finally {
