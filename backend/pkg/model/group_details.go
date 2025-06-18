@@ -11,7 +11,8 @@ type GroupData struct {
 	Posts       []Post             `json:"group_post"`
 	Members     []Creator          `json:"members"`
 	Events      []Events           `json:"Events"`
-	JoinRequest []GroupJoinRequest `jsont:"join_request"`
+	JoinRequest []GroupJoinRequest `json:"join_request"`
+	UserJoinRequest *GroupJoinRequest `json:"user_join_request,omitempty"`
 }
 
 type Events struct {
@@ -36,6 +37,7 @@ type Groups struct {
 	MembersCount int       `json:"members_count"`
 	IsJoined     bool      `json:"is_joined"`
 	UserRole     string    `json:"user_role"`
+	UserJoinRequest *GroupJoinRequest `json:"user_join_request,omitempty"`
 }
 
 type GroupJoinRequest struct {

@@ -1,22 +1,14 @@
-// Optimized GroupDetail component - sidebar moved to global RightSidebar
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useGroup } from '@/context/GroupContext';
-import { groupService } from '@/services/groupService';
+import { webSocketOperations, wsManager, useWebSocketNotifications } from '@/utils/websocket';
+import groupService from '@/services/groupService';
 import { findGroupBySlug } from '@/lib/slugUtils';
-import PostForm from '@/components/post/PostForm';
-import PostCard from '@/components/post/PostCard';
-import EventForm from '@/components/group/EventForm';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from '@/hooks/use-toast';
-import { Users, Calendar, Settings, Info, UserPlus, Trash2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +17,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import EventForm from '@/components/group/EventForm';
+import GroupManagementDialog from '@/components/group/GroupManagementDialog';
+
+// Import our new components
+import GroupHeader from '@/components/group/GroupHeader';
+import GroupContent from '@/components/group/GroupContent';
+import NonMemberView from '@/components/group/NonMemberView';
+
+// Request states based on backend data
+const REQUEST_STATES = {
+  NOT_REQUESTED: 'not_requested',
+  PENDING: 'pending',
+  JOINED: 'joined'
+};
 
 const GroupDetail = () => {
   const router = useRouter();
@@ -41,12 +47,101 @@ const GroupDetail = () => {
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState({});
   const [isRefreshingEvents, setIsRefreshingEvents] = useState(false);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [requestState, setRequestState] = useState(REQUEST_STATES.NOT_REQUESTED);
+
+  // Enable WebSocket notifications for this component
+  useWebSocketNotifications();
 
   // Update both local state and global context
   const updateGroupData = (data) => {
     setLocalGroupData(data);
     setGroupData(data);
   };
+
+  // CORRECTED: Use backend's exact field name 'JoinRequest' and user_join_request
+  const determineRequestState = (groupData, currentUser) => {
+    if (groupData.is_joined) {
+      return REQUEST_STATES.JOINED;
+    }
+
+    // Prefer user_join_request if present
+    if (groupData.user_join_request) {
+      if (groupData.user_join_request.status === 'pending') {
+        return REQUEST_STATES.PENDING;
+      } else if (groupData.user_join_request.status === 'accepted') {
+        return REQUEST_STATES.JOINED;
+      } else if (groupData.user_join_request.status === 'declined') {
+        return REQUEST_STATES.NOT_REQUESTED;
+      }
+    }
+
+    // Fallback: Check JoinRequest array for pending request
+    if (groupData.JoinRequest && currentUser) {
+      const userRequest = groupData.JoinRequest.find(
+        request => request.user_id === currentUser.id && request.status === 'pending'
+      );
+      if (userRequest) {
+        return REQUEST_STATES.PENDING;
+      }
+    }
+
+    return REQUEST_STATES.NOT_REQUESTED;
+  };
+
+  // Listen for real-time group updates
+  useEffect(() => {
+    if (!groupData?.id) return;
+
+    const handleGroupNotificationUpdate = (event) => {
+      const { groupId, notification } = event.detail;
+
+      if (groupId === groupData.id && notification.type === 'membership_changed') {
+        const { status } = notification.data;
+
+        if (status === 'accepted') {
+          setRequestState(REQUEST_STATES.JOINED);
+          const updatedData = { ...groupData, is_joined: true };
+          updateGroupData(updatedData);
+        } else if (status === 'declined') {
+          setRequestState(REQUEST_STATES.NOT_REQUESTED);
+          const updatedData = { ...groupData, is_joined: false };
+          updateGroupData(updatedData);
+        }
+      }
+      // Handle real-time leave group
+      if (groupId === groupData.id && notification.type === 'group_left') {
+        if (notification.data.user_id === currentUser.id) {
+          setRequestState(REQUEST_STATES.NOT_REQUESTED);
+          const updatedData = { ...groupData, is_joined: false };
+          updateGroupData(updatedData);
+        }
+      }
+    };
+
+    window.addEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
+
+    return () => {
+      window.removeEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
+    };
+  }, [groupData?.id, currentUser?.id]);
+
+  // Listen for group management dialog open events
+  useEffect(() => {
+    const handleOpenGroupManagement = (event) => {
+      const { groupId } = event.detail;
+      if (groupId === groupData?.id && groupData?.user_role === 'admin') {
+        setIsManageDialogOpen(true);
+      }
+    };
+
+    window.addEventListener('openGroupManagement', handleOpenGroupManagement);
+
+    return () => {
+      window.removeEventListener('openGroupManagement', handleOpenGroupManagement);
+    };
+  }, [groupData?.id, groupData?.user_role]);
 
   // Full fetch for initial load
   const fetchGroupDetails = async () => {
@@ -83,6 +178,16 @@ const GroupDetail = () => {
         };
 
         updateGroupData(groupDataWithUser);
+
+        // Use backend data to determine request state
+        const newRequestState = determineRequestState(groupDataWithUser, currentUser);
+        setRequestState(newRequestState);
+
+        console.log('[GroupDetail] Request state determined from backend:', {
+          isJoined,
+          joinRequests: details.JoinRequest, // CORRECTED: Log correct field name
+          finalState: newRequestState
+        });
       } else {
         console.error('[GroupDetail] Group not found for slug:', groupSlug);
         toast({
@@ -128,10 +233,16 @@ const GroupDetail = () => {
         events: eventsWithRsvpStatus,
         group_post: Array.isArray(details.group_post) ? details.group_post : [],
         members: Array.isArray(details.members) ? details.members : [],
-        members_count: Array.isArray(details.members) ? details.members.length : 0
+        members_count: Array.isArray(details.members) ? details.members.length : 0,
+        JoinRequest: details.JoinRequest || [] // CORRECTED: Use correct field name
       };
 
       updateGroupData(updatedGroupData);
+
+      // Update request state based on new data
+      const newRequestState = determineRequestState(updatedGroupData, currentUser);
+      setRequestState(newRequestState);
+
     } catch (error) {
       console.error('[GroupDetail] Error refreshing events:', error);
       throw error;
@@ -164,6 +275,7 @@ const GroupDetail = () => {
     };
   }, []);
 
+  // Event handlers
   const handleEventCreated = async () => {
     setIsCreateEventOpen(false);
     toast({
@@ -187,32 +299,7 @@ const GroupDetail = () => {
     }
   };
 
-  if (authLoading || !currentUser) {
-    return (
-      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-social" />
-      </div>
-    );
-  }
-
-  if (isLoadingDetails || !groupData || !groupData.title) {
-    return (
-      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-social" />
-      </div>
-    );
-  }
-
-  const formatEventDate = (dateString, time) => {
-    const date = new Date(dateString);
-    const formattedDate = date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
-    return time ? `${formattedDate}, ${time}` : formattedDate;
-  };
-
+  // Use corrected WebSocket operations with proper error handling
   const handleJoinLeaveGroup = async (isCurrentlyJoined) => {
     if (!groupData.group_id) {
       toast({
@@ -223,34 +310,61 @@ const GroupDetail = () => {
       return;
     }
 
+    setIsRequesting(true);
+
     try {
       if (isCurrentlyJoined) {
-        const result = await groupService.leaveGroup(groupData.group_id);
+        // Optimistic update for better UX
+        setRequestState(REQUEST_STATES.NOT_REQUESTED);
+        const updatedData = { ...groupData, is_joined: false };
+        updateGroupData(updatedData);
+        // Leave group using corrected WebSocket operation
+        const result = await webSocketOperations.leaveGroup(groupData.group_id);
         if (result.success) {
-          const updatedData = { ...groupData, is_joined: false };
-          updateGroupData(updatedData);
           toast({
             title: "Success",
             description: "You have left the group successfully.",
           });
         }
       } else {
-        const result = await groupService.joinGroup(groupData.group_id);
+        // Optimistic update for better UX
+        setRequestState(REQUEST_STATES.PENDING);
+        // Do NOT set is_joined: true here!
+        // Only update is_joined when backend confirms acceptance
+
+        // Join group using corrected WebSocket operation
+        const result = await webSocketOperations.joinGroup(groupData.group_id);
         if (result.success) {
-          const updatedData = { ...groupData, is_joined: true };
-          updateGroupData(updatedData);
           toast({
-            title: "Success",
-            description: "You have joined the group successfully!",
+            title: "Request Sent",
+            description: "Your request to join has been sent to the group admin for approval!",
           });
         }
       }
     } catch (error) {
+      const actionText = isCurrentlyJoined ? 'leave' : 'request to join';
+
+      // Revert optimistic update on error
+      if (isCurrentlyJoined) {
+        setRequestState(REQUEST_STATES.JOINED);
+        const updatedData = { ...groupData, is_joined: true };
+        updateGroupData(updatedData);
+      } else {
+        // Only revert to NOT_REQUESTED or PENDING, never set is_joined: true
+        const currentState = determineRequestState(groupData, currentUser);
+        setRequestState(currentState);
+        const updatedData = { ...groupData, is_joined: false };
+        updateGroupData(updatedData);
+      }
+
+      // Use the exact error message from the corrected WebSocket operations
       toast({
         title: "Error",
-        description: error.message || `Failed to ${isCurrentlyJoined ? 'leave' : 'join'} group. Please try again.`,
+        description: error.message || `Failed to ${actionText} group. Please try again.`,
         variant: "destructive"
       });
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -342,231 +456,50 @@ const GroupDetail = () => {
     }
   };
 
+  // Loading states
+  if (authLoading || !currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-social" />
+      </div>
+    );
+  }
+
+  if (isLoadingDetails || !groupData || !groupData.title) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-social" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-full mx-auto">
-      {/* Group Header */}
-      <Card className="mb-6 overflow-hidden">
-        <div className="h-40 bg-gradient-to-r from-social/30 to-social-accent/30 relative">
-          {groupData.user_role === 'admin' && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-4 right-4"
-            >
-              <Settings className="h-4 w-4 mr-1" />
-              Edit Cover
-            </Button>
-          )}
-        </div>
-        <CardHeader className="relative pt-0">
-          <div className="absolute -top-12 left-6">
-            <Avatar className="h-24 w-24 border-4 border-white">
-              <AvatarFallback className="text-3xl bg-social text-white">
-                {groupData.title ? groupData.title.slice(0, 2).toUpperCase() : 'GR'}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <div className="ml-28 flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl">{groupData.title || 'Loading...'}</CardTitle>
-              <CardDescription>
-                {groupData.members_count || groupData.members?.length || 0} members ·
-                Created {groupData.created_at ? new Date(groupData.created_at).toLocaleDateString() : 'Unknown'}
-                {groupData.Creator && groupData.Creator.firstname && (
-                  <span> · by {groupData.Creator.firstname} {groupData.Creator.lastname}</span>
-                )}
-              </CardDescription>
-            </div>
+      {/* Group Header - Visible to all users */}
+      <GroupHeader
+        groupData={groupData}
+        requestState={requestState}
+        isRequesting={isRequesting}
+        onJoinLeave={handleJoinLeaveGroup}
+        onOpenManagement={() => setIsManageDialogOpen(true)}
+        onDeleteGroup={() => setIsDeleteDialogOpen(true)}
+      />
 
-            {groupData.user_role === 'admin' ? (
-              <div className="flex space-x-2">
-                <Button className="bg-social hover:bg-social-dark">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Manage Group
-                </Button>
-                <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Group
-                </Button>
-              </div>
-            ) : groupData.is_joined ? (
-              <Button variant="outline" onClick={() => handleJoinLeaveGroup(true)}>Leave Group</Button>
-            ) : (
-              <Button
-                className="bg-social hover:bg-social-dark"
-                onClick={() => handleJoinLeaveGroup(false)}
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Join Group
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600">{groupData.about || 'No description available.'}</p>
-        </CardContent>
-      </Card>
-
-      {/* Group Content - Full Width */}
-      <div className="w-full">
-        <Tabs defaultValue="posts" className="w-full mb-6">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="posts">Posts</TabsTrigger>
-            <TabsTrigger value="events">Events</TabsTrigger>
-            <TabsTrigger value="about">About</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="posts" className="mt-6">
-            {groupData.is_joined && (
-              <div className="mb-6">
-                <PostForm groupId={groupData.group_id} />
-              </div>
-            )}
-
-            {groupData.group_post && groupData.group_post.length > 0 ? (
-              <div className="space-y-6">
-                {groupData.group_post.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
-              </div>
-            ) : (
-              <Card className="p-8 text-center">
-                <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-                <p className="text-gray-500">
-                  Be the first to post in this group!
-                </p>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="events" className="mt-6">
-            {groupData.user_role === 'admin' && (
-              <div className="mb-6">
-                <Button
-                  className="w-full bg-social hover:bg-social-dark"
-                  onClick={() => setIsCreateEventOpen(true)}
-                  disabled={isRefreshingEvents}
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  {isRefreshingEvents ? "Updating..." : "Create Event"}
-                </Button>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {isRefreshingEvents && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-social mr-2" />
-                  <span className="text-sm text-gray-600">Updating events...</span>
-                </div>
-              )}
-
-              {groupData.Events && groupData.Events.length > 0 ? (
-                groupData.Events.map((event) => (
-                  <Card key={event.id} className="overflow-hidden">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{event.title}</CardTitle>
-                          <CardDescription>
-                            {formatEventDate(event.event_time, '')}
-                            {event.location && ` · ${event.location}`}
-                          </CardDescription>
-                        </div>
-                        <Button
-                          onClick={() => handleRSVP(event.id)}
-                          className={rsvpStatus[event.id] ? "bg-green-600 hover:bg-green-700" : "bg-social hover:bg-social-dark"}
-                        >
-                          {rsvpStatus[event.id] ? "Going" : "RSVP"}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600 mb-3">{event.description}</p>
-
-                      {event.location && (
-                        <div className="flex items-center text-sm text-gray-500 mb-2">
-                          <span className="font-medium mr-2">Location:</span>
-                          {event.location}
-                        </div>
-                      )}
-
-                      <div className="mt-3 flex items-center">
-                        <Badge variant="secondary" className="mr-2">
-                          {event.attendees ? event.attendees.length : 0}
-                          {(event.attendees ? event.attendees.length : 0) === 1 ? ' person' : ' people'} going
-                        </Badge>
-
-                        {rsvpStatus[event.id] && (
-                          <Badge variant="outline" className="bg-green-50">
-                            You're going
-                          </Badge>
-                        )}
-                      </div>
-                      {event.creator && event.creator.firstname && (
-                        <div className="flex items-center mt-2 text-sm text-gray-500">
-                          <span>Created by {event.creator.firstname} {event.creator.lastname}</span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <Card className="p-8 text-center">
-                  <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <h3 className="text-lg font-medium mb-1">No upcoming events</h3>
-                  <p className="text-gray-500">
-                    {groupData.user_role === 'admin' ? 'Create the first event for this group!' : 'There are no scheduled events for this group yet'}
-                  </p>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="about" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Info className="h-5 w-5 mr-2" />
-                  About this group
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  {groupData.about || 'No description available.'}
-                </p>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Created:</span>
-                    <p className="text-gray-600">{groupData.created_at ? new Date(groupData.created_at).toLocaleDateString() : 'Unknown'}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Members:</span>
-                    <p className="text-gray-600">{groupData.members_count || groupData.members?.length || 0}</p>
-                  </div>
-                  {groupData.Creator && groupData.Creator.firstname && (
-                    <div>
-                      <span className="font-medium">Creator:</span>
-                      <p className="text-gray-600">
-                        {groupData.Creator.firstname} {groupData.Creator.lastname}
-                        {groupData.Creator.nickname && ` (${groupData.Creator.nickname})`}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Group rules</h4>
-                  <ul className="list-disc list-inside text-gray-600 space-y-1">
-                    <li>Be kind and respectful to other members</li>
-                    <li>No spam or self-promotion</li>
-                    <li>Only share content relevant to the group's purpose</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+      {/* Group Content - Conditional based on membership */}
+      {groupData.is_joined ? (
+        <GroupContent
+          groupData={groupData}
+          rsvpStatus={rsvpStatus}
+          isRefreshingEvents={isRefreshingEvents}
+          onCreateEvent={() => setIsCreateEventOpen(true)}
+          onRSVP={handleRSVP}
+        />
+      ) : (
+        <NonMemberView
+          groupData={groupData}
+          requestState={requestState}
+        />
+      )}
 
       {/* Event Creation Dialog */}
       <Dialog open={isCreateEventOpen} onOpenChange={setIsCreateEventOpen}>
@@ -621,8 +554,17 @@ const GroupDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Group Management Dialog */}
+      <GroupManagementDialog
+        isOpen={isManageDialogOpen}
+        onClose={() => setIsManageDialogOpen(false)}
+        groupData={groupData}
+        onGroupUpdated={updateGroupData}
+      />
     </div>
   );
 };
 
 export default GroupDetail;
+
