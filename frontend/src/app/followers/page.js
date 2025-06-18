@@ -24,32 +24,33 @@ const Followers = () => {
   const [error, setError] = useState(null);
 
   // Redirect to login if not authenticated
+  const fetchUsers = async () => {
+    try {
+      const req = await fetch(`${API_BASE_URL}/api/users`, {
+        method: "get",
+        credentials: "include",
+      });
+      if (!req.ok) {
+        setError("Failed to load users");
+        return;
+      }
+
+      const data = await req.json();
+      setUsers(data.message);
+    } catch (err) {
+      setError("Failed to load users.");
+    } finally {
+      setTimeout(function () {
+        setLoading(false);
+      }, 5000);
+    }
+  };
+  
   useEffect(() => {
     if (!authLoading && !currentUser == null) {
       router.push("/login");
     }
 
-    const fetchUsers = async () => {
-      try {
-        const req = await fetch(`${API_BASE_URL}/api/users`, {
-          method: "get",
-          credentials: "include",
-        });
-        if (!req.ok) {
-          setError("Failed to load users");
-          return;
-        }
-
-        const data = await req.json();
-        setUsers(data.message);
-      } catch (err) {
-        setError("Failed to load users.");
-      } finally {
-        setTimeout(function () {
-          setLoading(false);
-        }, 5000);
-      }
-    };
     fetchUsers();
   }, [currentUser, router, getAllUsers]);
 
@@ -111,20 +112,20 @@ const Followers = () => {
   // Filter friends based on the active tab
   const filteredFriends = users.followers
     ? users.followers.filter((user) => {
-        // Example: Assuming each user has firstName and lastName
-        const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      // Example: Assuming each user has firstName and lastName
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 
-        // Check search query
-        if (searchQuery) {
-          if (!fullName.includes(searchQuery.toLowerCase())) return false;
-        }
+      // Check search query
+      if (searchQuery) {
+        if (!fullName.includes(searchQuery.toLowerCase())) return false;
+      }
 
-        // Apply tab-based filtering
-        if (activeTab === "all") return true;
-        if (activeTab === "requests" && user.status === "pending") return true;
-        if (activeTab === "suggestions") return false; // or customize as needed
-        return user.status === "accepted"; // default condition
-      })
+      // Apply tab-based filtering
+      if (activeTab === "all") return true;
+      if (activeTab === "requests" && user.status === "pending") return true;
+      if (activeTab === "suggestions") return false; // or customize as needed
+      return user.status === "accepted"; // default condition
+    })
     : [];
 
   return (
