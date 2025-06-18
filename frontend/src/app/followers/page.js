@@ -30,11 +30,11 @@ const Followers = () => {
 
     const fetchUsers = async () => {
       try {
-        const req = await fetch(`${API_BASE_URL}/api/users`,{
-          method:'get',
-          credentials:'include'
+        const req = await fetch(`${API_BASE_URL}/api/users`, {
+          method: 'get',
+          credentials: 'include'
         });
-        if (!req.ok){
+        if (!req.ok) {
           setError("Failed to load users");
           return
         }
@@ -102,14 +102,13 @@ const Followers = () => {
   ];
 
   // Mock suggestions based on users
-  const userSuggestions = users
-    ? users
-        .filter(
-          (user) =>
-            user.id !== currentUser.id &&
-            !mockFriends.find((f) => f.id === user.id),
-        )
-        .slice(0, 5)
+  const userSuggestions = users.non_mutual
+    ? users['non_mutual']
+      .filter(
+        (user) =>
+          user.id !== currentUser.id,
+      )
+      .slice(0, 5)
     : [];
 
   // Handle accepting a friend request
@@ -137,17 +136,23 @@ const Followers = () => {
   };
 
   // Filter friends based on the active tab
-  const filteredFriends = mockFriends.filter((friend) => {
-    if (searchQuery) {
-      const fullName = `${friend.firstName} ${friend.lastName}`.toLowerCase();
-      if (!fullName.includes(searchQuery.toLowerCase())) return false;
-    }
+  const filteredFriends = users.followers
+    ? users.followers.filter((user) => {
+      // Example: Assuming each user has firstName and lastName
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 
-    if (activeTab === "all") return true;
-    if (activeTab === "requests" && friend.status === "pending") return true;
-    if (activeTab === "suggestions") return false;
-    return friend.status === "accepted";
-  });
+      // Check search query
+      if (searchQuery) {
+        if (!fullName.includes(searchQuery.toLowerCase())) return false;
+      }
+
+      // Apply tab-based filtering
+      if (activeTab === "all") return true;
+      if (activeTab === "requests" && user.status === "pending") return true;
+      if (activeTab === "suggestions") return false; // or customize as needed
+      return user.status === "accepted"; // default condition
+    })
+    : [];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -189,13 +194,13 @@ const Followers = () => {
                       <Avatar className="h-12 w-12 mr-4">
                         <AvatarImage src={friend.avatar} />
                         <AvatarFallback>
-                          {friend.firstName[0]}
-                          {friend.lastName[0]}
+                          {friend.firstname[0]}
+                          {friend.lastname[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-medium">
-                          {friend.firstName} {friend.lastName}
+                          {friend.firstname} {friend.lastname}
                         </h3>
                         {friend.mutual > 0 && (
                           <p className="text-sm text-gray-500">
@@ -251,9 +256,8 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="requests" className="space-y-4">
-              {mockFriends.filter((f) => f.status === "pending").length > 0 ? (
-                mockFriends
-                  .filter((f) => f.status === "pending")
+              {users.received_request ? (
+                users.received_request
                   .map((friend) => (
                     <div
                       key={friend.id}
@@ -263,13 +267,13 @@ const Followers = () => {
                         <Avatar className="h-12 w-12 mr-4">
                           <AvatarImage src={friend.avatar} />
                           <AvatarFallback>
-                            {friend.firstName[0]}
-                            {friend.lastName[0]}
+                            {friend.firstname[0]}
+                           
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h3 className="font-medium">
-                            {friend.firstName} {friend.lastName}
+                            {friend.firstname} 
                           </h3>
                           {friend.mutual > 0 && (
                             <p className="text-sm text-gray-500">
@@ -311,8 +315,8 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="suggestions" className="space-y-4">
-              {userSuggestions.length > 0 ? (
-                userSuggestions.map((user) => (
+              {users.non_mutual !== null ? (
+                users.non_mutual.map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
@@ -321,13 +325,12 @@ const Followers = () => {
                       <Avatar className="h-12 w-12 mr-4">
                         <AvatarImage src={user.avatar} />
                         <AvatarFallback>
-                          {user.firstName[0]}
-                          {user.lastName[0]}
+                          {user.firstname[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-medium">
-                          {user.firstName} {user.lastName}
+                        {user.firstname} {user.lastname}
                         </h3>
                         <p className="text-sm text-gray-500">
                           Suggested for you
@@ -359,11 +362,10 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="sent" className="space-y-4">
-              {mockFriends.filter((f) => f.status === "requested").length >
-              0 ? (
-                mockFriends
-                  .filter((f) => f.status === "requested")
-                  .map((friend) => (
+              {users.sent_request !== null
+                 ? (
+                users.sent_request
+                            .map((friend) => (
                     <div
                       key={friend.id}
                       className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
@@ -372,13 +374,13 @@ const Followers = () => {
                         <Avatar className="h-12 w-12 mr-4">
                           <AvatarImage src={friend.avatar} />
                           <AvatarFallback>
-                            {friend.firstName[0]}
-                            {friend.lastName[0]}
+                            {friend.firstname[0]}
+                            {friend.lastname[0]}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h3 className="font-medium">
-                            {friend.firstName} {friend.lastName}
+                            {friend.firstname} {friend.lastname}
                           </h3>
                           <p className="text-sm text-gray-500">Request sent</p>
                         </div>
