@@ -66,51 +66,7 @@ const Followers = () => {
     return null;
   }
 
-  // Mock friends data
-  const mockFriends = [
-    {
-      id: "101",
-      firstName: "John",
-      lastName: "Doe",
-      avatar: null,
-      status: "accepted", // 'accepted', 'pending', 'requested'
-      mutual: 5,
-    },
-    {
-      id: "102",
-      firstName: "Jane",
-      lastName: "Smith",
-      avatar: null,
-      status: "accepted",
-      mutual: 3,
-    },
-    {
-      id: "103",
-      firstName: "Mike",
-      lastName: "Johnson",
-      avatar: null,
-      status: "pending",
-      mutual: 2,
-    },
-    {
-      id: "104",
-      firstName: "Sarah",
-      lastName: "Wilson",
-      avatar: null,
-      status: "requested",
-      mutual: 1,
-    },
-  ];
 
-  // Mock suggestions based on users
-  const userSuggestions = users.non_mutual
-    ? users['non_mutual']
-      .filter(
-        (user) =>
-          user.id !== currentUser.id,
-      )
-      .slice(0, 5)
-    : [];
 
   // Handle accepting a friend request
   const handleAcceptFriend = async (friendId) => {
@@ -322,8 +278,8 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="suggestions" className="space-y-4">
-              {users.non_mutual !== null ? (
-                users.non_mutual.map((user) => (
+              {users.non_mutual != null ? (
+                users['non_mutual'].map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
@@ -369,7 +325,7 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="sent" className="space-y-4">
-              {users.sent_request !== null
+              {users.sent_request != null
                 ? (
                   users.sent_request
                     .map((friend) => (
