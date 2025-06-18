@@ -82,6 +82,7 @@ const PostCard = ({ post }) => {
   const author = normalizedPost.author;
   const isAuthor = currentUser && currentUser.id === author.id;
   const [hasLiked, setHasLiked] = useState(post.user_liked || false);
+  const [likeCount, setLikeCount] = useState(normalizedPost.likesCount);
 
   // Author data access with fallbacks from backend format
   const firstName = author.first_name || author.firstName || 'Unknown';
@@ -97,6 +98,7 @@ const PostCard = ({ post }) => {
         const success = await toggleLike(normalizedPost.id, !hasLiked);
         if (success) {
           setHasLiked(!hasLiked);
+          setLikeCount(prevCount => hasLiked ? prevCount - 1 : prevCount + 1);
           console.log('Toggle successful, state should update');
         } else {
           console.log('Toggle failed');
@@ -172,6 +174,16 @@ const PostCard = ({ post }) => {
         })}
       </div>
     );
+  };
+
+  const formatCount = (count) => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    } else {
+      return count;
+    }
   };
 
   return (
@@ -275,14 +287,12 @@ const PostCard = ({ post }) => {
           )}
 
           <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-            <div>
-              {normalizedPost.likesCount > 0 ?
-                `${normalizedPost.likesCount} ${normalizedPost.likesCount === 1 ? 'like' : 'likes'}` : ''}
-            </div>
-            <div>
-              {normalizedPost.commentsCount > 0 ?
-                `${normalizedPost.commentsCount} ${normalizedPost.commentsCount === 1 ? 'comment' : 'comments'}` : ''}
-            </div>
+            {normalizedPost.commentsCount > 0 && (
+              <div className="flex items-center">
+                <MessageSquare size={16} className="text-blue-500 mr-1" />
+                <span>{formatCount(normalizedPost.commentsCount)}</span>
+              </div>
+            )}
           </div>
         </CardContent>
 
@@ -294,7 +304,7 @@ const PostCard = ({ post }) => {
               onClick={handleLike}
             >
               <Heart className={`mr-1 h-5 w-5 ${hasLiked ? 'fill-green-500' : ''}`} />
-              Like
+              <span className="ml-1 text-sm">{formatCount(likeCount)}</span>
             </Button>
             <Button
               variant="ghost"
@@ -302,11 +312,10 @@ const PostCard = ({ post }) => {
               onClick={() => setShowComments(!showComments)}
             >
               <MessageSquare className="mr-1 h-5 w-5" />
-              Comment
+              <span className="ml-1 text-sm">{formatCount(normalizedPost.commentsCount)}</span>
             </Button>
             <Button variant="ghost" className="flex items-center justify-center">
               <Share2 className="mr-1 h-5 w-5" />
-              Share
             </Button>
           </div>
         </div>
