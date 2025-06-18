@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Search, UserPlus, UserCheck, UserX } from "lucide-react";
 import { FadeLoader } from "react-spinners";
+import { webSocketOperations } from "@/utils/websocket";
 
 const Followers = () => {
   const router = useRouter();
@@ -112,11 +113,14 @@ const Followers = () => {
     : [];
 
   // Handle accepting a friend request
-  const handleAcceptFriend = (friendId) => {
-    toast({
-      title: "Request accepted",
-      description: "You are now friends!",
-    });
+  const handleAcceptFriend = async (friendId) => {
+    const res = await webSocketOperations.respondToFollowRequest(friendId,"accepted");
+    if (res.success) {
+      toast({
+        title: "Request accepted",
+        description: "You are now friends!",
+      });
+    }
   };
 
   // Handle rejecting a friend request
@@ -129,10 +133,13 @@ const Followers = () => {
 
   // Handle sending a friend request
   const handleAddFriend = (friendId) => {
-    toast({
-      title: "Friend request sent",
-      description: "Your friend request has been sent.",
-    });
+    const result = webSocketOperations.sendFollowRequest(friendId)
+    if (result.success) {
+      toast({
+        title: "Friend request sent",
+        description: "Your friend request has been sent.",
+      });
+    }
   };
 
   // Filter friends based on the active tab
@@ -268,12 +275,12 @@ const Followers = () => {
                           <AvatarImage src={friend.avatar} />
                           <AvatarFallback>
                             {friend.firstname[0]}
-                           
+
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <h3 className="font-medium">
-                            {friend.firstname} 
+                            {friend.firstname}
                           </h3>
                           {friend.mutual > 0 && (
                             <p className="text-sm text-gray-500">
@@ -330,7 +337,7 @@ const Followers = () => {
                       </Avatar>
                       <div>
                         <h3 className="font-medium">
-                        {user.firstname} {user.lastname}
+                          {user.firstname} {user.lastname}
                         </h3>
                         <p className="text-sm text-gray-500">
                           Suggested for you
@@ -363,43 +370,43 @@ const Followers = () => {
 
             <TabsContent value="sent" className="space-y-4">
               {users.sent_request !== null
-                 ? (
-                users.sent_request
-                            .map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                    >
-                      <div className="flex items-center">
-                        <Avatar className="h-12 w-12 mr-4">
-                          <AvatarImage src={friend.avatar} />
-                          <AvatarFallback>
-                            {friend.firstname[0]}
-                            {friend.lastname[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">
-                            {friend.firstname} {friend.lastname}
-                          </h3>
-                          <p className="text-sm text-gray-500">Request sent</p>
+                ? (
+                  users.sent_request
+                    .map((friend) => (
+                      <div
+                        key={friend.id}
+                        className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                      >
+                        <div className="flex items-center">
+                          <Avatar className="h-12 w-12 mr-4">
+                            <AvatarImage src={friend.avatar} />
+                            <AvatarFallback>
+                              {friend.firstname[0]}
+                              {friend.lastname[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <h3 className="font-medium">
+                              {friend.firstname} {friend.lastname}
+                            </h3>
+                            <p className="text-sm text-gray-500">Request sent</p>
+                          </div>
                         </div>
-                      </div>
 
-                      <Button variant="outline" size="sm">
-                        Cancel Request
-                      </Button>
-                    </div>
-                  ))
-              ) : (
-                <div className="text-center py-10">
-                  <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No sent requests</h3>
-                  <p className="text-gray-500 mt-1">
-                    You haven't sent any friend requests yet
-                  </p>
-                </div>
-              )}
+                        <Button variant="outline" size="sm">
+                          Cancel Request
+                        </Button>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center py-10">
+                    <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-lg font-medium">No sent requests</h3>
+                    <p className="text-gray-500 mt-1">
+                      You haven't sent any friend requests yet
+                    </p>
+                  </div>
+                )}
             </TabsContent>
           </Tabs>
         </CardContent>
