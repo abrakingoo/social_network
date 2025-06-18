@@ -45,7 +45,7 @@ const Followers = () => {
       }, 5000);
     }
   };
-  
+
   useEffect(() => {
     if (!authLoading && !currentUser == null) {
       router.push("/login");
@@ -74,6 +74,8 @@ const Followers = () => {
       "accepted",
     );
     if (res.success) {
+      setUsers([]);
+      fetchUsers();
       toast({
         title: "Request accepted",
         description: "You are now friends!",
@@ -83,6 +85,8 @@ const Followers = () => {
 
   // Handle rejecting a friend request
   const handleRejectFriend = (friendId) => {
+    setUsers([]);
+    fetchUsers([]);
     toast({
       title: "Follow request rejected",
       description: "The follow request has been rejected.",
@@ -92,17 +96,19 @@ const Followers = () => {
   // Handle sending a friend request
   const handleAddFriend = (friendId) => {
     const result = webSocketOperations.sendFollowRequest(friendId);
-    if (result.success) {
-      toast({
-        title: "Friend request sent",
-        description: "Your friend request has been sent.",
-      });
-    }
+    setUsers([]);
+    fetchUsers([]);
+    toast({
+      title: "Friend request sent",
+      description: "Your friend request has been sent.",
+    });
+
   };
 
   const handleCancelFollowRequest = (followerId) => {
     const result = webSocketOperations.cancelFollowRequest(followerId);
-
+    setUsers([]);
+    fetchUsers([]);
     toast({
       title: "Success",
       description: "The follow request has been cancelled sucessfully.",
