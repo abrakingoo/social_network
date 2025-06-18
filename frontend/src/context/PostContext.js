@@ -186,26 +186,55 @@ export const PostProvider = ({ children }) => {
   }, [currentUser, posts]);
 
   // Like/Unlike post
-  const toggleLike = useCallback((postId) => {
+  const toggleLike = useCallback(async (postId, shouldLike) => {
     if (!currentUser) {
       toast.error("You must be logged in to like posts");
+      console.log("Toggle failed: User not logged in");
       return false;
     }
 
-    setPosts(prevPosts =>
-      prevPosts.map(post => {
-        if (post.id === postId) {
-          const userLiked = post.likes.includes(currentUser.id);
-          const updatedLikes = userLiked
-            ? post.likes.filter(id => id !== currentUser.id)
-            : [...post.likes, currentUser.id];
+    try {
+      console.log(`Attempting to ${shouldLike ? 'like' : 'unlike'} post ${postId}`);
+      console.log("API URL:", `${API_BASE_URL}/api/likePost`);
+      console.log("Method:", 'POST');
 
-          return { ...post, likes: updatedLikes };
-        }
-        return post;
-      })
-    );
-    return true;
+      const response = await fetch(`${API_BASE_URL}/api/likePost`, {
+        method: 'POST',
+        credentials: "include",
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          post_id: postId,
+          is_like: shouldLike
+        })
+      });
+
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${shouldLike ? 'like' : 'unlike'} post: ${response.status}`);
+      }
+
+      const updatedData = await response.json();
+      console.log("Updated data from server:", updatedData);
+
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return { ...post, user_liked: shouldLike, likes_count: updatedData.likes_count };
+          }
+          return post;
+        })
+      );
+      return true;
+    } catch (error) {
+      console.error(`Error ${shouldLike ? 'liking' : 'unliking'} post:`, error);
+      toast.error(`Failed to ${shouldLike ? 'like' : 'unlike'} post`);
+      console.log("Toggle failed due to error");
+      return false;
+    }
   }, [currentUser]);
 
   // Add comment to post
