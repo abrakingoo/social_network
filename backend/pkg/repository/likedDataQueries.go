@@ -112,7 +112,7 @@ func (q *Query) PostIdsFromCommentsId(commentsid []string) ([]string, error) {
 	query := `
 	SELECT DISTINCT post_id
 	FROM comments 
-	WHERE comment_id IN (` + placeholders + `)`
+	WHERE id IN (` + placeholders + `)`
 
 	// Convert postIDs ([]string) to []interface{} for Query
 	args := make([]interface{}, len(commentsid))
