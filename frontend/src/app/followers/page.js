@@ -32,15 +32,15 @@ const Followers = () => {
     const fetchUsers = async () => {
       try {
         const req = await fetch(`${API_BASE_URL}/api/users`, {
-          method: 'get',
-          credentials: 'include'
+          method: "get",
+          credentials: "include",
         });
         if (!req.ok) {
           setError("Failed to load users");
-          return
+          return;
         }
 
-        const data = await req.json()
+        const data = await req.json();
         setUsers(data.message);
       } catch (err) {
         setError("Failed to load users.");
@@ -66,11 +66,12 @@ const Followers = () => {
     return null;
   }
 
-
-
   // Handle accepting a friend request
   const handleAcceptFriend = async (friendId) => {
-    const res = await webSocketOperations.respondToFollowRequest(friendId,"accepted");
+    const res = await webSocketOperations.respondToFollowRequest(
+      friendId,
+      "accepted",
+    );
     if (res.success) {
       toast({
         title: "Request accepted",
@@ -82,14 +83,14 @@ const Followers = () => {
   // Handle rejecting a friend request
   const handleRejectFriend = (friendId) => {
     toast({
-      title: "Friend request rejected",
-      description: "The friend request has been rejected.",
+      title: "Follow request rejected",
+      description: "The follow request has been rejected.",
     });
   };
 
   // Handle sending a friend request
   const handleAddFriend = (friendId) => {
-    const result = webSocketOperations.sendFollowRequest(friendId)
+    const result = webSocketOperations.sendFollowRequest(friendId);
     if (result.success) {
       toast({
         title: "Friend request sent",
@@ -98,23 +99,32 @@ const Followers = () => {
     }
   };
 
+  const handleCancelFollowRequest = (followerId) => {
+    const result = webSocketOperations.cancelFollowRequest(followerId);
+
+    toast({
+      title: "Success",
+      description: "The follow request has been cancelled sucessfully.",
+    });
+  };
+
   // Filter friends based on the active tab
   const filteredFriends = users.followers
     ? users.followers.filter((user) => {
-      // Example: Assuming each user has firstName and lastName
-      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+        // Example: Assuming each user has firstName and lastName
+        const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 
-      // Check search query
-      if (searchQuery) {
-        if (!fullName.includes(searchQuery.toLowerCase())) return false;
-      }
+        // Check search query
+        if (searchQuery) {
+          if (!fullName.includes(searchQuery.toLowerCase())) return false;
+        }
 
-      // Apply tab-based filtering
-      if (activeTab === "all") return true;
-      if (activeTab === "requests" && user.status === "pending") return true;
-      if (activeTab === "suggestions") return false; // or customize as needed
-      return user.status === "accepted"; // default condition
-    })
+        // Apply tab-based filtering
+        if (activeTab === "all") return true;
+        if (activeTab === "requests" && user.status === "pending") return true;
+        if (activeTab === "suggestions") return false; // or customize as needed
+        return user.status === "accepted"; // default condition
+      })
     : [];
 
   return (
@@ -220,52 +230,46 @@ const Followers = () => {
 
             <TabsContent value="requests" className="space-y-4">
               {users.received_request ? (
-                users.received_request
-                  .map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                    >
-                      <div className="flex items-center">
-                        <Avatar className="h-12 w-12 mr-4">
-                          <AvatarImage src={friend.avatar} />
-                          <AvatarFallback>
-                            {friend.firstname[0]}
-
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">
-                            {friend.firstname}
-                          </h3>
-                          {friend.mutual > 0 && (
-                            <p className="text-sm text-gray-500">
-                              {friend.mutual} mutual friends
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={() => handleAcceptFriend(friend.id)}
-                          className="bg-social hover:bg-social-dark"
-                          size="sm"
-                        >
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          Accept
-                        </Button>
-                        <Button
-                          onClick={() => handleRejectFriend(friend.id)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <UserX className="h-4 w-4 mr-1" />
-                          Decline
-                        </Button>
+                users.received_request.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-center">
+                      <Avatar className="h-12 w-12 mr-4">
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>{friend.firstname[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">{friend.firstname}</h3>
+                        {friend.mutual > 0 && (
+                          <p className="text-sm text-gray-500">
+                            {friend.mutual} mutual friends
+                          </p>
+                        )}
                       </div>
                     </div>
-                  ))
+
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => handleAcceptFriend(friend.id)}
+                        className="bg-social hover:bg-social-dark"
+                        size="sm"
+                      >
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectFriend(friend.id)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <UserX className="h-4 w-4 mr-1" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-10">
                   <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -279,7 +283,7 @@ const Followers = () => {
 
             <TabsContent value="suggestions" className="space-y-4">
               {users.non_mutual != null ? (
-                users['non_mutual'].map((user) => (
+                users["non_mutual"].map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
@@ -287,9 +291,7 @@ const Followers = () => {
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
                         <AvatarImage src={user.avatar} />
-                        <AvatarFallback>
-                          {user.firstname[0]}
-                        </AvatarFallback>
+                        <AvatarFallback>{user.firstname[0]}</AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-medium">
@@ -325,44 +327,46 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="sent" className="space-y-4">
-              {users.sent_request != null
-                ? (
-                  users.sent_request
-                    .map((friend) => (
-                      <div
-                        key={friend.id}
-                        className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                      >
-                        <div className="flex items-center">
-                          <Avatar className="h-12 w-12 mr-4">
-                            <AvatarImage src={friend.avatar} />
-                            <AvatarFallback>
-                              {friend.firstname[0]}
-                              {friend.lastname[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium">
-                              {friend.firstname} {friend.lastname}
-                            </h3>
-                            <p className="text-sm text-gray-500">Request sent</p>
-                          </div>
-                        </div>
-
-                        <Button variant="outline" size="sm">
-                          Cancel Request
-                        </Button>
+              {users.sent_request != null ? (
+                users.sent_request.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-center">
+                      <Avatar className="h-12 w-12 mr-4">
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>
+                          {friend.firstname[0]}
+                          {friend.lastname[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">
+                          {friend.firstname} {friend.lastname}
+                        </h3>
+                        <p className="text-sm text-gray-500">Request sent</p>
                       </div>
-                    ))
-                ) : (
-                  <div className="text-center py-10">
-                    <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="text-lg font-medium">No sent requests</h3>
-                    <p className="text-gray-500 mt-1">
-                      You haven't sent any friend requests yet
-                    </p>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelFollowRequest(friend.id)}
+                    >
+                      Cancel Request
+                    </Button>
                   </div>
-                )}
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium">No sent requests</h3>
+                  <p className="text-gray-500 mt-1">
+                    You haven't sent any friend requests yet
+                  </p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
