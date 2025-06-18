@@ -81,8 +81,7 @@ const PostCard = ({ post }) => {
 
   const author = normalizedPost.author;
   const isAuthor = currentUser && currentUser.id === author.id;
-  // Likes handling will need to be updated once backend supports it
-  const hasLiked = false;
+  const [hasLiked, setHasLiked] = useState(post.user_liked || false);
 
   // Author data access with fallbacks from backend format
   const firstName = author.first_name || author.firstName || 'Unknown';
@@ -91,9 +90,20 @@ const PostCard = ({ post }) => {
 
   const formattedDate = formatDistanceToNow(new Date(normalizedPost.createdAt), { addSuffix: true });
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (typeof toggleLike === 'function') {
-      toggleLike(normalizedPost.id);
+      console.log('Before toggle - hasLiked:', hasLiked);
+      try {
+        const success = await toggleLike(normalizedPost.id, !hasLiked);
+        if (success) {
+          setHasLiked(!hasLiked);
+          console.log('Toggle successful, state should update');
+        } else {
+          console.log('Toggle failed');
+        }
+      } catch (error) {
+        console.error('Error toggling like:', error);
+      }
     }
   };
 
@@ -280,10 +290,10 @@ const PostCard = ({ post }) => {
           <div className="grid grid-cols-3 gap-1 py-1">
             <Button
               variant="ghost"
-              className={`flex items-center justify-center ${hasLiked ? 'text-red-500' : ''}`}
+              className={`flex items-center justify-center ${hasLiked ? 'text-green-500' : ''}`}
               onClick={handleLike}
             >
-              <Heart className={`mr-1 h-5 w-5 ${hasLiked ? 'fill-current' : ''}`} />
+              <Heart className={`mr-1 h-5 w-5 ${hasLiked ? 'fill-green-500' : ''}`} />
               Like
             </Button>
             <Button
