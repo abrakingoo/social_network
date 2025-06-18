@@ -127,7 +127,8 @@ const Followers = () => {
       }
 
       // Apply tab-based filtering
-      if (activeTab === "all") return true;
+      if (activeTab === "followers") return true;
+      if (activeTab === "following") return true;
       if (activeTab === "requests" && user.status === "pending") return true;
       if (activeTab === "suggestions") return false; // or customize as needed
       return user.status === "accepted"; // default condition
@@ -152,18 +153,19 @@ const Followers = () => {
           </div>
 
           <Tabs
-            defaultValue="all"
+            defaultValue="followers"
             value={activeTab}
             onValueChange={setActiveTab}
           >
-            <TabsList className="grid grid-cols-4 w-full mb-6">
-              <TabsTrigger value="all">All Followers</TabsTrigger>
+            <TabsList className="grid grid-cols-5 w-full mb-6">
+              <TabsTrigger value="followers">Followers</TabsTrigger>
+              <TabsTrigger value="following">Following</TabsTrigger>
               <TabsTrigger value="requests">Requests</TabsTrigger>
               <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
               <TabsTrigger value="sent">Sent Requests</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4">
+            <TabsContent value="followers" className="space-y-4">
               {filteredFriends.length > 0 ? (
                 filteredFriends.map((friend) => (
                   <div
@@ -225,10 +227,84 @@ const Followers = () => {
               ) : (
                 <div className="text-center py-10">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No friends found</h3>
+                  <h3 className="text-lg font-medium">No followers found</h3>
                   <p className="text-gray-500 mt-1">
                     {searchQuery
                       ? `No follower matching "${searchQuery}"`
+                      : "You don't have any followers yet"}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+
+            {/* Following */}
+            <TabsContent value="following" className="space-y-4">
+              {users.following != null? (
+                users.following.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-center">
+                      <Avatar className="h-12 w-12 mr-4">
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>
+                          {friend.firstname[0]}
+                          {friend.lastname[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">
+                          {friend.firstname} {friend.lastname}
+                        </h3>
+                        {friend.mutual > 0 && (
+                          <p className="text-sm text-gray-500">
+                            {friend.mutual} mutual friends
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      {friend.status === "pending" ? (
+                        <>
+                          <Button
+                            onClick={() => handleAcceptFriend(friend.id)}
+                            className="bg-social hover:bg-social-dark"
+                            size="sm"
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            onClick={() => handleRejectFriend(friend.id)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <UserX className="h-4 w-4 mr-1" />
+                            Decline
+                          </Button>
+                        </>
+                      ) : friend.status === "requested" ? (
+                        <Button variant="outline" size="sm">
+                          Requested
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm">
+                          Message
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium">No following found</h3>
+                  <p className="text-gray-500 mt-1">
+                    {searchQuery
+                      ? `No following matching "${searchQuery}"`
                       : "You don't have any followers yet"}
                   </p>
                 </div>
