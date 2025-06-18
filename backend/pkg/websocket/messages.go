@@ -18,7 +18,7 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 		case "unfollow":
 			c.Unfollow(msg, q)
 		case "exit_group":
-			c.ExitGroup(msg, q)
+			c.ExitGroup(msg, q, h)
 		case "group_invitation":
 			c.SendInvitation(msg, q, h)
 		case "respond_group_invitation":
@@ -26,7 +26,7 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 		case "group_join_request":
 			c.GroupJoinRequest(msg, q, h)
 		case "respond_group_join_request":
-			c.RespondGroupJoinRequest(msg, q)
+			c.RespondGroupJoinRequest(msg, q, h)
 		case "cancel_follow_request":
 			c.CancelFollowRequest(msg, q)
 		case "private_message":

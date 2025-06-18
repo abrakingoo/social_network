@@ -1,14 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { wsManager } from "@/utils/websocket";
 
-// Create context
 const AuthContext = createContext();
 
-// API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost";
 
-// Custom error class for authentication
 class AuthError extends Error {
   constructor(message, type = "general", field = null, status = null) {
     super(message);
@@ -22,8 +20,24 @@ class AuthError extends Error {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const initializationRef = useRef(false);
 
-  // Function to check if user is authenticated
+  //  Centralized WebSocket management - called only when user state changes
+  const manageWebSocket = (user) => {
+    if (user && !wsManager.isConnected()) {
+      // User authenticated and WebSocket not connected
+      console.log("AuthContext: Initializing WebSocket for authenticated user");
+      wsManager.setAuthState(true);
+      const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/api/ws';
+      wsManager.connect(wsUrl);
+    } else if (!user && wsManager.isConnected()) {
+      // User not authenticated and WebSocket is connected
+      console.log("AuthContext: Cleaning up WebSocket connection");
+      wsManager.setAuthState(false);
+    }
+  };
+
+  //  Bulletproof checkAuth with guaranteed loading state management
   const checkAuth = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/profile`, {
@@ -42,38 +56,49 @@ export const AuthProvider = ({ children }) => {
           data.data ||
           data.message ||
           data;
+
         if (
           typeof userObject === "object" &&
           userObject !== null &&
           Object.keys(userObject).length > 0
         ) {
           setCurrentUser(userObject);
-        } else {
-          // If after all checks, userObject is not a valid object or is empty, log an error and set to null
-          console.error(
-            "AuthContext: Failed to extract a valid user object from /api/profile response or user object is empty. Response data:",
-            data,
-          );
-          setCurrentUser(null);
+          manageWebSocket(userObject); //  Single WebSocket management point
+          return userObject;
         }
-      } else {
-        setCurrentUser(null);
       }
-    } catch (error) {
+
       setCurrentUser(null);
+      manageWebSocket(null); //  Single WebSocket management point
+      return null;
+    } catch (error) {
+      console.error("AuthContext: Error checking authentication:", error);
+      setCurrentUser(null);
+      manageWebSocket(null); //  Single WebSocket management point
+      return null;
     } finally {
+      // CRITICAL FIX: ALWAYS set loading to false, no matter what happens
       setLoading(false);
     }
   };
 
-  // Check authentication status when component mounts
+  //  Initialization with StrictMode protection - WebSocket managed by checkAuth
   useEffect(() => {
-    checkAuth();
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
+    const initializeAuth = async () => {
+      await checkAuth(); // This handles both user state AND WebSocket management
+    };
+
+    initializeAuth();
   }, []);
 
-  // Login function with structured error handling
+  //  Login with single WebSocket initialization point
   const login = async (email, password, rememberMe) => {
     try {
+      setLoading(true); // CRITICAL: Set loading true at start
+
       const credentials = btoa(`${email}:${password}`);
 
       const response = await fetch(`${API_BASE_URL}/api/login`, {
@@ -121,9 +146,14 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      await checkAuth();
+      // CRITICAL FIX: checkAuth handles BOTH user state AND WebSocket - no duplication
+      await checkAuth(); // This will set loading to false AND manage WebSocket properly
+
       return true;
     } catch (error) {
+      // CRITICAL FIX: ALWAYS set loading to false on error
+      setLoading(false);
+
       if (error instanceof AuthError) {
         throw error;
       } else {
@@ -136,20 +166,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  //  Logout with proper cleanup
   const logout = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/logout`, {
+      // Immediate cleanup
+      setCurrentUser(null);
+      setLoading(false);
+      manageWebSocket(null); //  Single WebSocket management point
+
+      // Then call API
+      await fetch(`${API_BASE_URL}/api/logout`, {
         method: "POST",
         credentials: "include",
         headers: {
           Accept: "application/json",
         },
       });
-
-      if (response.ok) {
-        setCurrentUser(null);
-      }
     } catch (error) {
       console.error("Logout error:", error);
     }

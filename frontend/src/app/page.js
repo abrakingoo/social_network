@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, Suspense, lazy, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { usePosts } from "@/context/PostContext";
 import Loading from "@/components/ui/loading";
-import { redirect } from "next/navigation";
 
 // Lazy load components that aren't needed immediately
 const PostForm = lazy(() => import("@/components/post/PostForm"));
@@ -12,6 +12,7 @@ const PostCard = lazy(() => import("@/components/post/PostCard"));
 
 // Extracting the content into a separate component for Suspense
 const HomeContent = () => {
+  const router = useRouter();
   const { currentUser, loading } = useAuth();
   const { posts, getFilteredPosts } = usePosts();
   const [isMobile, setIsMobile] = useState(false);
@@ -23,16 +24,19 @@ const HomeContent = () => {
     };
 
     checkIfMobile();
-
     window.addEventListener("resize", checkIfMobile);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener("resize", checkIfMobile);
-    };
+    return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
-  // Show loading state when checking authentication
+  // FIXED: Proper authentication redirect with correct order
+  useEffect(() => {
+    // Only redirect after loading is complete and user is not authenticated
+    if (!loading && !currentUser) {
+      router.push("/login");
+    }
+  }, [loading, currentUser, router]);
+
+  // FIXED: Show loading state when checking authentication
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -41,11 +45,14 @@ const HomeContent = () => {
     );
   }
 
+  // FIXED: Don't render content if user is not authenticated
+  if (!loading && !currentUser) {
+    return null; // Prevents flash of content before redirect
+  }
+
   // Get the posts visible to the current user
   const visiblePosts = currentUser ? getFilteredPosts() : [];
-  if (!currentUser) {
-    redirect("/login");
-  }
+
   return (
     <div className={`space-y-1 ${isMobile ? "-mx-4" : ""}`}>
       {/* Post Form */}
@@ -82,9 +89,7 @@ const HomeContent = () => {
           >
             <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
             <p className="text-gray-500 mt-2">
-              {currentUser
-                ? "Posts from you and people you follow will appear here."
-                : "Please log in to see posts."}
+              Posts from you and people you follow will appear here.
             </p>
           </div>
         )}
