@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL, useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -30,10 +30,18 @@ const Followers = () => {
 
     const fetchUsers = async () => {
       try {
-        const allUsers = await getAllUsers();
-        setUsers(allUsers);
+        const req = await fetch(`${API_BASE_URL}/api/users`,{
+          method:'get',
+          credentials:'include'
+        });
+        if (!req.ok){
+          setError("Failed to load users");
+          return
+        }
+
+        const data = await req.json()
+        setUsers(data.message);
       } catch (err) {
-        console.error("Failed to fetch users:", err);
         setError("Failed to load users.");
       } finally {
         setTimeout(function () {
