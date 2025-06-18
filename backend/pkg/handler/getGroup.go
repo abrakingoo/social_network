@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"net/http"
 )
 
@@ -10,13 +10,12 @@ type GroupTitle struct {
 }
 
 // GetGroupData handles the request to fetch group data based on the group title.
-// It decodes the JSON request body to get the group title, fetches the group ID,
+// It uses query parameters to get the group title, fetches the group ID,
 func (app *App) GetGroupData(w http.ResponseWriter, r *http.Request) {
-	var groupTitle GroupTitle
-
-	err := json.NewDecoder(r.Body).Decode(&groupTitle)
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid JSON data", Error)
+	// Get group title from query parameters
+	groupTitle := r.URL.Query().Get("title")
+	if groupTitle == "" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Group title is required", Error)
 		return
 	}
 
@@ -27,7 +26,7 @@ func (app *App) GetGroupData(w http.ResponseWriter, r *http.Request) {
 		userID = ""
 	}
 
-	id, err := app.Queries.FetchGroupId(groupTitle.Title)
+	id, err := app.Queries.FetchGroupId(groupTitle)
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusConflict, "Error fetching group ID", Error)
 		return

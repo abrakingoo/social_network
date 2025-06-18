@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type User struct {
 	ID                string    `json:"id"`
@@ -15,4 +18,15 @@ type User struct {
 	AboutMe           string    `json:"about_me"`
 	IsPublic          bool      `json:"is_public"`
 	CreatedAt         time.Time `json:"created_at"`
+}
+
+type UserNotification struct {
+	ID         string         `json:"id"`
+	ActorId    string         `json:"sender_id"`
+	Type       string         `json:"type"`
+	EntityID   sql.NullInt64  `json:"entity_id,omitempty"`
+	EntityType sql.NullString `json:"entity_type,omitempty"`
+	IsRead     bool           `json:"is_read"`
+	Message    string         `json:"message"`
+	CreatedAt  time.Time      `json:"created_at"`
 }
