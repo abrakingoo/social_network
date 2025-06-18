@@ -210,22 +210,25 @@ export const AuthProvider = ({ children }) => {
 
   // Get all users
   const getAllUsers = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-        },
-      });
+    if (currentUser) {
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch users");
+        }
+
+        const data = await response.json();
+        return data.users;
+      } catch (error) {
+        throw error;
       }
-
-      const data = await response.json();
-      return data.users;
-    } catch (error) {
-      throw error;
     }
   };
 
