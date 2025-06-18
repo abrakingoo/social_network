@@ -5,7 +5,7 @@ import { wsManager } from "@/utils/websocket";
 
 const AuthContext = createContext();
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost";
 
 class AuthError extends Error {
   constructor(message, type = "general", field = null, status = null) {
