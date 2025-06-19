@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL, useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,36 +11,46 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Search, UserPlus, UserCheck, UserX } from "lucide-react";
 import { FadeLoader } from "react-spinners";
+import { webSocketOperations } from "@/utils/websocket";
 
 const Followers = () => {
   const router = useRouter();
   const { currentUser, getAllUsers, loading: authLoading } = useAuth();
   const [users, setUsers] = useState([]);
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("followers");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Redirect to login if not authenticated
+  const fetchUsers = async () => {
+    try {
+      const req = await fetch(`${API_BASE_URL}/api/users`, {
+        method: "get",
+        credentials: "include",
+      });
+      if (!req.ok) {
+        setError("Failed to load users");
+        return;
+      }
+
+      const data = await req.json();
+      setUsers(data.message);
+    } catch (err) {
+      setError("Failed to load users.");
+    } finally {
+      setTimeout(function () {
+        setLoading(false);
+      }, 5000);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading && !currentUser == null) {
       router.push("/login");
     }
 
-    const fetchUsers = async () => {
-      try {
-        const allUsers = await getAllUsers();
-        setUsers(allUsers);
-      } catch (err) {
-        console.error("Failed to fetch users:", err);
-        setError("Failed to load users.");
-      } finally {
-        setTimeout(function () {
-          setLoading(false);
-        }, 5000);
-      }
-    };
     fetchUsers();
   }, [currentUser, router, getAllUsers]);
 
@@ -57,89 +67,73 @@ const Followers = () => {
     return null;
   }
 
-  // Mock friends data
-  const mockFriends = [
-    {
-      id: "101",
-      firstName: "John",
-      lastName: "Doe",
-      avatar: null,
-      status: "accepted", // 'accepted', 'pending', 'requested'
-      mutual: 5,
-    },
-    {
-      id: "102",
-      firstName: "Jane",
-      lastName: "Smith",
-      avatar: null,
-      status: "accepted",
-      mutual: 3,
-    },
-    {
-      id: "103",
-      firstName: "Mike",
-      lastName: "Johnson",
-      avatar: null,
-      status: "pending",
-      mutual: 2,
-    },
-    {
-      id: "104",
-      firstName: "Sarah",
-      lastName: "Wilson",
-      avatar: null,
-      status: "requested",
-      mutual: 1,
-    },
-  ];
-
-  // Mock suggestions based on users
-  const userSuggestions = users
-    ? users
-        .filter(
-          (user) =>
-            user.id !== currentUser.id &&
-            !mockFriends.find((f) => f.id === user.id),
-        )
-        .slice(0, 5)
-    : [];
-
   // Handle accepting a friend request
-  const handleAcceptFriend = (friendId) => {
-    toast({
-      title: "Request accepted",
-      description: "You are now friends!",
-    });
+  const handleAcceptFriend = async (friendId) => {
+    const res = await webSocketOperations.respondToFollowRequest(
+      friendId,
+      "accepted",
+    );
+    if (res.success) {
+      setUsers([]);
+      fetchUsers();
+      toast({
+        title: "Request accepted",
+        description: "You are now friends!",
+      });
+    }
   };
 
   // Handle rejecting a friend request
   const handleRejectFriend = (friendId) => {
+    setUsers([]);
+    fetchUsers([]);
     toast({
-      title: "Friend request rejected",
-      description: "The friend request has been rejected.",
+      title: "Follow request rejected",
+      description: "The follow request has been rejected.",
     });
   };
 
   // Handle sending a friend request
   const handleAddFriend = (friendId) => {
+    const result = webSocketOperations.sendFollowRequest(friendId);
+    setUsers([]);
+    fetchUsers([]);
     toast({
       title: "Friend request sent",
       description: "Your friend request has been sent.",
     });
+
+  };
+
+  const handleCancelFollowRequest = (followerId) => {
+    const result = webSocketOperations.cancelFollowRequest(followerId);
+    setUsers([]);
+    fetchUsers([]);
+    toast({
+      title: "Success",
+      description: "The follow request has been cancelled sucessfully.",
+    });
   };
 
   // Filter friends based on the active tab
-  const filteredFriends = mockFriends.filter((friend) => {
-    if (searchQuery) {
-      const fullName = `${friend.firstName} ${friend.lastName}`.toLowerCase();
-      if (!fullName.includes(searchQuery.toLowerCase())) return false;
-    }
+  const filteredFriends = users.followers
+    ? users.followers.filter((user) => {
+      // Example: Assuming each user has firstName and lastName
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 
-    if (activeTab === "all") return true;
-    if (activeTab === "requests" && friend.status === "pending") return true;
-    if (activeTab === "suggestions") return false;
-    return friend.status === "accepted";
-  });
+      // Check search query
+      if (searchQuery) {
+        if (!fullName.includes(searchQuery.toLowerCase())) return false;
+      }
+
+      // Apply tab-based filtering
+      if (activeTab === "followers") return true;
+      if (activeTab === "following") return true;
+      if (activeTab === "requests" && user.status === "pending") return true;
+      if (activeTab === "suggestions") return false; // or customize as needed
+      return user.status === "accepted"; // default condition
+    })
+    : [];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -159,18 +153,19 @@ const Followers = () => {
           </div>
 
           <Tabs
-            defaultValue="all"
+            defaultValue="followers"
             value={activeTab}
             onValueChange={setActiveTab}
           >
-            <TabsList className="grid grid-cols-4 w-full mb-6">
-              <TabsTrigger value="all">All Followers</TabsTrigger>
+            <TabsList className="grid grid-cols-5 w-full mb-6">
+              <TabsTrigger value="followers">Followers</TabsTrigger>
+              <TabsTrigger value="following">Following</TabsTrigger>
               <TabsTrigger value="requests">Requests</TabsTrigger>
               <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
               <TabsTrigger value="sent">Sent Requests</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4">
+            <TabsContent value="followers" className="space-y-4">
               {filteredFriends.length > 0 ? (
                 filteredFriends.map((friend) => (
                   <div
@@ -181,13 +176,13 @@ const Followers = () => {
                       <Avatar className="h-12 w-12 mr-4">
                         <AvatarImage src={friend.avatar} />
                         <AvatarFallback>
-                          {friend.firstName[0]}
-                          {friend.lastName[0]}
+                          {friend.firstname[0]}
+                          {friend.lastname[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-medium">
-                          {friend.firstName} {friend.lastName}
+                          {friend.firstname} {friend.lastname}
                         </h3>
                         {friend.mutual > 0 && (
                           <p className="text-sm text-gray-500">
@@ -232,7 +227,7 @@ const Followers = () => {
               ) : (
                 <div className="text-center py-10">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No friends found</h3>
+                  <h3 className="text-lg font-medium">No followers found</h3>
                   <p className="text-gray-500 mt-1">
                     {searchQuery
                       ? `No follower matching "${searchQuery}"`
@@ -242,55 +237,122 @@ const Followers = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="requests" className="space-y-4">
-              {mockFriends.filter((f) => f.status === "pending").length > 0 ? (
-                mockFriends
-                  .filter((f) => f.status === "pending")
-                  .map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                    >
-                      <div className="flex items-center">
-                        <Avatar className="h-12 w-12 mr-4">
-                          <AvatarImage src={friend.avatar} />
-                          <AvatarFallback>
-                            {friend.firstName[0]}
-                            {friend.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">
-                            {friend.firstName} {friend.lastName}
-                          </h3>
-                          {friend.mutual > 0 && (
-                            <p className="text-sm text-gray-500">
-                              {friend.mutual} mutual friends
-                            </p>
-                          )}
-                        </div>
-                      </div>
 
-                      <div className="flex space-x-2">
-                        <Button
-                          onClick={() => handleAcceptFriend(friend.id)}
-                          className="bg-social hover:bg-social-dark"
-                          size="sm"
-                        >
-                          <UserCheck className="h-4 w-4 mr-1" />
-                          Accept
-                        </Button>
-                        <Button
-                          onClick={() => handleRejectFriend(friend.id)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <UserX className="h-4 w-4 mr-1" />
-                          Decline
-                        </Button>
+            {/* Following */}
+            <TabsContent value="following" className="space-y-4">
+              {users.following != null? (
+                users.following.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-center">
+                      <Avatar className="h-12 w-12 mr-4">
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>
+                          {friend.firstname[0]}
+                          {friend.lastname[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">
+                          {friend.firstname} {friend.lastname}
+                        </h3>
+                        {friend.mutual > 0 && (
+                          <p className="text-sm text-gray-500">
+                            {friend.mutual} mutual friends
+                          </p>
+                        )}
                       </div>
                     </div>
-                  ))
+
+                    <div className="flex space-x-2">
+                      {friend.status === "pending" ? (
+                        <>
+                          <Button
+                            onClick={() => handleAcceptFriend(friend.id)}
+                            className="bg-social hover:bg-social-dark"
+                            size="sm"
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            onClick={() => handleRejectFriend(friend.id)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <UserX className="h-4 w-4 mr-1" />
+                            Decline
+                          </Button>
+                        </>
+                      ) : friend.status === "requested" ? (
+                        <Button variant="outline" size="sm">
+                          Requested
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm">
+                          Message
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-10">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium">No following found</h3>
+                  <p className="text-gray-500 mt-1">
+                    {searchQuery
+                      ? `No following matching "${searchQuery}"`
+                      : "You don't have any followers yet"}
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="requests" className="space-y-4">
+              {users.received_request ? (
+                users.received_request.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-center">
+                      <Avatar className="h-12 w-12 mr-4">
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>{friend.firstname[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">{friend.firstname}</h3>
+                        {friend.mutual > 0 && (
+                          <p className="text-sm text-gray-500">
+                            {friend.mutual} mutual friends
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => handleAcceptFriend(friend.id)}
+                        className="bg-social hover:bg-social-dark"
+                        size="sm"
+                      >
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        Accept
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectFriend(friend.id)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <UserX className="h-4 w-4 mr-1" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-10">
                   <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -303,8 +365,8 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="suggestions" className="space-y-4">
-              {userSuggestions.length > 0 ? (
-                userSuggestions.map((user) => (
+              {users.non_mutual != null ? (
+                users["non_mutual"].map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
@@ -312,14 +374,11 @@ const Followers = () => {
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
                         <AvatarImage src={user.avatar} />
-                        <AvatarFallback>
-                          {user.firstName[0]}
-                          {user.lastName[0]}
-                        </AvatarFallback>
+                        <AvatarFallback>{user.firstname[0]}</AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-medium">
-                          {user.firstName} {user.lastName}
+                          {user.firstname} {user.lastname}
                         </h3>
                         <p className="text-sm text-gray-500">
                           Suggested for you
@@ -351,36 +410,37 @@ const Followers = () => {
             </TabsContent>
 
             <TabsContent value="sent" className="space-y-4">
-              {mockFriends.filter((f) => f.status === "requested").length >
-              0 ? (
-                mockFriends
-                  .filter((f) => f.status === "requested")
-                  .map((friend) => (
-                    <div
-                      key={friend.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
-                    >
-                      <div className="flex items-center">
-                        <Avatar className="h-12 w-12 mr-4">
-                          <AvatarImage src={friend.avatar} />
-                          <AvatarFallback>
-                            {friend.firstName[0]}
-                            {friend.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="font-medium">
-                            {friend.firstName} {friend.lastName}
-                          </h3>
-                          <p className="text-sm text-gray-500">Request sent</p>
-                        </div>
+              {users.sent_request != null ? (
+                users.sent_request.map((friend) => (
+                  <div
+                    key={friend.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                  >
+                    <div className="flex items-center">
+                      <Avatar className="h-12 w-12 mr-4">
+                        <AvatarImage src={friend.avatar} />
+                        <AvatarFallback>
+                          {friend.firstname[0]}
+                          {friend.lastname[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">
+                          {friend.firstname} {friend.lastname}
+                        </h3>
+                        <p className="text-sm text-gray-500">Request sent</p>
                       </div>
-
-                      <Button variant="outline" size="sm">
-                        Cancel Request
-                      </Button>
                     </div>
-                  ))
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelFollowRequest(friend.id)}
+                    >
+                      Cancel Request
+                    </Button>
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-10">
                   <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-3" />

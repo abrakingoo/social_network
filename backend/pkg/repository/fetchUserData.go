@@ -56,7 +56,7 @@ func (q *Query) FetchUserPost(userid string, user *model.UserData) error {
 	}
 
 	// Fetch comments with their media
-	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs, userid)
 	if err != nil {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
@@ -87,7 +87,7 @@ func (q *Query) FetchUserComments(userid string, user *model.UserData) error {
 	}
 
 	// Fetch comments with their media
-	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs, userid)
 	if err != nil {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
@@ -357,7 +357,7 @@ func (q *Query) FetchLikedPost(userid string, user *model.UserData) error {
 	}
 
 	// Fetch comments with their media
-	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs, userid)
 	if err != nil {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}
@@ -423,7 +423,7 @@ func (q *Query) FetchLikedComments(userid string, user *model.UserData) error {
 	}
 
 	// Fetch comments with their media
-	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs, userid)
 	if err != nil {
 		return fmt.Errorf("failed to get comments: %w", err)
 	}

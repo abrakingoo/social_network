@@ -14,7 +14,12 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 		SELECT 
 			p.id, p.content, 
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
+			EXISTS (
+				SELECT 1 from post_likes pl
+				WHERE pl.post_id = p.id
+				AND pl.user_id = ?
+			) AS liked
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
 		JOIN users u ON u.id = p.user_id
@@ -43,7 +48,7 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
   		)
 		ORDER BY p.created_at DESC
 	`
-	rows, err := q.Db.Query(query, id, id, id)
+	rows, err := q.Db.Query(query, id, id, id, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
@@ -67,12 +72,14 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 			lastname      sql.NullString
 			nickname      sql.NullString
 			avatar        sql.NullString
+			isLiked       bool
 		)
 
 		err := rows.Scan(
 			&postID, &content,
 			&likesCount, &dislikesCount, &commentsCount, &privacy, &createdAt,
 			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
+			&isLiked,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
@@ -101,6 +108,7 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 				Privacy:       privacy,
 				CreatedAt:     createdAt,
 				Media:         []model.Media{},
+				IsLiked:       isLiked,
 			}
 			postsMap[postID] = post
 		}
@@ -121,23 +129,32 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 	return posts, nil
 }
 
-func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Comment, error) {
+func (q *Query) FetchCommentsWithMedia(postIDs []string, userID string) (map[string][]model.Comment, error) {
 	if len(postIDs) == 0 {
 		return make(map[string][]model.Comment), nil
 	}
 
 	placeholders := make([]string, len(postIDs))
-	args := make([]interface{}, len(postIDs))
-	for i, id := range postIDs {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-		args[i] = id
+	for i := range postIDs {
+		placeholders[i] = "?"
+	}
+
+	// First argument is userID, then postIDs
+	args := make([]interface{}, 0, len(postIDs)+1)
+	args = append(args, userID)
+	for _, id := range postIDs {
+		args = append(args, id)
 	}
 
 	query := fmt.Sprintf(`
 			SELECT 
 				c.id, c.post_id, c.content,
 				c.likes_count, c.dislikes_count, c.created_at,
-				m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+				m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
+				EXISTS (
+        			SELECT 1 FROM comment_likes cl 
+        			WHERE cl.comment_id = c.id AND cl.user_id = ?
+    				) AS liked
 			FROM comments c
 			LEFT JOIN media m ON m.parent_id = c.id
 			LEFT JOIN users u ON u.id = c.user_id
@@ -170,6 +187,7 @@ func (q *Query) FetchCommentsWithMedia(postIDs []string) (map[string][]model.Com
 			&comment.ID, &comment.PostID, &comment.Content,
 			&comment.LikesCount, &comment.DislikesCount, &comment.CreatedAt,
 			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
+			&comment.IsLiked,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan comment: %w", err)
@@ -228,7 +246,7 @@ func (q *Query) FetchAllPosts(userID string) ([]model.Post, error) {
 	}
 
 	// 3. Fetch comments with their media
-	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get comments: %w", err)
 	}
