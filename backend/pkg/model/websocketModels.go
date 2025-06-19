@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type FollowRequest struct {
 	RecipientID    string `json:"recipient_Id"`
 	ResponseStatus string `json:"status"`
@@ -12,9 +14,14 @@ type GroupRequest struct {
 }
 
 type PrivateMessage struct {
-	RecipientID string `json:"recipient_Id"`
-	SenderID    string `json:"sender_id"`
-	Message     string `json:"message"`
+	RecipientID string    `json:"recipient_Id"`
+	SenderID    string    `json:"sender_id"`
+	Message     string    `json:"message"`
+	ID          string    `json:"id"`
+	ReceiverID  string    `json:"receiver_id"`
+	Content     string    `json:"content"`
+	IsRead      bool      `json:"is_read"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type GroupMessage struct {
