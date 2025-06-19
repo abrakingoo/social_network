@@ -193,16 +193,16 @@ const PostCard = ({ post }) => {
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-2 hover:bg-blue-500"
           onClick={handleLike}
         >
-          <Heart className={`h-5 w-5 ${hasLiked ? 'fill-current text-green-500' : ''}`} />
+          <Heart className={`h-5 w-5 ${hasLiked ? 'fill-current text-pink-500' : ''}`} />
           <span>{likeCount || normalizedPost.likesCount || 0}</span>
         </Button>
         <Button
           variant="ghost"
           size="sm"
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-2 hover:bg-blue-500"
           onClick={() => setShowComments(!showComments)}
         >
           <MessageSquare className="h-5 w-5" />
