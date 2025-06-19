@@ -208,9 +208,6 @@ const PostCard = ({ post }) => {
           <MessageSquare className="h-5 w-5" />
           <span>{normalizedPost.commentsCount || 0}</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-          <Share2 className="h-5 w-5" />
-        </Button>
       </div>
     );
   };
