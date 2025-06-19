@@ -207,7 +207,12 @@ export const NotificationProvider = ({ children }) => {
   }, [notifications, cacheNotifications]);
 
   // Remove notification
-  const removeNotification = useCallback((notificationId) => {
+  const removeNotification = useCallback(async (notificationId) => {
+    const success = await notificationService.deleteNotification(notificationId);
+    if (!success) {
+      console.error('[NotificationProvider] Failed to delete notification from backend');
+      return;
+    }
     setNotifications(prev => {
       const notification = prev.find(n => n.id === notificationId);
       const updated = prev.filter(n => n.id !== notificationId);
@@ -254,11 +259,7 @@ export const NotificationProvider = ({ children }) => {
         type: 'group_invitation',
         title: 'Group Invitation',
         content: 'invited you to join a group',
-        actor: data.inviter || {
-          firstName: 'Someone',
-          lastName: '',
-          avatar: null
-        },
+        actor: data.inviter || null,
         groupId: data.group_id,
         groupName: data.group_name || 'a group',
         actionable: true,
@@ -274,11 +275,7 @@ export const NotificationProvider = ({ children }) => {
       type: 'follow_request',
       title: 'Follow Request',
       content: 'wants to follow you',
-      actor: data.requester || {
-        firstName: 'Someone',
-        lastName: '',
-        avatar: null
-      },
+      actor: data.requester || null,
       actionable: true,
       data: data
     });
