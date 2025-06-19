@@ -21,52 +21,76 @@ export const NotificationProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Generate storage key for current user (cache only)
-  const getStorageKey = useCallback(() => {
-    return currentUser?.id ? `notifications_cache_${currentUser.id}` : null;
-  }, [currentUser?.id]);
+  // FIXED: Check if user is authenticated properly
+  // Backend provides empty string ID ('') for authenticated users
+  const isUserAuthenticated = useCallback(() => {
+    const authenticated = currentUser && (
+      currentUser.first_name ||
+      currentUser.last_name ||
+      currentUser.email ||
+      currentUser.id !== undefined  // Accept empty string as valid ID
+    );
+    return authenticated;
+  }, [currentUser]);
 
-  // Cache notifications in localStorage (secondary storage)
+  // Generate storage key for current user (use email as fallback since ID might be empty)
+  const getStorageKey = useCallback(() => {
+    if (!currentUser) return null;
+
+    // Use email as primary identifier since backend provides empty string ID
+    const identifier = currentUser.email || currentUser.id || 'anonymous';
+    const key = `notifications_cache_${identifier}`;
+    return key;
+  }, [currentUser]);
+
+  // Cache notifications in localStorage
   const cacheNotifications = useCallback((notifs) => {
     const storageKey = getStorageKey();
-    if (!storageKey) return;
+    if (!storageKey) {
+      return;
+    }
 
     try {
       localStorage.setItem(storageKey, JSON.stringify(notifs));
     } catch (error) {
-      console.error('[NotificationContext] Cache failed:', error);
+      console.error('[NotificationProvider] Cache failed:', error);
     }
   }, [getStorageKey]);
 
-  // Load cached notifications (fallback while loading from DB)
+  // Load cached notifications
   const loadCachedNotifications = useCallback(() => {
     const storageKey = getStorageKey();
-    if (!storageKey) return [];
+    if (!storageKey) {
+      return [];
+    }
 
     try {
       const cached = localStorage.getItem(storageKey);
       if (cached) {
         const parsedNotifications = JSON.parse(cached);
-        return parsedNotifications.map(notif => ({
+        const result = parsedNotifications.map(notif => ({
           ...notif,
           timestamp: new Date(notif.timestamp)
         }));
+        return result;
       }
     } catch (error) {
-      console.error('[NotificationContext] Cache loading failed:', error);
+      console.error('[NotificationProvider] Cache loading failed:', error);
     }
     return [];
   }, [getStorageKey]);
 
-  // PRIMARY: Fetch notifications from database
+  // FIXED: Fetch notifications from database - works with empty string user ID
   const fetchNotificationsFromDB = useCallback(async () => {
-    if (!currentUser?.id) return;
+    // FIXED: Use proper authentication check instead of just checking ID
+    if (!isUserAuthenticated()) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      console.log('[NotificationContext] Fetching from database...');
       const dbNotifications = await notificationService.fetchNotifications();
 
       // Sort by timestamp (newest first)
@@ -83,10 +107,8 @@ export const NotificationProvider = ({ children }) => {
       // Cache for performance
       cacheNotifications(sortedNotifications);
 
-      console.log(`[NotificationContext] Loaded ${sortedNotifications.length} notifications from DB`);
-
     } catch (error) {
-      console.error('[NotificationContext] Database fetch failed:', error);
+      console.error('[NotificationProvider] Database fetch failed:', error);
       setError(error.message);
 
       // Fallback to cached data
@@ -95,12 +117,11 @@ export const NotificationProvider = ({ children }) => {
         setNotifications(cachedNotifications);
         const unread = cachedNotifications.filter(n => !n.read).length;
         setUnreadCount(unread);
-        console.log('[NotificationContext] Using cached notifications as fallback');
       }
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id, cacheNotifications, loadCachedNotifications]);
+  }, [currentUser, isUserAuthenticated, cacheNotifications, loadCachedNotifications]);
 
   // Add new notification (from WebSocket)
   const addNotification = useCallback((notification) => {
@@ -121,9 +142,9 @@ export const NotificationProvider = ({ children }) => {
         return trimmed;
       });
       setUnreadCount(prev => prev + 1);
-      console.log('[NotificationContext] Added persistent group_invitation notification:', newNotification);
       return newNotification;
     }
+
     // For other notifications, fallback to previous logic
     const newNotification = {
       id: notification.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -138,7 +159,6 @@ export const NotificationProvider = ({ children }) => {
       return trimmed;
     });
     setUnreadCount(prev => prev + 1);
-    console.log('[NotificationContext] Added real-time notification:', newNotification);
     return newNotification;
   }, [cacheNotifications]);
 
@@ -160,8 +180,7 @@ export const NotificationProvider = ({ children }) => {
       await notificationService.markAsRead(notificationId);
 
     } catch (error) {
-      console.error('[NotificationContext] Mark as read failed:', error);
-      // Could revert optimistic update here if needed
+      console.error('[NotificationProvider] Mark as read failed:', error);
     }
   }, [cacheNotifications]);
 
@@ -177,13 +196,13 @@ export const NotificationProvider = ({ children }) => {
     });
     setUnreadCount(0);
 
-    // Send each to backend (could be optimized with bulk endpoint)
+    // Send each to backend
     try {
       await Promise.all(
         unreadNotifications.map(notif => notificationService.markAsRead(notif.id))
       );
     } catch (error) {
-      console.error('[NotificationContext] Mark all as read failed:', error);
+      console.error('[NotificationProvider] Mark all as read failed:', error);
     }
   }, [notifications, cacheNotifications]);
 
@@ -194,7 +213,6 @@ export const NotificationProvider = ({ children }) => {
       const updated = prev.filter(n => n.id !== notificationId);
       cacheNotifications(updated);
 
-      // Update unread count if removed notification was unread
       if (notification && !notification.read) {
         setUnreadCount(count => Math.max(0, count - 1));
       }
@@ -218,10 +236,19 @@ export const NotificationProvider = ({ children }) => {
     fetchNotificationsFromDB();
   }, [fetchNotificationsFromDB]);
 
-  // Handle group invitation from WebSocket
+  // FIXED: Load notifications when user authentication changes
+  useEffect(() => {
+    if (isUserAuthenticated()) {
+      fetchNotificationsFromDB();
+    } else {
+      setNotifications([]);
+      setUnreadCount(0);
+      setError(null);
+    }
+  }, [currentUser, isUserAuthenticated, fetchNotificationsFromDB]);
+
+  // WebSocket notification handlers
   const handleGroupInvitation = useCallback((data) => {
-    console.log('[NotificationContext] Group invitation received:', data);
-    // Only add if backend-provided ID is present
     if (data && data.id) {
       addNotification({
         type: 'group_invitation',
@@ -238,14 +265,11 @@ export const NotificationProvider = ({ children }) => {
         data: data
       });
     } else {
-      console.warn('[NotificationContext] Skipped group_invitation without backend ID:', data);
+      console.warn('[NotificationProvider] Skipped group_invitation without backend ID:', data);
     }
   }, [addNotification]);
 
-  // Handle follow request from WebSocket
   const handleFollowRequest = useCallback((data) => {
-    console.log('[NotificationContext] Follow request received:', data);
-
     addNotification({
       type: 'follow_request',
       title: 'Follow Request',
@@ -260,10 +284,7 @@ export const NotificationProvider = ({ children }) => {
     });
   }, [addNotification]);
 
-  // Handle join request accepted/declined
   const handleJoinResponse = useCallback((data) => {
-    console.log('[NotificationContext] Join response received:', data);
-
     const isAccepted = data.status === 'accepted';
     addNotification({
       type: 'join_response',
@@ -271,17 +292,14 @@ export const NotificationProvider = ({ children }) => {
       content: isAccepted
         ? 'Your request to join the group was accepted'
         : 'Your request to join the group was declined',
-      actor: null, // System notification
+      actor: null,
       groupId: data.group_id,
-      actionable: isAccepted, // Only show action if accepted
+      actionable: isAccepted,
       data: data
     });
   }, [addNotification]);
 
-  // Handle general notifications (likes, comments, etc.)
   const handleGeneralNotification = useCallback((type, data) => {
-    console.log(`[NotificationContext] ${type} notification received:`, data);
-
     const notificationMap = {
       'like': { title: 'New Like', content: 'liked your post', icon: 'heart' },
       'comment': { title: 'New Comment', content: 'commented on your post', icon: 'message' },
@@ -303,11 +321,10 @@ export const NotificationProvider = ({ children }) => {
 
   // Listen for WebSocket notification events
   useEffect(() => {
-    if (!currentUser) return;
+    if (!isUserAuthenticated()) return;
 
     const handleWSNotification = (event) => {
       const { type, notification } = event.detail;
-      console.log('[NotificationContext] WebSocket notification:', { type, notification });
 
       switch (type) {
         case 'group_invitation':
@@ -325,40 +342,23 @@ export const NotificationProvider = ({ children }) => {
           handleGeneralNotification(type, notification.data);
           break;
         default:
-          console.log('[NotificationContext] Unknown notification type:', type);
+          break;
       }
     };
 
-    // Listen for WebSocket notifications
     window.addEventListener('wsNotification', handleWSNotification);
 
     return () => {
       window.removeEventListener('wsNotification', handleWSNotification);
     };
-  }, [currentUser, handleGroupInvitation, handleFollowRequest, handleJoinResponse, handleGeneralNotification]);
-
-  // PRIMARY: Load notifications from database when user logs in
-  useEffect(() => {
-    if (currentUser?.id) {
-      console.log('[NotificationContext] User logged in, fetching notifications...');
-      fetchNotificationsFromDB();
-    } else {
-      // Clear notifications when user logs out
-      setNotifications([]);
-      setUnreadCount(0);
-      setError(null);
-    }
-  }, [currentUser?.id, fetchNotificationsFromDB]);
+  }, [isUserAuthenticated, handleGroupInvitation, handleFollowRequest, handleJoinResponse, handleGeneralNotification]);
 
   // Helper function to respond to group invitation
   const respondToGroupInvitation = useCallback(async (notificationId, groupId, status) => {
     try {
       await notificationService.respondToGroupInvitation(groupId, status);
-
-      // Mark notification as read
       await markAsRead(notificationId);
 
-      // Add a success notification
       addNotification({
         type: 'system',
         title: status === 'accepted' ? 'Group Joined!' : 'Invitation Declined',
@@ -371,9 +371,8 @@ export const NotificationProvider = ({ children }) => {
 
       return true;
     } catch (error) {
-      console.error('[NotificationContext] Group invitation response failed:', error);
+      console.error('[NotificationProvider] Group invitation response failed:', error);
 
-      // Add error notification
       addNotification({
         type: 'error',
         title: 'Error',
@@ -386,13 +385,12 @@ export const NotificationProvider = ({ children }) => {
     }
   }, [markAsRead, addNotification]);
 
-  // Compute notification counts by type for Navbar and other consumers
+  // Compute notification counts by type
   const notificationCounts = notifications.reduce((acc, notif) => {
     if (!notif.read) {
       if (notif.type === 'message') {
         acc.message = (acc.message || 0) + 1;
       }
-      // Add more types as needed
     }
     return acc;
   }, {});
@@ -408,7 +406,7 @@ export const NotificationProvider = ({ children }) => {
     markAllAsRead,
     removeNotification,
     clearAll,
-    refreshNotifications, // New: allow manual refresh
+    refreshNotifications,
     respondToGroupInvitation
   };
 
