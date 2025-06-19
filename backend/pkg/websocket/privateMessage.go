@@ -144,4 +144,24 @@ func (c *Client) LoadMessages(msg map[string]any, q *repository.Query) {
 		c.SendError("Invalid data format")
 		return
 	}
+
+	isReal, err := q.CheckRow("users", []string{
+		"id",
+	}, []any{
+		private.RecipientID,
+	})
+	if !isReal || err != nil {
+		c.SendError("Error: recipient does not exist")
+		return
+	}
+
+	if private.RecipientID == "" {
+		c.SendError("recipient not found")
+		return
+	}
+
+	if private.RecipientID == c.UserID {
+		c.SendError("You cannot load your own messages")
+		return
+	}
 }
