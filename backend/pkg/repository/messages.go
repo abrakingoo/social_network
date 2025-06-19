@@ -35,3 +35,31 @@ func (q *Query) GetMessagesBetweenUsers(userAID, userBID string) ([]model.Privat
 
 	return messages, nil
 }
+
+func (q *Query) GetGroupMessages(groupID string) ([]model.GroupMessage, error) {
+	query := `
+		SELECT id, group_id, sender_id, content, created_at
+		FROM group_messages
+		WHERE group_id = ?
+		ORDER BY created_at ASC
+	`
+
+	rows, err := q.Db.Query(query, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch group messages: %w", err)
+	}
+	defer rows.Close()
+
+	var messages []model.GroupMessage
+
+	for rows.Next() {
+		var msg model.GroupMessage
+		err := rows.Scan(&msg.ID, &msg.GroupId, &msg.SenderID, &msg.Content, &msg.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan group message row: %w", err)
+		}
+		messages = append(messages, msg)
+	}
+
+	return messages, nil
+}
