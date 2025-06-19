@@ -118,4 +118,16 @@ func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {
 		c.SendError("Failed to load group messages")
 		return
 	}
+
+	payload := map[string]any{
+		"type":     "load_group_messages",
+		"messages": messages,
+	}
+
+	sendData, err := json.Marshal(payload)
+	if err != nil {
+		c.SendError("Failed to encode messages")
+		return
+	}
+	c.Send <- sendData
 }
