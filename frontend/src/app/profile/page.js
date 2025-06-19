@@ -227,7 +227,12 @@ const Profile = () => {
 
           <div>
             {isOwnProfile ? (
-              <Button variant="outline">Edit Profile</Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/settings")}
+              >
+                Edit Profile
+              </Button>
             ) : (
               <Button className="bg-social hover:bg-social-dark">
                 Add Friend
