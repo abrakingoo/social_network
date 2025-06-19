@@ -111,7 +111,7 @@ func (q *Query) fetchGroupPosts(groupid string, userID string) ([]model.Post, er
 	}
 
 	// 3. Fetch comments with their media
-	commentsByPost, err := q.FetchCommentsWithMedia(postIDs)
+	commentsByPost, err := q.FetchCommentsWithMedia(postIDs, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get comments: %w", err)
 	}
