@@ -132,7 +132,7 @@ func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {
 	}
 }
 
-func (c *Client) LoadMessages(msg map[string]any, q *repository.Query) {
+func (c *Client) LoadPrivateMessages(msg map[string]any, q *repository.Query) {
 	data, err := json.Marshal(msg["data"])
 	if err != nil {
 		c.SendError("Invalid data encoding")
