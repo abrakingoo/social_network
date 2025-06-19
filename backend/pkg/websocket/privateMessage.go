@@ -23,6 +23,17 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 		return
 	}
 
+	isReal, err := q.CheckRow("users", []string{
+		"id",
+	}, []any{
+		private.RecipientID,
+	})
+
+	if !isReal || err != nil {
+		c.SendError("Error: recipient does not exist")
+		return
+	}
+
 	if strings.TrimSpace(private.Message) == "" {
 		c.SendError("Cannot send empty message")
 		return
