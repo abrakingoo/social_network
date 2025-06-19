@@ -88,4 +88,16 @@ func (c *Client) GroupMessage(msg map[string]any, q *repository.Query, h *Hub) {
 	h.BroadcastToGroup(c, message.GroupId, groupData)
 }
 
-func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {}
+func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {
+	data, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var message model.GroupMessage
+	if err = json.Unmarshal(data, &message); err != nil {
+		c.SendError("Invalid messsage format")
+		return
+	}
+}
