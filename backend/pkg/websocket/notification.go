@@ -73,3 +73,30 @@ func (c *Client) ReadNotification(msg map[string]any, q *repository.Query) {
 		c.SendError("Failed to update notification read status")
 	}
 }
+
+func (c *Client) DeleteNotification(msg map[string]any, q *repository.Query) {
+	data, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var payload struct {
+		NotificationId string `json:"notification_id"`
+	}
+	if err := json.Unmarshal(data, &payload); err != nil {
+		c.SendError("Invalid message format")
+		return
+	}
+
+	if payload.NotificationId == "" {
+		c.SendError("No notification found")
+		return
+	}
+
+	err = q.DeleteData("notifications", []string{"id", "recipient_id"}, []any{payload.NotificationId, c.UserID})
+	if err != nil {
+		c.SendError("Failed to delete notification")
+		return
+	}
+}
