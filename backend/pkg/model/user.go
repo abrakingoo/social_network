@@ -29,4 +29,7 @@ type UserNotification struct {
 	IsRead     bool           `json:"is_read"`
 	Message    string         `json:"message"`
 	CreatedAt  time.Time      `json:"created_at"`
+	ActorFirstName string     `json:"actor_first_name,omitempty"`
+	ActorLastName  string     `json:"actor_last_name,omitempty"`
+	ActorAvatar    string     `json:"actor_avatar,omitempty"`
 }
