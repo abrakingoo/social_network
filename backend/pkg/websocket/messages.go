@@ -45,6 +45,8 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 			c.LoadPrivateMessages(msg, q)
 		case "load_group_messages":
 			c.LoadGroupMessages(msg, q)
+		case "delete_notification":
+			c.DeleteNotification(msg, q)
 		default:
 			c.SendError("Unknown message type")
 		}
