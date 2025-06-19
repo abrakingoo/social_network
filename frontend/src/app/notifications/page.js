@@ -169,8 +169,8 @@ const Notifications = () => {
 
   // Render notification content
   const renderNotificationContent = (notification) => {
-    const actorName = notification.actor
-      ? `${notification.actor.firstName} ${notification.actor.lastName}`.trim()
+    const actorName = notification.actor && (notification.actor.firstName || notification.actor.lastName)
+      ? `${notification.actor.firstName || ''} ${notification.actor.lastName || ''}`.trim()
       : 'System';
 
     return (
@@ -185,15 +185,16 @@ const Notifications = () => {
           {getNotificationIcon(notification.type)}
         </div>
 
-        {notification.actor && (
-          <Avatar className="h-10 w-10 mr-3">
+        <Avatar className="h-10 w-10 mr-3">
+          {notification.actor && notification.actor.avatar ? (
             <AvatarImage src={notification.actor.avatar} />
-            <AvatarFallback>
-              {notification.actor.firstName?.[0] || '?'}
-              {notification.actor.lastName?.[0] || '?'}
-            </AvatarFallback>
-          </Avatar>
-        )}
+          ) : null}
+          <AvatarFallback>
+            {notification.actor && (notification.actor.firstName || notification.actor.lastName)
+              ? `${notification.actor.firstName?.[0] || ''}${notification.actor.lastName?.[0] || ''}`.toUpperCase() || '?'
+              : 'S'}
+          </AvatarFallback>
+        </Avatar>
 
         <div className="flex-1">
           <div className="flex justify-between items-start">
