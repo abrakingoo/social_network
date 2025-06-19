@@ -196,7 +196,7 @@ const PostCard = ({ post }) => {
           className="flex items-center space-x-2"
           onClick={handleLike}
         >
-          <Heart className={`h-5 w-5 ${hasLiked ? 'fill-current text-red-500' : ''}`} />
+          <Heart className={`h-5 w-5 ${hasLiked ? 'fill-current text-green-500' : ''}`} />
           <span>{likeCount || normalizedPost.likesCount || 0}</span>
         </Button>
         <Button
