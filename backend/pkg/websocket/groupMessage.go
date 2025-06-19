@@ -100,4 +100,16 @@ func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {
 		c.SendError("Invalid messsage format")
 		return
 	}
+
+	isReal, err := q.CheckRow("group_members", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		message.GroupId,
+		c.UserID,
+	})
+	if !isReal || err != nil {
+		c.SendError("You are not a member of this group")
+		return
+	}
 }
