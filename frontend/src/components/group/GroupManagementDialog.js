@@ -1,5 +1,5 @@
-// frontend/src/components/group/GroupManagementDialog.js - CORRECTED: Use backend's exact field name 'JoinRequest'
-import React, { useState, useEffect } from 'react';
+// frontend/src/components/group/GroupManagementDialog.js - FINAL FIX: Properly loads users
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
   useEffect(() => {
     const requests = groupData?.JoinRequest || groupData?.join_request || [];
     setJoinRequests(requests);
-      setNewRequestCount(0);
+    setNewRequestCount(0);
   }, [groupData?.JoinRequest, groupData?.join_request]);
 
   // Subscribe to real-time group notifications with exact backend format
@@ -81,7 +81,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
           }
         } else {
           // Fallback: Refresh group data to get the latest join requests
-        refreshGroupData();
+          refreshGroupData();
         }
 
         // Update new request count if not on requests tab
@@ -117,8 +117,8 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     }
   }, [activeTab]);
 
-  // CORRECTED: Refresh group data to get latest join requests (accept both field names)
-  const refreshGroupData = async () => {
+  // FIXED: Stable refresh function
+  const refreshGroupData = useCallback(async () => {
     if (!groupData?.title) return;
 
     try {
@@ -137,47 +137,122 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     } catch (error) {
       console.error('Error refreshing group data:', error);
     }
-  };
+  }, [groupData?.title, onGroupUpdated]); // Fixed dependencies
 
-  // Fetch available users for invitations
-  const fetchAvailableUsers = async () => {
+  // FIXED: Stable fetch function with better logging
+  const fetchAvailableUsers = useCallback(async () => {
+    console.log('[GroupManagementDialog] ==> fetchAvailableUsers called');
+    console.log('[GroupManagementDialog] ==> isOpen:', isOpen);
+    console.log('[GroupManagementDialog] ==> currentUser:', currentUser);
+    console.log('[GroupManagementDialog] ==> groupData:', groupData);
+
     setLoadingUsers(true);
     try {
-      const users = await groupService.getAllUsers();
+      console.log('[GroupManagementDialog] Fetching available users...');
+      console.log('[GroupManagementDialog] Current user ID:', currentUser?.id);
+      console.log('[GroupManagementDialog] Group members:', groupData?.members?.map(m => m.id));
 
+      const users = await groupService.getAllUsers();
+      console.log('[GroupManagementDialog] Users from service:', users?.length);
+      console.log('[GroupManagementDialog] First few users:', users?.slice(0, 3));
+
+      // FIXED: Handle empty users array gracefully
       if (!users || !Array.isArray(users)) {
+        console.warn('[GroupManagementDialog] No users returned or invalid format');
         setAvailableUsers([]);
         return;
       }
 
-      const memberIds = new Set(groupData.members?.map(m => m.id) || []);
-      const filtered = users.filter(user =>
-        user.id !== currentUser.id &&
-        !memberIds.has(user.id)
-      );
+      if (users.length === 0) {
+        console.log('[GroupManagementDialog] No users available from backend');
+        setAvailableUsers([]);
+        return;
+      }
+
+      // Create set of existing member IDs for efficient filtering
+      const memberIds = new Set(groupData?.members?.map(m => m.id) || []);
+      console.log('[GroupManagementDialog] Member IDs to exclude:', Array.from(memberIds));
+
+      // FIXED: Filter out current user and existing members with better logging
+      const filtered = users.filter(user => {
+        // Check if user object is valid
+        if (!user || !user.id) {
+          console.warn('[GroupManagementDialog] Skipping invalid user:', user);
+          return false;
+        }
+
+        // Exclude current user (handle case where currentUser.id might be undefined)
+        if (currentUser?.id && user.id === currentUser.id) {
+          console.log('[GroupManagementDialog] Excluding current user:', user.id);
+          return false;
+        }
+
+        // Exclude existing members
+        if (memberIds.has(user.id)) {
+          console.log('[GroupManagementDialog] Excluding existing member:', user.id);
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log('[GroupManagementDialog] Filtered users count:', filtered.length);
+      console.log('[GroupManagementDialog] Setting availableUsers to:', filtered);
 
       setAvailableUsers(filtered);
 
+      // Show a toast if no users are available to invite (only once)
+      if (filtered.length === 0 && users.length > 0) {
+        toast({
+          title: "No Users Available",
+          description: "All users are either already members or there are no users to invite at this time.",
+        });
+      }
+
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('[GroupManagementDialog] Error fetching users:', error);
+      console.error('[GroupManagementDialog] Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+
       toast({
         title: "Error",
-        description: "Failed to load available users",
+        description: "Failed to load available users. Please try again later.",
         variant: "destructive"
       });
+
+      // Set empty array to clear the loading state
       setAvailableUsers([]);
     } finally {
+      console.log('[GroupManagementDialog] Setting loadingUsers to false');
       setLoadingUsers(false);
     }
-  };
+  }, [currentUser?.id, groupData?.members, toast]); // Simplified dependencies
 
-  // Load data when dialog opens (always fetch latest)
+  // FIXED: Simple effect to load data when dialog opens
   useEffect(() => {
-    if (isOpen && currentUser && groupData) {
-      refreshGroupData(); // <-- Always fetch latest join requests
+    console.log('[GroupManagementDialog] ==> Main effect triggered');
+    console.log('[GroupManagementDialog] ==> isOpen:', isOpen);
+    console.log('[GroupManagementDialog] ==> currentUser:', currentUser);
+    console.log('[GroupManagementDialog] ==> groupData?.id:', groupData?.id);
+
+    if (isOpen && groupData?.id) {
+      console.log('[GroupManagementDialog] ==> Conditions met, loading data...');
+      refreshGroupData();
+      fetchAvailableUsers();
+    } else {
+      console.log('[GroupManagementDialog] ==> Conditions not met, not loading data');
+    }
+  }, [isOpen, groupData?.id]); // Removed functions from dependencies
+
+  // FIXED: Separate effect to call functions when they change
+  useEffect(() => {
+    if (isOpen && groupData?.id) {
+      console.log('[GroupManagementDialog] ==> Functions changed, reloading...');
       fetchAvailableUsers();
     }
-  }, [isOpen, currentUser, groupData]);
+  }, [fetchAvailableUsers, isOpen, groupData?.id]);
 
   // Handle join request responses using exact backend format
   const handleJoinRequestResponse = async (requestId, userId, status) => {
@@ -279,6 +354,12 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
      user.nickname?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  console.log('[GroupManagementDialog] ==> Render state:');
+  console.log('[GroupManagementDialog] ==> isOpen:', isOpen);
+  console.log('[GroupManagementDialog] ==> loadingUsers:', loadingUsers);
+  console.log('[GroupManagementDialog] ==> availableUsers.length:', availableUsers.length);
+  console.log('[GroupManagementDialog] ==> filteredUsers.length:', filteredUsers.length);
+
   if (!isOpen) return null;
 
   return (
@@ -363,6 +444,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
               {loadingUsers ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading users...</span>
                 </div>
               ) : filteredUsers.length > 0 ? (
                 filteredUsers.map(user => (
@@ -400,6 +482,9 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
                   <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500">
                     {searchQuery ? 'No users found matching your search' : 'No users available to invite'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Debug: availableUsers={availableUsers.length}, loadingUsers={loadingUsers.toString()}
                   </p>
                 </div>
               )}
