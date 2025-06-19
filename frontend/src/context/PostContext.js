@@ -72,6 +72,12 @@ export const PostProvider = ({ children }) => {
       id: commentData.id || Date.now().toString(),
       authorId: commentData.authorId || (currentUser?.id || ''),
       createdAt: commentData.createdAt || new Date().toISOString(),
+      author: {
+        id: currentUser?.id || '',
+        first_name: currentUser?.firstName || 'Unknown',
+        last_name: currentUser?.lastName || 'User',
+        avatar: currentUser?.avatar || ''
+      },
       ...commentData
     };
   }, [currentUser]);
@@ -238,7 +244,7 @@ export const PostProvider = ({ children }) => {
   }, [currentUser]);
 
   // Add comment to post
-  const addComment = useCallback((postId, commentText) => {
+  const addComment = useCallback(async (postId, commentText) => {
     if (!currentUser) {
       toast.error("You must be logged in to comment");
       return false;
@@ -250,24 +256,63 @@ export const PostProvider = ({ children }) => {
     }
 
     const newComment = normalizeComment({
-      authorId: currentUser.id,
       content: commentText
     });
 
+    // Optimistically update the UI
     setPosts(prevPosts =>
       prevPosts.map(post => {
         if (post.id === postId) {
           return {
             ...post,
-            comments: [...post.comments, newComment]
+            comments: [...(post.comments || []), newComment],
+            commentsCount: (post.commentsCount || 0) + 1
           };
         }
         return post;
       })
     );
 
-    return true;
-  }, [currentUser, normalizeComment]);
+    try {
+      // Send comment to backend
+      const response = await fetch(`${API_BASE_URL}/api/addComment`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          post_id: postId,
+          content: commentText,
+          comment_id: newComment.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add comment: ${response.status} ${response.statusText}`);
+      }
+
+      // Comment successfully added to backend
+      return true;
+    } catch (error) {
+      toast.error(`Failed to add comment: ${error.message}`);
+      // Revert optimistic update on failure
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: (post.comments || []).filter(c => c.id !== newComment.id),
+              commentsCount: (post.commentsCount || 1) - 1
+            };
+          }
+          return post;
+        })
+      );
+      return false;
+    }
+  }, [currentUser, normalizeComment, API_BASE_URL]);
 
   // Delete comment
   const deleteComment = useCallback((postId, commentId) => {
