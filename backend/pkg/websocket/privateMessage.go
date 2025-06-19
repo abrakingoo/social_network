@@ -131,3 +131,6 @@ func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {
 		return
 	}
 }
+
+func (c *Client) LoadMessages(msg map[string]any, q *repository.Query) {
+}
