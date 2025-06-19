@@ -189,7 +189,7 @@ const PostCard = ({ post }) => {
 
   const renderInteractions = () => {
     return (
-      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-start gap-x-4 px-4 py-2 border-t border-gray-200 dark:border-gray-700">
         <Button
           variant="ghost"
           size="sm"
