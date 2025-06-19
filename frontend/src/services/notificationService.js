@@ -29,14 +29,14 @@ class NotificationService {
 
       const data = await response.json();
 
-      // DEBUG: Log the raw response from the backend
-      console.debug('[NotificationService] Raw backend notifications response:', data);
-
-      // Backend returns { data: notifications[] } format based on handler
-      const notifications = Array.isArray(data) ? data : data.data || [];
+      // FIXED: Backend returns {message: notifications[]} format, not {data: notifications[]}
+      // Work with exactly what backend provides
+      const notifications = Array.isArray(data) ? data : (data.message || data.data || []);
 
       // Transform backend notification format to frontend format
-      return notifications.map(this.transformBackendNotification);
+      const transformedNotifications = notifications.map(notif => this.transformBackendNotification(notif));
+
+      return transformedNotifications;
 
     } catch (error) {
       console.error('[NotificationService] Fetch failed:', error);
@@ -56,9 +56,9 @@ class NotificationService {
       content: backendNotif.Message || backendNotif.message || 'New notification',
       actor: backendNotif.ActorId ? {
         id: backendNotif.ActorId,
-        firstName: 'User', // Would need separate actor fetch or join in backend
-        lastName: '',
-        avatar: null
+        firstName: backendNotif.actor_first_name || backendNotif.ActorFirstName || '',
+        lastName: backendNotif.actor_last_name || backendNotif.ActorLastName || '',
+        avatar: backendNotif.actor_avatar || backendNotif.ActorAvatar || null
       } : null,
       timestamp: new Date(backendNotif.CreatedAt || backendNotif.created_at),
       read: Boolean(backendNotif.IsRead || backendNotif.is_read),
@@ -95,7 +95,7 @@ class NotificationService {
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
-        await wsManager.sendMessage('read_notification', {
+        wsManager.sendMessage('read_notification', {
           notification_id: notificationId
         });
         return true;
@@ -118,44 +118,44 @@ class NotificationService {
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
-        await wsManager.sendMessage('respond_group_invitation', {
+        wsManager.sendMessage('respond_group_invitation', {
           group_id: groupId,
           status: status
         });
         return true;
       } else {
-        throw new Error('WebSocket not connected');
+        console.warn('[NotificationService] WebSocket not connected, cannot respond to invitation');
+        return false;
       }
     } catch (error) {
       console.error('[NotificationService] Group invitation response failed:', error);
-      throw error;
+      return false;
     }
   }
 
   /**
    * Respond to follow request via WebSocket
-   * Backend expects: { type: "respond_follow_request", data: { requester_id: string, status: "accepted"|"declined" } }
+   * Backend expects: { type: "respond_follow_request", data: { user_id: string, status: "accepted"|"declined" } }
    */
-  async respondToFollowRequest(requesterId, status) {
+  async respondToFollowRequest(userId, status) {
     try {
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
-        await wsManager.sendMessage('respond_follow_request', {
-          requester_id: requesterId,
+        wsManager.sendMessage('respond_follow_request', {
+          user_id: userId,
           status: status
         });
         return true;
       } else {
-        throw new Error('WebSocket not connected');
+        console.warn('[NotificationService] WebSocket not connected, cannot respond to follow request');
+        return false;
       }
     } catch (error) {
       console.error('[NotificationService] Follow request response failed:', error);
-      throw error;
+      return false;
     }
   }
 }
 
-// Export singleton instance
-export const notificationService = new NotificationService();
-export default notificationService;
+export default new NotificationService();
