@@ -164,4 +164,22 @@ func (c *Client) LoadMessages(msg map[string]any, q *repository.Query) {
 		c.SendError("You cannot load your own messages")
 		return
 	}
+	messages, err := q.GetMessagesBetweenUsers(c.UserID, private.RecipientID)
+	if err != nil {
+		c.SendError("Failed to load messages")
+		return
+	}
+
+	payload := map[string]any{
+		"type":     "load_private_messages",
+		"messages": messages,
+	}
+
+	sendData, err := json.Marshal(payload)
+	if err != nil {
+		c.SendError("Failed to encode messages")
+		return
+	}
+
+	c.Send <- sendData
 }
