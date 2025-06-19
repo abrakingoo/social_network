@@ -11,7 +11,6 @@ import (
 )
 
 func (q *Query) FetchGroupData(groupid string, userID string) (model.GroupData, error) {
-
 	var group model.GroupData
 	var err error
 
@@ -21,7 +20,7 @@ func (q *Query) FetchGroupData(groupid string, userID string) (model.GroupData, 
 	}
 
 	// fetch group post
-	group.Posts, err = q.fetchGroupPosts(groupid)
+	group.Posts, err = q.fetchGroupPosts(groupid, userID)
 	if err != nil {
 		return model.GroupData{}, err
 	}
@@ -98,9 +97,9 @@ func (q *Query) fetchGroupInfo(groupid string, group *model.GroupData) error {
 	return nil
 }
 
-func (q *Query) fetchGroupPosts(groupid string) ([]model.Post, error) {
+func (q *Query) fetchGroupPosts(groupid string, userID string) ([]model.Post, error) {
 	// 1. Fetch posts with their media
-	posts, err := q.FetchGroupPostWithMedia(groupid)
+	posts, err := q.FetchGroupPostWithMedia(groupid, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get posts: %w", err)
 	}
@@ -125,19 +124,24 @@ func (q *Query) fetchGroupPosts(groupid string) ([]model.Post, error) {
 	return posts, nil
 }
 
-func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
+func (q *Query) FetchGroupPostWithMedia(groupid string, user_id string) ([]model.Post, error) {
 	query := `
 		SELECT
 			p.id, p.content,
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
+			EXISTS (
+				SELECT 1 from post_likes pl
+				WHERE pl.post_id = p.id
+				AND pl.user_id = ?
+			) AS liked
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
 		LEFT JOIN users u ON u.id = p.user_id
 		WHERE p.group_id = ?
 		ORDER BY p.created_at DESC
 	`
-	rows, err := q.Db.Query(query, groupid)
+	rows, err := q.Db.Query(query, user_id, groupid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
@@ -161,12 +165,14 @@ func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 			lastname      sql.NullString
 			nickname      sql.NullString
 			avatar        sql.NullString
+			isLiked       bool
 		)
 
 		err := rows.Scan(
 			&postID, &content,
 			&likesCount, &dislikesCount, &commentsCount, &privacy, &createdAt,
 			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
+			&isLiked,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
@@ -195,6 +201,7 @@ func (q *Query) FetchGroupPostWithMedia(groupid string) ([]model.Post, error) {
 				Privacy:       privacy,
 				CreatedAt:     createdAt,
 				Media:         []model.Media{},
+				IsLiked:       isLiked,
 			}
 			postsMap[postID] = post
 		}
