@@ -50,16 +50,29 @@ class NotificationService {
    * Frontend: { id, type, content, actor, timestamp, read, actionable, data }
    */
   transformBackendNotification(backendNotif) {
-    return {
-      id: backendNotif.ID || backendNotif.id,
-      type: backendNotif.Type || backendNotif.type,
-      content: backendNotif.Message || backendNotif.message || 'New notification',
-      actor: backendNotif.ActorId ? {
+    // Prefer nested actor object if present
+    let actor = null;
+    if (backendNotif.actor) {
+      actor = {
+        id: backendNotif.actor.id || '',
+        firstName: backendNotif.actor.first_name || backendNotif.actor.firstName || '',
+        lastName: backendNotif.actor.last_name || backendNotif.actor.lastName || '',
+        avatar: backendNotif.actor.avatar || null,
+        nickname: backendNotif.actor.nickname || '',
+      };
+    } else if (backendNotif.ActorId) {
+      actor = {
         id: backendNotif.ActorId,
         firstName: backendNotif.actor_first_name || backendNotif.ActorFirstName || '',
         lastName: backendNotif.actor_last_name || backendNotif.ActorLastName || '',
         avatar: backendNotif.actor_avatar || backendNotif.ActorAvatar || null
-      } : null,
+      };
+    }
+    return {
+      id: backendNotif.ID || backendNotif.id,
+      type: backendNotif.Type || backendNotif.type,
+      content: backendNotif.Message || backendNotif.message || 'New notification',
+      actor,
       timestamp: new Date(backendNotif.CreatedAt || backendNotif.created_at),
       read: Boolean(backendNotif.IsRead || backendNotif.is_read),
       actionable: this.isActionableType(backendNotif.Type || backendNotif.type),
@@ -68,7 +81,7 @@ class NotificationService {
       data: {
         entity_id: backendNotif.EntityID || backendNotif.entity_id,
         entity_type: backendNotif.EntityType || backendNotif.entity_type,
-        actor_id: backendNotif.ActorId || backendNotif.actor_id
+        actor_id: (actor && actor.id) || backendNotif.ActorId || backendNotif.actor_id
       }
     };
   }
@@ -95,7 +108,7 @@ class NotificationService {
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
-        wsManager.sendMessage('read_notification', {
+        wsManager.send('read_notification', {
           notification_id: notificationId
         });
         return true;
@@ -118,7 +131,7 @@ class NotificationService {
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
-        wsManager.sendMessage('respond_group_invitation', {
+        wsManager.send('respond_group_invitation', {
           group_id: groupId,
           status: status
         });
@@ -142,7 +155,7 @@ class NotificationService {
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
-        wsManager.sendMessage('respond_follow_request', {
+        wsManager.send('respond_follow_request', {
           user_id: userId,
           status: status
         });
@@ -153,6 +166,27 @@ class NotificationService {
       }
     } catch (error) {
       console.error('[NotificationService] Follow request response failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete notification from DB via websocket
+   * @param {string} notificationId
+   * @returns {Promise<boolean>} true if sent, false otherwise
+   */
+  async deleteNotification(notificationId) {
+    try {
+      const { wsManager } = await import('@/utils/websocket');
+      if (wsManager.isConnected()) {
+        wsManager.send('delete_notification', { notification_id: notificationId });
+        return true;
+      } else {
+        console.warn('[NotificationService] WebSocket not connected, cannot delete notification');
+        return false;
+      }
+    } catch (error) {
+      console.error('[NotificationService] Delete (delete_notification) failed:', error);
       return false;
     }
   }
