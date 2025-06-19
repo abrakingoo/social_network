@@ -31,7 +31,6 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		return
 	}
 
-	// Only block if there is a 'pending' or 'accepted' request
 	pendingOrAccepted, err := q.CheckRow("group_join_requests", []string{
 		"group_id",
 		"user_id",
@@ -68,7 +67,6 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 
 	notId := util.UUIDGen()
 
-	// Remove any declined requests before inserting a new one
 	_ = q.DeleteData("group_join_requests", []string{
 			"group_id",
 			"user_id",
