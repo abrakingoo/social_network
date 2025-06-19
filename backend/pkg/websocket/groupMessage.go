@@ -112,4 +112,10 @@ func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {
 		c.SendError("You are not a member of this group")
 		return
 	}
+
+	messages, err := q.GetGroupMessages(message.GroupId)
+	if err != nil {
+		c.SendError("Failed to load group messages")
+		return
+	}
 }
