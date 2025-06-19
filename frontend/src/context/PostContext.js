@@ -67,6 +67,28 @@ export const PostProvider = ({ children }) => {
 
   // Normalize comment data
   const normalizeComment = useCallback((commentData) => {
+    let extractedFirstName = 'Unknown';
+    let extractedLastName = 'User';
+    if (currentUser?.avatar && currentUser.avatar.includes('name=')) {
+      const namePart = currentUser.avatar.split('name=')[1]?.split('&')[0];
+      if (namePart) {
+        const decodedName = decodeURIComponent(namePart).trim();
+        const nameParts = decodedName.split(' ');
+        if (nameParts.length >= 2) {
+          extractedFirstName = nameParts[0];
+          extractedLastName = nameParts[1];
+        } else if (nameParts.length === 1) {
+          extractedFirstName = nameParts[0];
+          extractedLastName = '';
+        }
+      }
+    }
+    
+    const authorName = currentUser?.nickname || `${extractedFirstName} ${extractedLastName}`.trim();
+    const nameParts = authorName.split(' ');
+    const firstNameToUse = nameParts.length > 0 ? nameParts[0] : 'Unknown';
+    const lastNameToUse = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User';
+    
     return {
       ...DEFAULT_COMMENT_STRUCTURE,
       id: commentData.id || Date.now().toString(),
@@ -74,8 +96,9 @@ export const PostProvider = ({ children }) => {
       createdAt: commentData.createdAt || new Date().toISOString(),
       author: {
         id: currentUser?.id || '',
-        first_name: currentUser?.firstName || 'Unknown',
-        last_name: currentUser?.lastName || 'User',
+        firstName: currentUser?.firstName || firstNameToUse,
+        lastName: currentUser?.lastName || lastNameToUse,
+        nickname: currentUser?.nickname || '',
         avatar: currentUser?.avatar || ''
       },
       ...commentData
@@ -195,15 +218,10 @@ export const PostProvider = ({ children }) => {
   const toggleLike = useCallback(async (postId, shouldLike) => {
     if (!currentUser) {
       toast.error("You must be logged in to like posts");
-      console.log("Toggle failed: User not logged in");
       return false;
     }
 
     try {
-      console.log(`Attempting to ${shouldLike ? 'like' : 'unlike'} post ${postId}`);
-      console.log("API URL:", `${API_BASE_URL}/api/likePost`);
-      console.log("Method:", 'POST');
-
       const response = await fetch(`${API_BASE_URL}/api/likePost`, {
         method: 'POST',
         credentials: "include",
@@ -217,14 +235,11 @@ export const PostProvider = ({ children }) => {
         })
       });
 
-      console.log("Response status:", response.status);
-
       if (!response.ok) {
         throw new Error(`Failed to ${shouldLike ? 'like' : 'unlike'} post: ${response.status}`);
       }
 
       const updatedData = await response.json();
-      console.log("Updated data from server:", updatedData);
 
       setPosts(prevPosts =>
         prevPosts.map(post => {
@@ -238,7 +253,6 @@ export const PostProvider = ({ children }) => {
     } catch (error) {
       console.error(`Error ${shouldLike ? 'liking' : 'unliking'} post:`, error);
       toast.error(`Failed to ${shouldLike ? 'like' : 'unlike'} post`);
-      console.log("Toggle failed due to error");
       return false;
     }
   }, [currentUser]);

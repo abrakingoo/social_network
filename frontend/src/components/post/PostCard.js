@@ -93,18 +93,14 @@ const PostCard = ({ post }) => {
 
   const handleLike = async () => {
     if (typeof toggleLike === 'function') {
-      console.log('Before toggle - hasLiked:', hasLiked);
       try {
         const success = await toggleLike(normalizedPost.id, !hasLiked);
         if (success) {
           setHasLiked(!hasLiked);
           setLikeCount(prevCount => hasLiked ? prevCount - 1 : prevCount + 1);
-          console.log('Toggle successful, state should update');
         } else {
-          console.log('Toggle failed');
         }
       } catch (error) {
-        console.error('Error toggling like:', error);
       }
     }
   };
@@ -123,6 +119,28 @@ const PostCard = ({ post }) => {
     }
   };
 
+  const getCommentAuthor = (comment) => {
+    // Default fallback values
+    let commentAuthorName = 'Anonymous User';
+    let commentAvatarUrl = '';
+
+    // Check if comment has an author object (should be there for new comments)
+    if (comment.author && typeof comment.author === 'object') {
+      const firstName = comment.author.firstName || comment.author.first_name || 'Anonymous';
+      const lastName = comment.author.lastName || comment.author.last_name || 'User';
+      commentAuthorName = comment.author.nickname || `${firstName} ${lastName}`;
+      commentAvatarUrl = formatAvatarUrl(comment.author.avatar || '');
+    } else if (comment.authorId && typeof comment.authorId === 'string') {
+      // If only authorId is available, we might not have full details, but check if it's the current user
+      if (currentUser && currentUser.id === comment.authorId) {
+        commentAuthorName = currentUser.nickname || `${currentUser.firstName || 'Anonymous'} ${currentUser.lastName || 'User'}`;
+        commentAvatarUrl = formatAvatarUrl(currentUser.avatar || '');
+      }
+    }
+
+    return { commentAuthorName, commentAvatarUrl };
+  };
+
   const renderComments = () => {
     if (normalizedPost.comments.length === 0) {
       return <p className="text-sm text-gray-500 p-4">No comments yet.</p>;
@@ -131,31 +149,14 @@ const PostCard = ({ post }) => {
     return (
       <div className="space-y-4 p-4">
         {normalizedPost.comments.map((comment) => {
-          // Get comment author with fallbacks
-          const getCommentAuthor = () => {
-            if (!comment.authorId) return null;
-
-            let commentAuthor = getUserById(comment.authorId);
-            if (!commentAuthor) {
-              return {
-                firstName: 'Anonymous',
-                lastName: 'User',
-                avatar: null
-              };
-            }
-            return commentAuthor;
-          };
-
-          const commentAuthor = getCommentAuthor();
-          const commentAuthorName = commentAuthor?.nickname ||
-            `${commentAuthor?.firstName || 'Anonymous'} ${commentAuthor?.lastName || 'User'}`;
+          const { commentAuthorName, commentAvatarUrl } = getCommentAuthor(comment);
 
           return (
             <div key={comment.id || Math.random().toString(36).substring(2)} className="flex space-x-3">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={commentAuthor?.avatar} alt={commentAuthorName} />
+                <AvatarImage src={commentAvatarUrl} alt={commentAuthorName} />
                 <AvatarFallback>
-                  {commentAuthor?.firstName?.[0] || 'A'}{commentAuthor?.lastName?.[0] || 'U'}
+                  {commentAuthorName.split(' ')[0]?.[0] || 'A'}{commentAuthorName.split(' ')[1]?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
