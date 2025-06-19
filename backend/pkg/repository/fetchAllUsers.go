@@ -42,7 +42,13 @@ func (q *Query) FetchAllUsers(userID string) (model.AllUsers, error) {
 		return model.AllUsers{}, err
 	}
 
-	users.NonMutual = append(users.NonMutual, users.Followers...)
+    var notFollowedBack []model.Follower
+    notFollowedBack , err = q.GetFollowersNotFollowedBack(userID)
+    if err != nil {
+        return model.AllUsers{}, err
+    }
+
+    users.NonMutual = append(users.NonMutual, notFollowedBack...)
 
 	return users, nil
 }
@@ -161,4 +167,47 @@ func (q *Query) FetchReceivedFollowRequests(userID string) ([]model.Follower, er
 	}
 
 	return followers, nil
+}
+
+func (q *Query) GetFollowersNotFollowedBack(userID string) ([]model.Follower, error) {
+	query := `
+        SELECT 
+            u.id, u.first_name, u.last_name, u.avatar, u.is_public
+        FROM user_follows uf
+        JOIN users u ON uf.follower_id = u.id
+        WHERE uf.following_id = ? 
+        AND uf.status = 'accepted'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM user_follows uf2
+          WHERE uf2.follower_id = ?
+            AND uf2.following_id = uf.follower_id
+            AND uf2.status = 'accepted'
+        ) 
+		ORDER BY uf.created_at ASC
+        LIMIT 100
+    `
+
+	rows, err := q.Db.Query(query, userID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("GetFollowersNotFollowedBack: failed to query followers: %w", err)
+	}
+	defer rows.Close()
+
+	var users []model.Follower
+	for rows.Next() {
+		var follower model.Follower
+		if err := rows.Scan(
+			&follower.ID,
+			&follower.FirstName,
+			&follower.LastName,
+			&follower.Avatar,
+			&follower.IsPublic,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan follower: %w", err)
+		}
+		users = append(users, follower)
+	}
+
+	return users, nil
 }
