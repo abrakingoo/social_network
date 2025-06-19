@@ -4,23 +4,24 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"social/pkg/model"
 )
 
-func (q *Query) FetchFollowers(userID string)([]model.Follower , error) {
+func (q *Query) FetchFollowers(userID string) ([]model.Follower, error) {
 	query := `
         SELECT 
-            u.id, u.first_name, u.nickname, u.avatar, u.is_public
+            u.id, u.first_name, u.last_name, u.avatar, u.is_public
         FROM user_follows uf
         JOIN users u ON uf.follower_id = u.id
         WHERE uf.following_id = ? AND uf.status = 'accepted'
 		ORDER BY uf.created_at ASC
         LIMIT 100
     `
-	
+
 	rows, err := q.Db.Query(query, userID)
 	if err != nil {
-		return nil,  fmt.Errorf("failed to query followers: %w", err)
+		return nil, fmt.Errorf("failed to query followers: %w", err)
 	}
 	defer rows.Close()
 
@@ -30,7 +31,7 @@ func (q *Query) FetchFollowers(userID string)([]model.Follower , error) {
 		if err := rows.Scan(
 			&follower.ID,
 			&follower.FirstName,
-			&follower.Nickname,
+			&follower.LastName,
 			&follower.Avatar,
 			&follower.IsPublic,
 		); err != nil {
@@ -45,7 +46,7 @@ func (q *Query) FetchFollowers(userID string)([]model.Follower , error) {
 func (q *Query) FetchFollowing(userID string) ([]model.Follower, error) {
 	query := `
         SELECT 
-            u.id, u.first_name, u.nickname, u.avatar, u.is_public
+            u.id, u.first_name, u.last_name, u.avatar, u.is_public
         FROM user_follows uf
         JOIN users u ON uf.following_id = u.id
         WHERE uf.follower_id = ? AND uf.status = 'accepted'
@@ -65,13 +66,13 @@ func (q *Query) FetchFollowing(userID string) ([]model.Follower, error) {
 		if err := rows.Scan(
 			&following.ID,
 			&following.FirstName,
-			&following.Nickname,
+			&following.LastName,
 			&following.Avatar,
 			&following.IsPublic,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan following: %w", err)
 		}
-		users = append(users , following)
+		users = append(users, following)
 	}
 
 	return users, nil
