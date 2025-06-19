@@ -41,30 +41,6 @@ export const PostProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
 
-  // Normalize post data to ensure consistent structure
-  const normalizePost = useCallback((postData) => {
-    if (!postData) return null;
-
-    // Return a post with all required fields, using default values for missing ones
-    return {
-      ...DEFAULT_POST_STRUCTURE,
-      id: postData.id || Date.now().toString(),
-      content: postData.content || '',
-      privacy: postData.privacy || PRIVACY_LEVELS.PUBLIC,
-      createdAt: postData.createdAt || postData.created_at || new Date().toISOString(),
-      likesCount: postData.likesCount || postData.likes || 0,
-      dislikesCount: postData.dislikesCount || postData.dislikes || 0,
-      commentsCount: postData.commentsCount || (postData.comments ? postData.comments.length : 0),
-      comments: Array.isArray(postData.comments) ? postData.comments : [],
-      media: Array.isArray(postData.media) ? postData.media : [],
-      author: postData.user || postData.author || {
-        id: currentUser?.id || '',
-        first_name: currentUser?.firstName || '',
-        last_name: currentUser?.lastName || ''
-      }
-    };
-  }, [currentUser]);
-
   // Normalize comment data
   const normalizeComment = useCallback((commentData) => {
     let extractedFirstName = 'Unknown';
@@ -104,6 +80,32 @@ export const PostProvider = ({ children }) => {
       ...commentData
     };
   }, [currentUser]);
+
+  // Normalize post data to ensure consistent structure
+  const normalizePost = useCallback((postData) => {
+    if (!postData) return null;
+
+    const normalizedComments = Array.isArray(postData.comments) ? postData.comments.map(comment => normalizeComment(comment)) : [];
+
+    // Return a post with all required fields, using default values for missing ones
+    return {
+      ...DEFAULT_POST_STRUCTURE,
+      id: postData.id || Date.now().toString(),
+      content: postData.content || '',
+      privacy: postData.privacy || PRIVACY_LEVELS.PUBLIC,
+      createdAt: postData.createdAt || postData.created_at || new Date().toISOString(),
+      likesCount: postData.likesCount || postData.likes || 0,
+      dislikesCount: postData.dislikesCount || postData.dislikes || 0,
+      commentsCount: postData.commentsCount || (postData.comments ? postData.comments.length : 0),
+      comments: normalizedComments,
+      media: Array.isArray(postData.media) ? postData.media : [],
+      author: postData.user || postData.author || {
+        id: currentUser?.id || '',
+        first_name: currentUser?.firstName || '',
+        last_name: currentUser?.lastName || ''
+      }
+    };
+  }, [currentUser, normalizeComment]);
 
   // Function to handle fetching posts from API
   const fetchPosts = useCallback(async () => {
