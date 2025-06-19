@@ -18,7 +18,7 @@ const Followers = () => {
   const { currentUser, getAllUsers, loading: authLoading } = useAuth();
   const [users, setUsers] = useState([]);
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("followers");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
