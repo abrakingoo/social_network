@@ -187,6 +187,34 @@ const PostCard = ({ post }) => {
     }
   };
 
+  const renderInteractions = () => {
+    return (
+      <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex items-center space-x-2"
+          onClick={handleLike}
+        >
+          <Heart className={`h-5 w-5 ${hasLiked ? 'fill-current text-red-500' : ''}`} />
+          <span>{likeCount || normalizedPost.likesCount || 0}</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex items-center space-x-2"
+          onClick={() => setShowComments(!showComments)}
+        >
+          <MessageSquare className="h-5 w-5" />
+          <span>{normalizedPost.commentsCount || 0}</span>
+        </Button>
+        <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+          <Share2 className="h-5 w-5" />
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <div className={`max-w-4xl mx-auto ${isMobile ? '-mx-4' : ''}`}>
       {/* Lightbox for images */}
@@ -286,40 +314,9 @@ const PostCard = ({ post }) => {
               })}
             </div>
           )}
-
-          <div className="flex justify-between items-center mt-4 text-sm text-gray-500">
-            {normalizedPost.commentsCount > 0 && (
-              <div className="flex items-center">
-                <MessageSquare size={16} className="text-blue-500 mr-1" />
-                <span>{formatCount(normalizedPost.commentsCount)}</span>
-              </div>
-            )}
-          </div>
         </CardContent>
 
-        <div className={`border-t border-gray-200 ${isMobile ? 'border-x-0' : ''}`}>
-          <div className="grid grid-cols-3 gap-1 py-1">
-            <Button
-              variant="ghost"
-              className={`flex items-center justify-center ${hasLiked ? 'text-green-500' : ''}`}
-              onClick={handleLike}
-            >
-              <Heart className={`mr-1 h-5 w-5 ${hasLiked ? 'fill-green-500' : ''}`} />
-              <span className="ml-1 text-sm">{formatCount(likeCount)}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              className="flex items-center justify-center"
-              onClick={() => setShowComments(!showComments)}
-            >
-              <MessageSquare className="mr-1 h-5 w-5" />
-              <span className="ml-1 text-sm">{formatCount(normalizedPost.commentsCount)}</span>
-            </Button>
-            <Button variant="ghost" className="flex items-center justify-center">
-              <Share2 className="mr-1 h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+        {renderInteractions()}
 
         {showComments && (
           <CardFooter className="flex flex-col p-0">
