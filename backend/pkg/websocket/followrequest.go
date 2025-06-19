@@ -53,7 +53,6 @@ func (svc *FollowService) sendNotification(notifID, recipientID, actorID, ntype,
 		[]any{notifID, recipientID, actorID, ntype, message},
 	)
 	if err != nil {
-		// log or handle error sending notification insert
 		return
 	}
 
