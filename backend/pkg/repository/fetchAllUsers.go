@@ -42,6 +42,8 @@ func (q *Query) FetchAllUsers(userID string) (model.AllUsers, error) {
 		return model.AllUsers{}, err
 	}
 
+	users.NonMutual = append(users.NonMutual, users.Followers...)
+
 	return users, nil
 }
 
