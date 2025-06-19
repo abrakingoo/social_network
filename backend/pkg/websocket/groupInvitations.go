@@ -90,7 +90,6 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 	h.ActionBasedNotification([]string{
 		request.RecipientID,
 	}, "group_invitation", map[string]any{
-		"id": notId,
 		"group_id": request.GroupId,
 	})
 }
