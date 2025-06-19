@@ -36,7 +36,8 @@ const Settings = () => {
     email: '',
     phone: '',
     location: '',
-    about: ''
+    about: '',
+    nickname: ''
   });
 
   const [privacy, setPrivacy] = useState({
@@ -76,7 +77,8 @@ const Settings = () => {
         email: currentUser.email || '',
         phone: currentUser.phone || '',
         location: currentUser.location || '',
-        about: currentUser.about || ''
+        about: currentUser.about || '',
+        nickname: currentUser.nickname || ''
       });
 
       setPrivacy({
@@ -146,7 +148,15 @@ const Settings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="about">About</Label>
+                  <Label htmlFor="nickname">Nickname</Label>
+                  <Input
+                    id="nickname"
+                    value={profile.nickname}
+                    onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="about">About Me</Label>
                   <textarea
                     id="about"
                     className="w-full min-h-[100px] p-2 border rounded-md"
