@@ -25,7 +25,7 @@ import {
 
 const Settings = () => {
   const router = useRouter();
-  const { currentUser, loading, checkAuth } = useAuth();
+  const { currentUser } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('account');
 
@@ -34,10 +34,16 @@ const Settings = () => {
     firstName: '',
     lastName: '',
     email: '',
-    date_of_birth: '',
-    about: '',
-    nickname: '',
-    is_public: true
+    phone: '',
+    location: '',
+    about: ''
+  });
+
+  const [privacy, setPrivacy] = useState({
+    isPublic: true,
+    showEmail: false,
+    showPhone: false,
+    showLocation: true
   });
 
   const [notifications, setNotifications] = useState({
@@ -57,8 +63,6 @@ const Settings = () => {
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (loading) return; // Wait for the authentication check to complete
-
     if (!currentUser) {
       router.push('/login');
       return;
@@ -67,90 +71,35 @@ const Settings = () => {
     // Load user data
     if (currentUser) {
       setProfile({
-        firstName: currentUser.first_name || '',
-        lastName: currentUser.last_name || '',
+        firstName: currentUser.firstName || '',
+        lastName: currentUser.lastName || '',
         email: currentUser.email || '',
-        date_of_birth: currentUser.date_of_birth ? new Date(currentUser.date_of_birth).toISOString().split('T')[0] : '',
-        about: currentUser.about_me || '',
-        nickname: currentUser.nickname || '',
-        is_public: currentUser.is_public !== undefined ? currentUser.is_public : true
+        phone: currentUser.phone || '',
+        location: currentUser.location || '',
+        about: currentUser.about || ''
       });
 
+      setPrivacy({
+        isPublic: currentUser.isPublic !== undefined ? currentUser.isPublic : true,
+        showEmail: currentUser.showEmail !== undefined ? currentUser.showEmail : false,
+        showPhone: currentUser.showPhone !== undefined ? currentUser.showPhone : false,
+        showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
+      });
     }
-  }, [currentUser, router, loading]);
+  }, [currentUser, router]);
 
   // Don't render if user is not authenticated
-  if (loading || !currentUser) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <p>Loading...</p>
-      </div>
-    );
+  if (!currentUser) {
+    return null;
   }
 
-  const saveSettings = async (section) => {
-    if (section === 'account') {
-      try {
-        const payload = {
-          first_name: profile.firstName,
-          last_name: profile.lastName,
-          email: profile.email,
-          date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth).toISOString() : '',
-          nickname: profile.nickname,
-          about_me: profile.about,
-          is_public: profile.is_public,
-        };
-
-        // Remove empty fields from payload to avoid sending unnecessary data
-        Object.keys(payload).forEach(key => {
-          if (payload[key] === '' || payload[key] === null) {
-            delete payload[key];
-          }
-        });
-
-        // Use environment variable consistent with other parts of the app
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiBaseUrl}/api/updateUser`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          credentials: 'include', // Ensure cookies are sent with the request
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to update profile');
-        }
-
-        const data = await response.json();
-        toast({
-          title: 'Success',
-          description: data.message || 'Profile updated successfully',
-          status: 'success',
-          duration: 3000,
-        });
-        
-        // Refresh user data in AuthContext to ensure profile page shows updated info
-        await checkAuth();
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: error.message || 'Failed to update profile',
-          status: 'error',
-          duration: 5000,
-        });
-      }
-    } else if (section === 'notifications') {
-      // TODO: Implement notifications settings update
-      toast({
-        title: 'Success',
-        description: 'Notifications settings saved',
-        status: 'success',
-        duration: 3000,
-      });
-    } 
+  const saveSettings = (section) => {
+    // In a real app, this would save to backend
+    toast({
+      title: "Settings updated",
+      description: `Your ${section} settings have been saved.`,
+      variant: "success",
+    });
   };
 
   return (
@@ -165,6 +114,10 @@ const Settings = () => {
               <TabsTrigger value="account" className="flex items-center">
                 <User className="h-4 w-4 mr-2" />
                 Account
+              </TabsTrigger>
+              <TabsTrigger value="privacy" className="flex items-center">
+                <Lock className="h-4 w-4 mr-2" />
+                Privacy
               </TabsTrigger>
             </TabsList>
 
@@ -189,39 +142,47 @@ const Settings = () => {
                       onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="flex items-center space-x-2">
+                      <Mail className="h-4 w-4 text-gray-500" />
+                      <Input
                         id="email"
                         type="email"
                         value={profile.email}
                         onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        />
+                      />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date_of_birth">Date of Birth</Label>
-                        <Input
-                        id="date_of_birth"
-                        type="date"
-                        value={profile.date_of_birth}
-                        onChange={(e) => setProfile({ ...profile, date_of_birth: e.target.value })}
-                        />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <div className="flex items-center space-x-2">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <Input
+                        id="phone"
+                        value={profile.phone}
+                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <Input
+                        id="location"
+                        value={profile.location}
+                        onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nickname">Nickname</Label>
-                  <Input
-                    id="nickname"
-                    value={profile.nickname}
-                    onChange={(e) => setProfile({ ...profile, nickname: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="about">About Me</Label>
+                  <Label htmlFor="about">About</Label>
                   <textarea
                     id="about"
                     className="w-full min-h-[100px] p-2 border rounded-md"
@@ -230,7 +191,20 @@ const Settings = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t mt-4">
+                <Button
+                  onClick={() => saveSettings('account')}
+                  className="bg-social hover:bg-social-dark"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Account Settings
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Privacy Settings */}
+            <TabsContent value="privacy">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="publicProfile">Public Profile</Label>
                     <div className="text-sm text-gray-500">
@@ -239,17 +213,59 @@ const Settings = () => {
                   </div>
                   <Switch
                     id="publicProfile"
-                    checked={profile.is_public}
-                    onCheckedChange={(checked) => setProfile({ ...profile, is_public: checked })}
+                    checked={privacy.isPublic}
+                    onCheckedChange={(checked) => setPrivacy({ ...privacy, isPublic: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showEmail">Show Email</Label>
+                    <div className="text-sm text-gray-500">
+                      Display your email on your profile
+                    </div>
+                  </div>
+                  <Switch
+                    id="showEmail"
+                    checked={privacy.showEmail}
+                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showEmail: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showPhone">Show Phone Number</Label>
+                    <div className="text-sm text-gray-500">
+                      Display your phone number on your profile
+                    </div>
+                  </div>
+                  <Switch
+                    id="showPhone"
+                    checked={privacy.showPhone}
+                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showPhone: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="showLocation">Show Location</Label>
+                    <div className="text-sm text-gray-500">
+                      Display your location on your profile
+                    </div>
+                  </div>
+                  <Switch
+                    id="showLocation"
+                    checked={privacy.showLocation}
+                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showLocation: checked })}
                   />
                 </div>
 
                 <Button
-                  onClick={() => saveSettings('account')}
-                  className="bg-social hover:bg-social-dark mt-6"
+                  onClick={() => saveSettings('privacy')}
+                  className="bg-social hover:bg-social-dark"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Save Changes
+                  Save Privacy Settings
                 </Button>
               </div>
             </TabsContent>
