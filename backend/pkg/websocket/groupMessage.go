@@ -87,3 +87,5 @@ func (c *Client) GroupMessage(msg map[string]any, q *repository.Query, h *Hub) {
 
 	h.BroadcastToGroup(c, message.GroupId, groupData)
 }
+
+func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {}
