@@ -290,38 +290,97 @@ export const groupService = {
     }
   },
 
-  // Get all users for invitations - CORRECTED: Use exact backend endpoint
+  // Get all users for invitations - FIXED: Enhanced error handling and debugging
   async getAllUsers() {
     try {
+      console.log('[groupService.getAllUsers] Starting fetch...');
+
       const response = await fetch(`${API_BASE_URL}/api/users`, {
         credentials: 'include',
+        headers: getHeaders(false)
       });
 
+      console.log('[groupService.getAllUsers] Response status:', response.status);
+      console.log('[groupService.getAllUsers] Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        const errorText = await response.text();
+        console.error('[groupService.getAllUsers] Error response:', errorText);
+        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
       }
 
       // Handle 204 No Content response
       if (response.status === 204) {
+        console.log('[groupService.getAllUsers] No content returned (204)');
         return [];
       }
 
       const data = await response.json();
+      console.log('[groupService.getAllUsers] Raw response data:', data);
+
+      // Extract user relations from the response
       const userRelations = data.message || data;
+      console.log('[groupService.getAllUsers] User relations:', userRelations);
 
-      // Combine all user categories into one array
-      const allUsers = [
-        ...(userRelations.followers || []),
-        ...(userRelations.following || []),
-        ...(userRelations.non_mutual || []),
-        ...(userRelations.received_request || []),
-        ...(userRelations.sent_request || [])
-      ];
+      // Validate that userRelations is an object
+      if (!userRelations || typeof userRelations !== 'object') {
+        console.error('[groupService.getAllUsers] Invalid user relations format:', userRelations);
+        return [];
+      }
 
-      return allUsers;
+      // FIXED: Safely combine all user categories with proper null/undefined handling
+      const allUsers = [];
+
+      // Helper function to safely add users from a category
+      const addUsersFromCategory = (category, categoryName) => {
+        if (Array.isArray(category) && category.length > 0) {
+          console.log(`[groupService.getAllUsers] Adding ${category.length} users from ${categoryName}`);
+          allUsers.push(...category);
+        } else {
+          console.log(`[groupService.getAllUsers] No users in ${categoryName} (or not an array)`);
+        }
+      };
+
+      // Process each user category with exact field names from backend
+      addUsersFromCategory(userRelations.followers, 'followers');
+      addUsersFromCategory(userRelations.following, 'following');
+      addUsersFromCategory(userRelations.non_mutual, 'non_mutual');
+      addUsersFromCategory(userRelations.received_request, 'received_request');
+      addUsersFromCategory(userRelations.sent_request, 'sent_request');
+
+      console.log(`[groupService.getAllUsers] Total users combined: ${allUsers.length}`);
+      if (allUsers.length > 0) {
+        console.log(`[groupService.getAllUsers] Sample user:`, allUsers[0]);
+      }
+
+      // FIXED: Remove duplicates based on user ID and ensure valid user objects
+      const uniqueUsers = [];
+      const seenIds = new Set();
+
+      for (const user of allUsers) {
+        if (user && user.id && !seenIds.has(user.id)) {
+          // Validate user object has required fields
+          if (user.firstname || user.first_name) {
+            seenIds.add(user.id);
+            uniqueUsers.push(user);
+          } else {
+            console.warn('[groupService.getAllUsers] Skipping user with missing name fields:', user);
+          }
+        }
+      }
+
+      console.log(`[groupService.getAllUsers] Final unique users: ${uniqueUsers.length}`);
+
+      return uniqueUsers;
+
     } catch (error) {
-      console.error('Error fetching users:', error);
-      throw error;
+      console.error('[groupService.getAllUsers] Error:', error);
+      console.error('[groupService.getAllUsers] Error message:', error.message);
+      console.error('[groupService.getAllUsers] Error stack:', error.stack);
+
+      // Return empty array instead of throwing to prevent UI from breaking
+      // The UI will show "No users available to invite" which is better than a broken state
+      return [];
     }
   },
 
