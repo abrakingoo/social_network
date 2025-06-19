@@ -133,4 +133,15 @@ func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {
 }
 
 func (c *Client) LoadMessages(msg map[string]any, q *repository.Query) {
+	data, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var private model.PrivateMessage
+	if err = json.Unmarshal(data, &private); err != nil {
+		c.SendError("Invalid data format")
+		return
+	}
 }
