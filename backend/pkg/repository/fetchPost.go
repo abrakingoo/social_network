@@ -14,7 +14,12 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 		SELECT 
 			p.id, p.content, 
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
+			EXISTS (
+				SELECT 1 from post_likes pl
+				WHERE pl.post_id = p.id
+				AND pl.user_id = ?
+			) AS liked
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
 		JOIN users u ON u.id = p.user_id
@@ -43,7 +48,7 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
   		)
 		ORDER BY p.created_at DESC
 	`
-	rows, err := q.Db.Query(query, id, id, id)
+	rows, err := q.Db.Query(query, id, id, id, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
@@ -67,12 +72,14 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 			lastname      sql.NullString
 			nickname      sql.NullString
 			avatar        sql.NullString
+			isLiked       bool
 		)
 
 		err := rows.Scan(
 			&postID, &content,
 			&likesCount, &dislikesCount, &commentsCount, &privacy, &createdAt,
 			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
+			&isLiked,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan post: %w", err)
@@ -101,6 +108,7 @@ func (q *Query) FetchPostWithMedia(id string) ([]model.Post, error) {
 				Privacy:       privacy,
 				CreatedAt:     createdAt,
 				Media:         []model.Media{},
+				IsLiked:       isLiked,
 			}
 			postsMap[postID] = post
 		}
