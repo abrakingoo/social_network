@@ -1,6 +1,6 @@
 // frontend/src/utils/websocket.js - CORRECTED: Perfect backend integration
-import { useEffect, useRef, useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 // Enhanced WebSocket manager with EXACT backend integration
 class WebSocketManager {
@@ -20,7 +20,7 @@ class WebSocketManager {
       isDisconnecting: false,
       lastConnectionAttempt: 0,
       connectionDebounceMs: 200,
-      cleanupInProgress: false
+      cleanupInProgress: false,
     };
 
     // Group notification management for real-time updates
@@ -45,21 +45,24 @@ class WebSocketManager {
   // Debounced connection to prevent rapid attempts
   connect(url) {
     if (!this.isAuthenticated) {
-      console.log('WebSocket: Not authenticated, skipping connection');
+      console.log("WebSocket: Not authenticated, skipping connection");
       return;
     }
 
     const state = this.connectionState;
     const now = Date.now();
 
-    if (state.isConnecting || state.isConnected ||
-        (now - state.lastConnectionAttempt) < state.connectionDebounceMs) {
-      console.log('WebSocket: Connection attempt too soon, debouncing');
+    if (
+      state.isConnecting ||
+      state.isConnected ||
+      now - state.lastConnectionAttempt < state.connectionDebounceMs
+    ) {
+      console.log("WebSocket: Connection attempt too soon, debouncing");
       return;
     }
 
     if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
-      console.log('WebSocket: Closing existing connection before new attempt');
+      console.log("WebSocket: Closing existing connection before new attempt");
       this.ws.close();
       this.ws = null;
     }
@@ -68,65 +71,69 @@ class WebSocketManager {
     state.isConnecting = true;
     this.connectionUrl = url;
 
-    console.log('WebSocket: Connecting to:', url);
+    console.log("WebSocket: Connecting to:", url);
 
     try {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        console.log('WebSocket: Connected successfully');
+        console.log("WebSocket: Connected successfully");
         state.isConnected = true;
         state.isConnecting = false;
         this.reconnectAttempts = 0;
-        this.notifyListeners('connection', { status: 'connected' });
+        this.notifyListeners("connection", { status: "connected" });
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('WebSocket: Message received:', data);
+          console.log("WebSocket: Message received:", data);
 
           // Handle backend notifications with EXACT format matching
-          if (data.type === 'notification') {
+          if (data.type === "notification") {
             this.handleBackendNotification(data);
-          } else if (data.type === 'error') {
+          } else if (data.type === "error") {
             // Backend sends errors with exact format: { "type": "error", "message": "..." }
-            this.notifyListeners('error', { message: data.message });
+            this.notifyListeners("error", { message: data.message });
           } else {
             this.notifyListeners(data.type, data.data || data);
           }
         } catch (error) {
-          console.error('WebSocket: Error parsing message:', error);
+          console.error("WebSocket: Error parsing message:", error);
         }
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket: Connection error:', error);
+        console.error("WebSocket: Connection error:", error);
         state.isConnecting = false;
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket: Connection closed', event.code, event.reason);
+        console.log("WebSocket: Connection closed", event.code, event.reason);
 
         state.isConnected = false;
         state.isConnecting = false;
         state.isDisconnecting = false;
 
         if (state.cleanupInProgress) {
-          console.log('WebSocket: Disconnect completed successfully');
+          console.log("WebSocket: Disconnect completed successfully");
         }
 
-        this.notifyListeners('connection', { status: 'disconnected' });
+        this.notifyListeners("connection", { status: "disconnected" });
 
-        if (this.isAuthenticated &&
-            !state.cleanupInProgress &&
-            this.reconnectAttempts < this.maxReconnectAttempts &&
-            event.code !== 1000) {
-
+        if (
+          this.isAuthenticated &&
+          !state.cleanupInProgress &&
+          this.reconnectAttempts < this.maxReconnectAttempts &&
+          event.code !== 1000
+        ) {
           this.reconnectAttempts++;
-          const delay = this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1);
+          const delay =
+            this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts - 1);
 
-          console.log(`WebSocket: Scheduling reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+          console.log(
+            `WebSocket: Scheduling reconnection ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`,
+          );
 
           setTimeout(() => {
             if (this.isAuthenticated && !state.cleanupInProgress) {
@@ -142,7 +149,7 @@ class WebSocketManager {
         }, 50);
       };
     } catch (error) {
-      console.error('WebSocket: Failed to create connection:', error);
+      console.error("WebSocket: Failed to create connection:", error);
       state.isConnecting = false;
     }
   }
@@ -151,22 +158,22 @@ class WebSocketManager {
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
 
-    if (notificationCase === 'action_based') {
+    if (notificationCase === "action_based") {
       switch (action_type) {
-        case 'group_join_request':
+        case "group_join_request":
           this.handleJoinRequestNotification(data);
           break;
-        case 'group_join_accept':
+        case "group_join_accept":
           this.handleJoinAcceptNotification(data);
           break;
-        case 'group_join_decline':
+        case "group_join_decline":
           this.handleJoinDeclineNotification(data);
           break;
-        case 'group_invitation':
+        case "group_invitation":
           this.handleGroupInvitationNotification(data);
           break;
         default:
-          console.log('WebSocket: Unknown group notification:', message);
+          console.log("WebSocket: Unknown group notification:", message);
       }
     }
   }
@@ -176,35 +183,35 @@ class WebSocketManager {
     const { group_id } = data;
 
     // Dispatch event for components to handle
-    this.dispatchNotificationEvent('group_join_request', {
+    this.dispatchNotificationEvent("group_join_request", {
       title: "New Join Request",
       description: "Someone wants to join your group",
       action: {
         text: "Review",
-        callback: () => this.openGroupManagement(group_id)
+        callback: () => this.openGroupManagement(group_id),
       },
-      data: data
+      data: data,
     });
 
     // Trigger callbacks for active group management dialogs
     const callbacks = this.groupNotificationCallbacks.get(group_id);
     if (callbacks && callbacks.length > 0) {
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         try {
           callback({
-            type: 'join_request',
-            data: data
+            type: "join_request",
+            data: data,
           });
         } catch (error) {
-          console.error('Error in group notification callback:', error);
+          console.error("Error in group notification callback:", error);
         }
       });
     }
 
     // Trigger page updates
     this.triggerGroupPageUpdate(group_id, {
-      type: 'join_request_received',
-      data: data
+      type: "join_request_received",
+      data: data,
     });
   }
 
@@ -213,23 +220,28 @@ class WebSocketManager {
     const { group_id, status } = data;
 
     // Dispatch event for components to handle
-    this.dispatchNotificationEvent('group_join_response', {
-      title: status === 'accepted' ? "Request Accepted!" : "Request Declined",
-      description: status === 'accepted'
-        ? "Your request to join the group was accepted"
-        : "Your request to join the group was declined",
-      variant: status === 'accepted' ? "default" : "destructive",
-      action: status === 'accepted' ? {
-        text: "Visit Group",
-        callback: () => window.location.href = `/groups/${this.createSlug('group-' + group_id)}`
-      } : undefined,
-      data: data
+    this.dispatchNotificationEvent("group_join_response", {
+      title: status === "accepted" ? "Request Accepted!" : "Request Declined",
+      description:
+        status === "accepted"
+          ? "Your request to join the group was accepted"
+          : "Your request to join the group was declined",
+      variant: status === "accepted" ? "default" : "destructive",
+      action:
+        status === "accepted"
+          ? {
+              text: "Visit Group",
+              callback: () =>
+                (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
+            }
+          : undefined,
+      data: data,
     });
 
     // Update group page if user is currently viewing it
     this.triggerGroupPageUpdate(group_id, {
-      type: 'membership_changed',
-      data: { status: status, group_id }
+      type: "membership_changed",
+      data: { status: status, group_id },
     });
   }
 
@@ -238,32 +250,34 @@ class WebSocketManager {
     const { group_id } = data;
 
     // Dispatch event for components to handle
-    this.dispatchNotificationEvent('group_invitation', {
+    this.dispatchNotificationEvent("group_invitation", {
       title: "Group Invitation",
       description: "You've been invited to join a group",
       action: {
         text: "View",
-        callback: () => window.location.href = `/notifications`
+        callback: () => (window.location.href = `/notifications`),
       },
-      data: data
+      data: data,
     });
   }
 
   // Dispatch custom events for components to handle notifications
   dispatchNotificationEvent(type, notificationData) {
-    window.dispatchEvent(new CustomEvent('wsNotification', {
-      detail: { type, notification: notificationData }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("wsNotification", {
+        detail: { type, notification: notificationData },
+      }),
+    );
   }
 
   // Perfect disconnect with proper sequencing
   disconnect() {
-    console.log('WebSocket: Disconnecting...');
+    console.log("WebSocket: Disconnecting...");
 
     const state = this.connectionState;
 
     if (state.isDisconnecting) {
-      console.log('WebSocket: Already disconnecting, skipping');
+      console.log("WebSocket: Already disconnecting, skipping");
       return;
     }
 
@@ -275,26 +289,29 @@ class WebSocketManager {
     if (this.ws) {
       const currentState = this.ws.readyState;
 
-      if (currentState === WebSocket.OPEN || currentState === WebSocket.CONNECTING) {
-        console.log('WebSocket: Closing connection...');
-        this.ws.close(1000, 'Logout');
+      if (
+        currentState === WebSocket.OPEN ||
+        currentState === WebSocket.CONNECTING
+      ) {
+        console.log("WebSocket: Closing connection...");
+        this.ws.close(1000, "Logout");
 
         setTimeout(() => {
           if (this.ws && state.cleanupInProgress) {
-            console.log('WebSocket: Force cleanup after timeout');
+            console.log("WebSocket: Force cleanup after timeout");
             this.ws = null;
             state.isDisconnecting = false;
-            console.log('WebSocket: Disconnect completed (fallback)');
+            console.log("WebSocket: Disconnect completed (fallback)");
           }
         }, 1000);
       } else {
-        console.log('WebSocket: Connection already closed');
+        console.log("WebSocket: Connection already closed");
         this.ws = null;
         state.isDisconnecting = false;
-        console.log('WebSocket: Disconnect completed (already closed)');
+        console.log("WebSocket: Disconnect completed (already closed)");
       }
     } else {
-      console.log('WebSocket: No connection to disconnect');
+      console.log("WebSocket: No connection to disconnect");
       state.isDisconnecting = false;
     }
 
@@ -326,21 +343,28 @@ class WebSocketManager {
 
   // Trigger updates on group pages
   triggerGroupPageUpdate(groupId, notification) {
-    window.dispatchEvent(new CustomEvent('groupNotificationUpdate', {
-      detail: { groupId, notification }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("groupNotificationUpdate", {
+        detail: { groupId, notification },
+      }),
+    );
   }
 
   // Helper to create group slug from title
   createSlug(title) {
-    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 
   // Helper to open group management
   openGroupManagement(groupId) {
-    window.dispatchEvent(new CustomEvent('openGroupManagement', {
-      detail: { groupId }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("openGroupManagement", {
+        detail: { groupId },
+      }),
+    );
   }
 
   // Event listener management
@@ -363,7 +387,7 @@ class WebSocketManager {
   notifyListeners(type, data) {
     if (this.listeners.has(type)) {
       const callbacks = Array.from(this.listeners.get(type));
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
@@ -376,19 +400,19 @@ class WebSocketManager {
   // Send with connection validation
   send(type, data) {
     if (!this.isAuthenticated) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('Connection not available');
+      throw new Error("Connection not available");
     }
 
     try {
       const message = JSON.stringify({ type, data });
       this.ws.send(message);
-      console.log('WebSocket: Message sent:', message);
+      console.log("WebSocket: Message sent:", message);
     } catch (error) {
-      console.error('WebSocket: Failed to send message:', error);
+      console.error("WebSocket: Failed to send message:", error);
       throw error;
     }
   }
@@ -396,24 +420,24 @@ class WebSocketManager {
   // CORRECTED: Handle backend's silent operations properly
   async sendAndWait(type, data, timeout = 8000) {
     if (!this.isAuthenticated) {
-      throw new Error('User not authenticated');
+      throw new Error("User not authenticated");
     }
 
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error('Connection not available');
+      throw new Error("Connection not available");
     }
 
     // Operations that backend processes silently (no success response)
     const silentOperations = [
-      'group_join_request',
-      'exit_group',
-      'group_invitation',
-      'respond_group_join_request',
-      'respond_group_invitation',
-      'unfollow',
-      'follow_request',
-      'cancel_group_invitation',
-      'cancel_group_join_request'
+      "group_join_request",
+      "exit_group",
+      "group_invitation",
+      "respond_group_join_request",
+      "respond_group_invitation",
+      "unfollow",
+      "follow_request",
+      "cancel_group_invitation",
+      "cancel_group_join_request",
     ];
 
     if (silentOperations.includes(type)) {
@@ -426,22 +450,22 @@ class WebSocketManager {
           if (!resolved && !errorReceived) {
             errorReceived = true;
             resolved = true;
-            this.removeListener('error', errorListener);
-            reject(new Error(errorData.message || 'Operation failed'));
+            this.removeListener("error", errorListener);
+            reject(new Error(errorData.message || "Operation failed"));
           }
         };
 
-        this.addListener('error', errorListener);
+        this.addListener("error", errorListener);
 
         // Set timeout for silent success
         const timeoutId = setTimeout(() => {
           if (!resolved && !errorReceived) {
             resolved = true;
-            this.removeListener('error', errorListener);
+            this.removeListener("error", errorListener);
             resolve({
               success: true,
-              message: 'Operation completed successfully',
-              silent: true
+              message: "Operation completed successfully",
+              silent: true,
             });
           }
         }, timeout);
@@ -452,7 +476,7 @@ class WebSocketManager {
           if (!resolved) {
             resolved = true;
             clearTimeout(timeoutId);
-            this.removeListener('error', errorListener);
+            this.removeListener("error", errorListener);
             reject(error);
           }
         }
@@ -470,7 +494,7 @@ class WebSocketManager {
         clearTimeout(timeoutId);
         resolve({
           success: true,
-          message: 'Operation completed successfully'
+          message: "Operation completed successfully",
         });
       } catch (error) {
         clearTimeout(timeoutId);
@@ -481,7 +505,9 @@ class WebSocketManager {
 
   // Connection status getter
   isConnected() {
-    return this.connectionState.isConnected && this.ws?.readyState === WebSocket.OPEN;
+    return (
+      this.connectionState.isConnected && this.ws?.readyState === WebSocket.OPEN
+    );
   }
 
   // Debug info
@@ -493,7 +519,7 @@ class WebSocketManager {
       isDisconnecting: this.connectionState.isDisconnecting,
       reconnectAttempts: this.reconnectAttempts,
       wsState: this.ws?.readyState,
-      listenerCount: this.listeners.size
+      listenerCount: this.listeners.size,
     };
   }
 }
@@ -509,7 +535,7 @@ export const useWebSocketNotifications = () => {
     const handleNotification = (event) => {
       const { type, notification } = event.detail;
 
-      if (type === 'group_join_request') {
+      if (type === "group_join_request") {
         toast({
           title: notification.title,
           description: notification.description,
@@ -522,7 +548,7 @@ export const useWebSocketNotifications = () => {
             </button>
           ) : null,
         });
-      } else if (type === 'group_join_response') {
+      } else if (type === "group_join_response") {
         toast({
           title: notification.title,
           description: notification.description,
@@ -536,7 +562,7 @@ export const useWebSocketNotifications = () => {
             </button>
           ) : null,
         });
-      } else if (type === 'group_invitation') {
+      } else if (type === "group_invitation") {
         toast({
           title: notification.title,
           description: notification.description,
@@ -552,10 +578,10 @@ export const useWebSocketNotifications = () => {
       }
     };
 
-    window.addEventListener('wsNotification', handleNotification);
+    window.addEventListener("wsNotification", handleNotification);
 
     return () => {
-      window.removeEventListener('wsNotification', handleNotification);
+      window.removeEventListener("wsNotification", handleNotification);
     };
   }, [toast]);
 };
@@ -573,7 +599,7 @@ export const useWebSocket = (type, callback) => {
   useEffect(() => {
     const connectionCallback = (data) => {
       if (mountedRef.current) {
-        setIsConnected(data.status === 'connected');
+        setIsConnected(data.status === "connected");
       }
     };
 
@@ -582,19 +608,19 @@ export const useWebSocket = (type, callback) => {
         try {
           callbackRef.current(data);
         } catch (error) {
-          console.error('WebSocket: Error in message callback:', error);
+          console.error("WebSocket: Error in message callback:", error);
         }
       }
     };
 
-    wsManager.addListener('connection', connectionCallback);
+    wsManager.addListener("connection", connectionCallback);
     if (type) {
       wsManager.addListener(type, messageCallback);
     }
 
     return () => {
       mountedRef.current = false;
-      wsManager.removeListener('connection', connectionCallback);
+      wsManager.removeListener("connection", connectionCallback);
       if (type) {
         wsManager.removeListener(type, messageCallback);
       }
@@ -610,49 +636,55 @@ export const useWebSocket = (type, callback) => {
   return {
     isConnected,
     send: (type, data) => wsManager.send(type, data),
-    sendAndWait: (type, data, timeout) => wsManager.sendAndWait(type, data, timeout),
-    connectionInfo: wsManager.getConnectionInfo()
+    sendAndWait: (type, data, timeout) =>
+      wsManager.sendAndWait(type, data, timeout),
+    connectionInfo: wsManager.getConnectionInfo(),
   };
 };
 
 // Event types matching backend exactly
 export const EVENT_TYPES = {
-  PRIVATE_MESSAGE: 'private_message',
-  GROUP_MESSAGE: 'group_message',
-  FOLLOW_REQUEST: 'follow_request',
-  RESPOND_FOLLOW_REQUEST: 'respond_follow_request',
-  UNFOLLOW: 'unfollow',
-  CANCEL_FOLLOW_REQUEST: 'cancel_follow_request',
-  GROUP_JOIN_REQUEST: 'group_join_request',
-  RESPOND_GROUP_JOIN_REQUEST: 'respond_group_join_request',
-  EXIT_GROUP: 'exit_group',
-  GROUP_INVITATION: 'group_invitation',
-  RESPOND_GROUP_INVITATION: 'respond_group_invitation',
-  CANCEL_GROUP_INVITATION: 'cancel_group_invitation',
-  CANCEL_GROUP_JOIN_REQUEST: 'cancel_group_join_request',
-  READ_NOTIFICATION: 'read_notification',
-  READ_PRIVATE_MESSAGE: 'read_private_message'
+  PRIVATE_MESSAGE: "private_message",
+  GROUP_MESSAGE: "group_message",
+  FOLLOW_REQUEST: "follow_request",
+  RESPOND_FOLLOW_REQUEST: "respond_follow_request",
+  UNFOLLOW: "unfollow",
+  CANCEL_FOLLOW_REQUEST: "cancel_follow_request",
+  GROUP_JOIN_REQUEST: "group_join_request",
+  RESPOND_GROUP_JOIN_REQUEST: "respond_group_join_request",
+  EXIT_GROUP: "exit_group",
+  GROUP_INVITATION: "group_invitation",
+  RESPOND_GROUP_INVITATION: "respond_group_invitation",
+  CANCEL_GROUP_INVITATION: "cancel_group_invitation",
+  CANCEL_GROUP_JOIN_REQUEST: "cancel_group_join_request",
+  READ_NOTIFICATION: "read_notification",
+  READ_PRIVATE_MESSAGE: "read_private_message",
 };
 
 // CORRECTED: WebSocket operations with exact backend payload format
 export const webSocketOperations = {
   async joinGroup(groupId) {
     try {
-      const result = await wsManager.sendAndWait(EVENT_TYPES.GROUP_JOIN_REQUEST, {
-        group_id: groupId
-      });
+      const result = await wsManager.sendAndWait(
+        EVENT_TYPES.GROUP_JOIN_REQUEST,
+        {
+          group_id: groupId,
+        },
+      );
       return result;
     } catch (error) {
       // Map backend error messages exactly
       const message = error.message;
-      if (message === 'Request already sent') {
-        throw new Error('You have already requested to join this group.');
-      } else if (message === 'Cannot request to join your own group') {
-        throw new Error('You cannot request to join your own group.');
-      } else if (message === 'User not authenticated') {
-        throw new Error('Please log in to join groups.');
-      } else if (message === 'Connection not available') {
-        throw new Error('Connection lost. Please refresh the page and try again.');
+      if (message === "Request already sent") {
+        throw new Error("You have already requested to join this group.");
+      } else if (message === "Cannot request to join your own group") {
+        throw new Error("You cannot request to join your own group.");
+      } else if (message === "User not authenticated") {
+        throw new Error("Please log in to join groups.");
+      } else if (message === "Connection not available") {
+        throw new Error(
+          "Connection lost. Please refresh the page and try again.",
+        );
       }
       throw error;
     }
@@ -661,20 +693,24 @@ export const webSocketOperations = {
   async leaveGroup(groupId) {
     try {
       const result = await wsManager.sendAndWait(EVENT_TYPES.EXIT_GROUP, {
-        group_id: groupId
+        group_id: groupId,
       });
       return result;
     } catch (error) {
       // Map backend error messages exactly
       const message = error.message;
-      if (message === 'Admins can\'t exit group') {
-        throw new Error('Group administrators cannot leave their own group. Please transfer ownership or delete the group.');
-      } else if (message === 'Not a member of the group') {
-        throw new Error('You are not a member of this group.');
-      } else if (message === 'User not authenticated') {
-        throw new Error('Please log in to leave groups.');
-      } else if (message === 'Connection not available') {
-        throw new Error('Connection lost. Please refresh the page and try again.');
+      if (message === "Admins can't exit group") {
+        throw new Error(
+          "Group administrators cannot leave their own group. Please transfer ownership or delete the group.",
+        );
+      } else if (message === "Not a member of the group") {
+        throw new Error("You are not a member of this group.");
+      } else if (message === "User not authenticated") {
+        throw new Error("Please log in to leave groups.");
+      } else if (message === "Connection not available") {
+        throw new Error(
+          "Connection lost. Please refresh the page and try again.",
+        );
       }
       throw error;
     }
@@ -684,20 +720,22 @@ export const webSocketOperations = {
     try {
       const result = await wsManager.sendAndWait(EVENT_TYPES.GROUP_INVITATION, {
         group_id: groupId,
-        recipient_Id: userId
+        recipient_Id: userId,
       });
       return result;
     } catch (error) {
       // Map backend error messages exactly
       const message = error.message;
-      if (message === 'Only group admin can send join invitations') {
-        throw new Error('Only group admin can send invitations');
-      } else if (message === 'User is already a member') {
-        throw new Error('User is already a member of this group');
-      } else if (message === 'User not authenticated') {
-        throw new Error('Please log in to send invitations.');
-      } else if (message === 'Connection not available') {
-        throw new Error('Connection lost. Please refresh the page and try again.');
+      if (message === "Only group admin can send join invitations") {
+        throw new Error("Only group admin can send invitations");
+      } else if (message === "User is already a member") {
+        throw new Error("User is already a member of this group");
+      } else if (message === "User not authenticated") {
+        throw new Error("Please log in to send invitations.");
+      } else if (message === "Connection not available") {
+        throw new Error(
+          "Connection lost. Please refresh the page and try again.",
+        );
       }
       throw error;
     }
@@ -705,18 +743,23 @@ export const webSocketOperations = {
 
   async respondToGroupInvitation(groupId, status) {
     try {
-      const result = await wsManager.sendAndWait(EVENT_TYPES.RESPOND_GROUP_INVITATION, {
-        group_id: groupId,
-        status: status
-      });
+      const result = await wsManager.sendAndWait(
+        EVENT_TYPES.RESPOND_GROUP_INVITATION,
+        {
+          group_id: groupId,
+          status: status,
+        },
+      );
       return result;
     } catch (error) {
       // Map backend error messages exactly
       const message = error.message;
-      if (message === 'User not authenticated') {
-        throw new Error('Please log in to respond to invitations.');
-      } else if (message === 'Connection not available') {
-        throw new Error('Connection lost. Please refresh the page and try again.');
+      if (message === "User not authenticated") {
+        throw new Error("Please log in to respond to invitations.");
+      } else if (message === "Connection not available") {
+        throw new Error(
+          "Connection lost. Please refresh the page and try again.",
+        );
       }
       throw error;
     }
@@ -724,47 +767,59 @@ export const webSocketOperations = {
 
   async respondToJoinRequest(groupId, userId, status) {
     try {
-      const result = await wsManager.sendAndWait(EVENT_TYPES.RESPOND_GROUP_JOIN_REQUEST, {
-        group_id: groupId,
-        recipient_Id: userId,
-        status: status
-      });
+      const result = await wsManager.sendAndWait(
+        EVENT_TYPES.RESPOND_GROUP_JOIN_REQUEST,
+        {
+          group_id: groupId,
+          recipient_Id: userId,
+          status: status,
+        },
+      );
       return result;
     } catch (error) {
       // Map backend error messages exactly
       const message = error.message;
-      if (message === 'Only group admin can respond to join requests') {
-        throw new Error('Only group admin can respond to join requests');
-      } else if (message === 'The user is already a member') {
-        throw new Error('User is already a member of this group');
-      } else if (message === 'No request to respond to') {
-        throw new Error('No request found to respond to');
-      } else if (message === 'User not authenticated') {
-        throw new Error('Please log in to respond to requests.');
-      } else if (message === 'Connection not available') {
-        throw new Error('Connection lost. Please refresh the page and try again.');
+      if (message === "Only group admin can respond to join requests") {
+        throw new Error("Only group admin can respond to join requests");
+      } else if (message === "The user is already a member") {
+        throw new Error("User is already a member of this group");
+      } else if (message === "No request to respond to") {
+        throw new Error("No request found to respond to");
+      } else if (message === "User not authenticated") {
+        throw new Error("Please log in to respond to requests.");
+      } else if (message === "Connection not available") {
+        throw new Error(
+          "Connection lost. Please refresh the page and try again.",
+        );
       }
       throw error;
     }
   },
 
   async sendFollowRequest(userId) {
-    return wsManager.sendAndWait(EVENT_TYPES.FOLLOW_REQUEST, { recipient_Id: userId });
+    return wsManager.sendAndWait(EVENT_TYPES.FOLLOW_REQUEST, {
+      recipient_Id: userId,
+    });
   },
 
   async respondToFollowRequest(userId, status) {
     return wsManager.sendAndWait(EVENT_TYPES.RESPOND_FOLLOW_REQUEST, {
       recipient_Id: userId,
-      status
+      status,
     });
   },
 
   async unfollowUser(userId) {
-    return wsManager.sendAndWait(EVENT_TYPES.UNFOLLOW, { recipient_Id: userId });
+    return wsManager.sendAndWait(EVENT_TYPES.UNFOLLOW, {
+      recipient_Id: userId,
+    });
   },
 
   sendPrivateMessage(userId, message) {
-    wsManager.send(EVENT_TYPES.PRIVATE_MESSAGE, { recipient_Id: userId, message });
+    wsManager.send(EVENT_TYPES.PRIVATE_MESSAGE, {
+      recipient_Id: userId,
+      message,
+    });
   },
 
   sendGroupMessage(groupId, message) {
@@ -772,12 +827,20 @@ export const webSocketOperations = {
   },
 
   markNotificationAsRead(notificationId) {
-    wsManager.send(EVENT_TYPES.READ_NOTIFICATION, { notification_id: notificationId });
+    wsManager.send(EVENT_TYPES.READ_NOTIFICATION, {
+      notification_id: notificationId,
+    });
   },
 
   markPrivateMessageAsRead(messageId) {
     wsManager.send(EVENT_TYPES.READ_PRIVATE_MESSAGE, { message_id: messageId });
-  }
+  },
+
+  cancelFollowRequest(followerId) {
+    wsManager.send(EVENT_TYPES.CANCEL_FOLLOW_REQUEST, {
+      recipient_Id: followerId,
+    });
+  },
 };
 
 export default wsManager;

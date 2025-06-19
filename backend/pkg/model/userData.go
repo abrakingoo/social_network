@@ -25,7 +25,7 @@ type UserData struct {
 type Follower struct {
 	ID        string `json:"id"`
 	FirstName string `json:"firstname"`
-	Nickname  string `json:"nickname"`
+	LastName  string `json:"lastname"`
 	Avatar    string `json:"avatar"`
 	IsPublic  bool   `json:"is_public"`
 }
