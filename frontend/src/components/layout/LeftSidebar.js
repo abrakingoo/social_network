@@ -14,11 +14,6 @@ const LeftSidebar = () => {
 
   const sidebarItems = [
     {
-      icon: User,
-      label: "My Profile",
-      path: "/profile",
-    },
-    {
       icon: Users,
       label: "Followers",
       path: "/followers",
