@@ -150,9 +150,7 @@ const PostCard = ({ post }) => {
                   <p className="text-sm">{comment.content}</p>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {comment.createdAt ?
-                    formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) :
-                    'Recently'}
+                  Recently
                 </div>
               </div>
             </div>
