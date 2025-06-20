@@ -247,7 +247,6 @@ export const groupService = {
   },
 
   // RSVP to an event - CORRECTED: Use exact backend endpoint and payload format
-// FIXED RSVP to an event - Corrected payload format to match backend exactly
   async rsvpEvent(eventId, status) {
     try {
       // Ensure status is properly formatted - backend expects exact values
@@ -395,7 +394,6 @@ export const groupService = {
   },
 
   // ==================== WEBSOCKET OPERATIONS ====================
-  // CORRECTED: All WebSocket operations now use the fixed webSocketOperations
 
   // Join a group - Uses corrected WebSocket infrastructure
   async joinGroup(groupId) {
@@ -465,7 +463,21 @@ export const groupService = {
     } catch (error) {
       handleWebSocketError(error, 'respondToJoinRequest');
     }
-  }
+  },
+
+  // Propose member invitation - Uses WebSocket for member invitation proposals
+  async proposeMemberInvitation(groupId, userId) {
+    try {
+      const result = await webSocketOperations.proposeMemberInvitation(groupId, userId);
+
+      return {
+        success: true,
+        message: result.message || 'Invitation proposal sent successfully'
+      };
+    } catch (error) {
+      handleWebSocketError(error, 'proposeMemberInvitation');
+    }
+  },
 };
 
 export default groupService;
