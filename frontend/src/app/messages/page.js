@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { API_BASE_URL, useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,15 +13,40 @@ import { Send, Search, ArrowLeft } from 'lucide-react';
 const Messages = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [selectedChat, setSelectedChat] = useState(null);
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [users, setUsers] = useState([]);
+
+
+  const fetchUsers = async () => {
+    const req = await fetch(`${API_BASE_URL}/api/users`, {
+      method: 'get',
+      credentials: 'include'
+    });
+
+    if (!req.ok) {
+      toast({
+        title: "Oops!",
+        description: "Something went wrong while fetching chats",
+      });
+      return
+    }
+
+    const res = await req.json();
+
+    setUsers(res.message);
+  }
 
   // Check if we're on mobile
   useEffect(() => {
+    if (!authLoading && !currentUser == null) {
+      router.push("/login");
+    }
+
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -31,10 +56,16 @@ const Messages = () => {
 
     // Add event listener
     window.addEventListener('resize', checkIfMobile);
+    fetchUsers();
+
+
+
 
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
+  }, [currentUser, router]);
+
+  console.log(users)
 
   // Mock data
   const mockChats = [
@@ -81,12 +112,7 @@ const Messages = () => {
     ]
   };
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!currentUser) {
-      router.push('/login');
-    }
-  }, [currentUser, router]);
+
 
   // Don't render if user is not authenticated
   if (!currentUser) {
@@ -236,11 +262,10 @@ const Messages = () => {
                       className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${
-                          msg.sender === 'me'
-                            ? 'bg-social text-white rounded-tr-none'
-                            : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
-                        }`}
+                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${msg.sender === 'me'
+                          ? 'bg-social text-white rounded-tr-none'
+                          : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
+                          }`}
                       >
                         <p>{msg.text}</p>
                         <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-white/70' : 'text-gray-500'}`}>
