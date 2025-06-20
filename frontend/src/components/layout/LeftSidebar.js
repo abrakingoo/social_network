@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { User, Users, BookOpen, Calendar, Image, Settings } from "lucide-react";
+import { User, Users, BookOpen, Calendar, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { formatAvatarUrl } from "@/lib/utils";
@@ -32,11 +32,6 @@ const LeftSidebar = () => {
       icon: Calendar,
       label: "Events",
       path: "/events",
-    },
-    {
-      icon: Image,
-      label: "Photos",
-      path: "/photos",
     },
     {
       icon: Settings,
