@@ -419,6 +419,7 @@ class WebSocketManager {
       "follow_request",
       "cancel_group_invitation",
       "cancel_group_join_request",
+      "member_group_invitation_proposal",
     ];
 
     if (silentOperations.includes(type)) {
@@ -640,6 +641,7 @@ export const EVENT_TYPES = {
   CANCEL_GROUP_JOIN_REQUEST: "cancel_group_join_request",
   READ_NOTIFICATION: "read_notification",
   READ_PRIVATE_MESSAGE: "read_private_message",
+  MEMBER_GROUP_INVITATION_PROPOSAL: "member_group_invitation_proposal",
 };
 
 // CORRECTED: WebSocket operations with exact backend payload format
@@ -771,6 +773,35 @@ export const webSocketOperations = {
       } else if (message === "Connection not available") {
         throw new Error(
           "Connection lost. Please refresh the page and try again.",
+        );
+      }
+      throw error;
+    }
+  },
+
+  // Member invitation proposal operation
+  async proposeMemberInvitation(groupId, userId) {
+    try {
+      const result = await wsManager.sendAndWait(
+        EVENT_TYPES.MEMBER_GROUP_INVITATION_PROPOSAL,
+        {
+          group_id: groupId,
+          recipient_Id: userId, // Note: Backend expects recipient_Id (capital I)
+        }
+      );
+      return result;
+    } catch (error) {
+      // Map backend error messages exactly
+      const message = error.message;
+      if (message === "Only group members can send invitation proposals") {
+        throw new Error("Only group members can send invitation proposals");
+      } else if (message === "User is already a member") {
+        throw new Error("User is already a member of this group");
+      } else if (message === "User not authenticated") {
+        throw new Error("Please log in to send invitation proposals.");
+      } else if (message === "Connection not available") {
+        throw new Error(
+          "Connection lost. Please refresh the page and try again."
         );
       }
       throw error;
