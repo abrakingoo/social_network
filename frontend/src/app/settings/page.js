@@ -25,7 +25,7 @@ import {
 
 const Settings = () => {
   const router = useRouter();
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, checkAuth } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('account');
 
@@ -131,6 +131,9 @@ const Settings = () => {
           status: 'success',
           duration: 3000,
         });
+        
+        // Refresh user data in AuthContext to ensure profile page shows updated info
+        await checkAuth();
       } catch (error) {
         toast({
           title: 'Error',
