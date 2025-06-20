@@ -40,12 +40,6 @@ const Settings = () => {
     isPublic: true
   });
 
-  const [privacy, setPrivacy] = useState({
-    showEmail: false,
-    showPhone: false,
-    showLocation: true
-  });
-
   const [notifications, setNotifications] = useState({
     newMessage: true,
     newComment: true,
@@ -82,11 +76,6 @@ const Settings = () => {
         isPublic: currentUser.is_public !== undefined ? currentUser.is_public : true
       });
 
-      setPrivacy({
-        showEmail: currentUser.showEmail !== undefined ? currentUser.showEmail : false,
-        showPhone: currentUser.showPhone !== undefined ? currentUser.showPhone : false,
-        showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
-      });
     }
   }, [currentUser, router, loading]);
 
@@ -159,10 +148,6 @@ const Settings = () => {
               <TabsTrigger value="account" className="flex items-center">
                 <User className="h-4 w-4 mr-2" />
                 Account
-              </TabsTrigger>
-              <TabsTrigger value="privacy" className="flex items-center">
-                <Lock className="h-4 w-4 mr-2" />
-                Privacy
               </TabsTrigger>
             </TabsList>
 
@@ -248,63 +233,6 @@ const Settings = () => {
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Account Settings
-                </Button>
-              </div>
-            </TabsContent>
-
-            {/* Privacy Settings */}
-            <TabsContent value="privacy">
-              <div className="space-y-6">
-
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showEmail">Show Email</Label>
-                    <div className="text-sm text-gray-500">
-                      Display your email on your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="showEmail"
-                    checked={privacy.showEmail}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showEmail: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showPhone">Show Phone Number</Label>
-                    <div className="text-sm text-gray-500">
-                      Display your phone number on your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="showPhone"
-                    checked={privacy.showPhone}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showPhone: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showLocation">Show Location</Label>
-                    <div className="text-sm text-gray-500">
-                      Display your location on your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="showLocation"
-                    checked={privacy.showLocation}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showLocation: checked })}
-                  />
-                </div>
-
-                <Button
-                  onClick={() => saveSettings('privacy')}
-                  className="bg-social hover:bg-social-dark"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Privacy Settings
                 </Button>
               </div>
             </TabsContent>
