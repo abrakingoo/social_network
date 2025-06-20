@@ -230,10 +230,10 @@ class WebSocketManager {
       action:
         status === "accepted"
           ? {
-              text: "Visit Group",
-              callback: () =>
-                (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
-            }
+            text: "Visit Group",
+            callback: () =>
+              (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
+          }
           : undefined,
       data: data,
     });
@@ -645,6 +645,7 @@ export const useWebSocket = (type, callback) => {
 // Event types matching backend exactly
 export const EVENT_TYPES = {
   PRIVATE_MESSAGE: "private_message",
+  LOAD_PRIVATE_MESSAGES: "load_private_messages",
   GROUP_MESSAGE: "group_message",
   FOLLOW_REQUEST: "follow_request",
   RESPOND_FOLLOW_REQUEST: "respond_follow_request",
@@ -829,6 +830,12 @@ export const webSocketOperations = {
   markNotificationAsRead(notificationId) {
     wsManager.send(EVENT_TYPES.READ_NOTIFICATION, {
       notification_id: notificationId,
+    });
+  },
+
+  loadPreviousMessages(userID) {
+    return wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, {
+      "recipient_Id": userID
     });
   },
 
