@@ -21,7 +21,6 @@ export const NotificationProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // FIXED: Check if user is authenticated properly
   // Backend provides empty string ID ('') for authenticated users
   const isUserAuthenticated = useCallback(() => {
     const authenticated = currentUser && (
@@ -53,7 +52,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(notifs));
     } catch (error) {
-      console.error('[NotificationProvider] Cache failed:', error);
+      // Silent fail for caching
     }
   }, [getStorageKey]);
 
@@ -75,14 +74,14 @@ export const NotificationProvider = ({ children }) => {
         return result;
       }
     } catch (error) {
-      console.error('[NotificationProvider] Cache loading failed:', error);
+      // Silent fail for cache loading
     }
     return [];
   }, [getStorageKey]);
 
-  // FIXED: Fetch notifications from database - works with empty string user ID
+  // Fetch notifications from database - works with empty string user ID
   const fetchNotificationsFromDB = useCallback(async () => {
-    // FIXED: Use proper authentication check instead of just checking ID
+    // Use proper authentication check instead of just checking ID
     if (!isUserAuthenticated()) {
       return;
     }
@@ -108,7 +107,6 @@ export const NotificationProvider = ({ children }) => {
       cacheNotifications(sortedNotifications);
 
     } catch (error) {
-      console.error('[NotificationProvider] Database fetch failed:', error);
       setError(error.message);
 
       // Fallback to cached data
@@ -180,7 +178,7 @@ export const NotificationProvider = ({ children }) => {
       await notificationService.markAsRead(notificationId);
 
     } catch (error) {
-      console.error('[NotificationProvider] Mark as read failed:', error);
+      // Silent fail for mark as read
     }
   }, [cacheNotifications]);
 
@@ -202,7 +200,7 @@ export const NotificationProvider = ({ children }) => {
         unreadNotifications.map(notif => notificationService.markAsRead(notif.id))
       );
     } catch (error) {
-      console.error('[NotificationProvider] Mark all as read failed:', error);
+      // Silent fail for mark all as read
     }
   }, [notifications, cacheNotifications]);
 
@@ -210,7 +208,6 @@ export const NotificationProvider = ({ children }) => {
   const removeNotification = useCallback(async (notificationId) => {
     const success = await notificationService.deleteNotification(notificationId);
     if (!success) {
-      console.error('[NotificationProvider] Failed to delete notification from backend');
       return;
     }
     setNotifications(prev => {
@@ -241,7 +238,7 @@ export const NotificationProvider = ({ children }) => {
     fetchNotificationsFromDB();
   }, [fetchNotificationsFromDB]);
 
-  // FIXED: Load notifications when user authentication changes
+  // Load notifications when user authentication changes
   useEffect(() => {
     if (isUserAuthenticated()) {
       fetchNotificationsFromDB();
@@ -266,8 +263,27 @@ export const NotificationProvider = ({ children }) => {
         data: data
       });
     } else {
-      console.warn('[NotificationProvider] Skipped group_invitation without backend ID:', data);
+      // Skip notifications without backend ID
     }
+  }, [addNotification]);
+
+  // Handle group view invitation notifications
+  const handleGroupViewInvitation = useCallback((data) => {
+    const { group_title, actor_id } = data;
+
+    addNotification({
+      type: 'group_view_invitation',
+      title: 'Group Suggestion',
+      content: `Someone suggested you check out "${group_title}"`,
+      actor: {
+        firstName: 'Someone', // Will be populated by backend if needed
+        lastName: '',
+        avatar: null
+      },
+      groupId: data.group_id,
+      actionable: true, // User can take action
+      data: data
+    });
   }, [addNotification]);
 
   const handleFollowRequest = useCallback((data) => {
@@ -327,6 +343,9 @@ export const NotificationProvider = ({ children }) => {
         case 'group_invitation':
           handleGroupInvitation(notification.data);
           break;
+        case 'group_view_invitation': // NEW case
+          handleGroupViewInvitation(notification.data);
+          break;
         case 'follow_request':
           handleFollowRequest(notification.data);
           break;
@@ -348,7 +367,14 @@ export const NotificationProvider = ({ children }) => {
     return () => {
       window.removeEventListener('wsNotification', handleWSNotification);
     };
-  }, [isUserAuthenticated, handleGroupInvitation, handleFollowRequest, handleJoinResponse, handleGeneralNotification]);
+  }, [
+    isUserAuthenticated,
+    handleGroupInvitation,
+    handleGroupViewInvitation,
+    handleFollowRequest,
+    handleJoinResponse,
+    handleGeneralNotification
+  ]);
 
   // Helper function to respond to group invitation
   const respondToGroupInvitation = useCallback(async (notificationId, groupId, status) => {
@@ -368,8 +394,6 @@ export const NotificationProvider = ({ children }) => {
 
       return true;
     } catch (error) {
-      console.error('[NotificationProvider] Group invitation response failed:', error);
-
       addNotification({
         type: 'error',
         title: 'Error',
