@@ -183,10 +183,6 @@ const PostCard = ({ post }) => {
           <MessageSquare className="h-5 w-5" />
           <span>{formatCount(normalizedPost.comments.length)}</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:text-green-500">
-          <Share2 className="h-5 w-5" />
-          <span>Share</span>
-        </Button>
       </div>
     </CardFooter>
   );
