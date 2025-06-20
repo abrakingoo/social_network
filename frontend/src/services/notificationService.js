@@ -1,20 +1,14 @@
+// frontend/src/services/notificationService.js - SIMPLIFIED
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-/**
- * Service for handling notification API calls
- * Integrates with backend /api/notifications endpoint
- */
 class NotificationService {
 
-  /**
-   * Fetch all notifications for current user from database
-   * @returns {Promise<Array>} Array of notifications from database
-   */
   async fetchNotifications() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications`, {
         method: 'GET',
-        credentials: 'include', // Include session cookies
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -28,29 +22,15 @@ class NotificationService {
       }
 
       const data = await response.json();
-
-      // FIXED: Backend returns {message: notifications[]} format, not {data: notifications[]}
-      // Work with exactly what backend provides
       const notifications = Array.isArray(data) ? data : (data.message || data.data || []);
 
-      // Transform backend notification format to frontend format
-      const transformedNotifications = notifications.map(notif => this.transformBackendNotification(notif));
-
-      return transformedNotifications;
-
+      return notifications.map(notif => this.transformBackendNotification(notif));
     } catch (error) {
-      console.error('[NotificationService] Fetch failed:', error);
       throw error;
     }
   }
 
-  /**
-   * Transform backend notification format to frontend format
-   * Backend: { id, actor_id, type, entity_id, entity_type, is_read, message, created_at }
-   * Frontend: { id, type, content, actor, timestamp, read, actionable, data }
-   */
   transformBackendNotification(backendNotif) {
-    // Prefer nested actor object if present
     let actor = null;
     if (backendNotif.actor) {
       actor = {
@@ -65,9 +45,29 @@ class NotificationService {
         id: backendNotif.ActorId,
         firstName: backendNotif.actor_first_name || backendNotif.ActorFirstName || '',
         lastName: backendNotif.actor_last_name || backendNotif.ActorLastName || '',
-        avatar: backendNotif.actor_avatar || backendNotif.ActorAvatar || null
+        avatar: backendNotif.actor_avatar || backendNotif.ActorAvatar || null,
+        nickname: backendNotif.actor_nickname || backendNotif.ActorNickname || '',
       };
     }
+
+    // Handle sql.NullString for entity_id
+    let entityId = null;
+    if (backendNotif.entity_id && backendNotif.entity_id !== null) {
+      if (typeof backendNotif.entity_id === 'object' && backendNotif.entity_id.String && backendNotif.entity_id.Valid) {
+        entityId = backendNotif.entity_id.String;
+      } else if (typeof backendNotif.entity_id === 'string') {
+        entityId = backendNotif.entity_id;
+      } else {
+        entityId = String(backendNotif.entity_id);
+      }
+    } else if (backendNotif.EntityID) {
+      if (typeof backendNotif.EntityID === 'object' && backendNotif.EntityID.String && backendNotif.EntityID.Valid) {
+        entityId = backendNotif.EntityID.String;
+      } else {
+        entityId = backendNotif.EntityID;
+      }
+    }
+
     return {
       id: backendNotif.ID || backendNotif.id,
       type: backendNotif.Type || backendNotif.type,
@@ -76,35 +76,23 @@ class NotificationService {
       timestamp: new Date(backendNotif.CreatedAt || backendNotif.created_at),
       read: Boolean(backendNotif.IsRead || backendNotif.is_read),
       actionable: this.isActionableType(backendNotif.Type || backendNotif.type),
-      entityId: backendNotif.EntityID || backendNotif.entity_id,
+      entityId: entityId,
       entityType: backendNotif.EntityType || backendNotif.entity_type,
       data: {
-        entity_id: backendNotif.EntityID || backendNotif.entity_id,
+        entity_id: entityId,
         entity_type: backendNotif.EntityType || backendNotif.entity_type,
         actor_id: (actor && actor.id) || backendNotif.ActorId || backendNotif.actor_id
       }
     };
   }
 
-  /**
-   * Determine if notification type requires user action
-   */
   isActionableType(type) {
-    const actionableTypes = [
-      'follow_request',
-      'group_invitation',
-      'group_join_request'
-    ];
+    const actionableTypes = ['follow_request', 'group_invitation', 'group_join_request'];
     return actionableTypes.includes(type);
   }
 
-  /**
-   * Mark notification as read via WebSocket
-   * Backend expects: { type: "read_notification", data: { notification_id: string } }
-   */
   async markAsRead(notificationId) {
     try {
-      // Use WebSocket manager to send read notification
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
@@ -113,21 +101,23 @@ class NotificationService {
         });
         return true;
       } else {
-        console.warn('[NotificationService] WebSocket not connected, cannot mark as read');
         return false;
       }
     } catch (error) {
-      console.error('[NotificationService] Mark as read failed:', error);
       return false;
     }
   }
 
-  /**
-   * Respond to group invitation via WebSocket
-   * Backend expects: { type: "respond_group_invitation", data: { group_id: string, status: "accepted"|"declined" } }
-   */
   async respondToGroupInvitation(groupId, status) {
     try {
+      if (!groupId || typeof groupId !== 'string') {
+        throw new Error('Invalid groupId provided');
+      }
+
+      if (!status || !['accepted', 'declined'].includes(status)) {
+        throw new Error('Invalid status provided. Must be "accepted" or "declined"');
+      }
+
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
@@ -137,57 +127,72 @@ class NotificationService {
         });
         return true;
       } else {
-        console.warn('[NotificationService] WebSocket not connected, cannot respond to invitation');
         return false;
       }
     } catch (error) {
-      console.error('[NotificationService] Group invitation response failed:', error);
       return false;
     }
   }
 
-  /**
-   * Respond to follow request via WebSocket
-   * Backend expects: { type: "respond_follow_request", data: { user_id: string, status: "accepted"|"declined" } }
-   */
   async respondToFollowRequest(userId, status) {
     try {
+      if (!userId || typeof userId !== 'string') {
+        throw new Error('Invalid userId provided');
+      }
+
+      if (!status || !['accepted', 'declined'].includes(status)) {
+        throw new Error('Invalid status provided. Must be "accepted" or "declined"');
+      }
+
       const { wsManager } = await import('@/utils/websocket');
 
       if (wsManager.isConnected()) {
         wsManager.send('respond_follow_request', {
-          user_id: userId,
+          recipient_Id: userId,
           status: status
         });
         return true;
       } else {
-        console.warn('[NotificationService] WebSocket not connected, cannot respond to follow request');
         return false;
       }
     } catch (error) {
-      console.error('[NotificationService] Follow request response failed:', error);
       return false;
     }
   }
 
-  /**
-   * Delete notification from DB via websocket
-   * @param {string} notificationId
-   * @returns {Promise<boolean>} true if sent, false otherwise
-   */
   async deleteNotification(notificationId) {
     try {
+      if (!notificationId || typeof notificationId !== 'string') {
+        throw new Error('Invalid notificationId provided');
+      }
+
       const { wsManager } = await import('@/utils/websocket');
+
       if (wsManager.isConnected()) {
-        wsManager.send('delete_notification', { notification_id: notificationId });
+        wsManager.send('delete_notification', {
+          notification_id: notificationId
+        });
         return true;
       } else {
-        console.warn('[NotificationService] WebSocket not connected, cannot delete notification');
         return false;
       }
     } catch (error) {
-      console.error('[NotificationService] Delete (delete_notification) failed:', error);
       return false;
+    }
+  }
+
+  async getConnectionStatus() {
+    try {
+      const { wsManager } = await import('@/utils/websocket');
+      return {
+        isConnected: wsManager.isConnected(),
+        connectionInfo: wsManager.getConnectionInfo()
+      };
+    } catch (error) {
+      return {
+        isConnected: false,
+        error: error.message
+      };
     }
   }
 }
