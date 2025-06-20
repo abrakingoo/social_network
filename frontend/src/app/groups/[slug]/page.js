@@ -183,11 +183,6 @@ const GroupDetail = () => {
         const newRequestState = determineRequestState(groupDataWithUser, currentUser);
         setRequestState(newRequestState);
 
-        console.log('[GroupDetail] Request state determined from backend:', {
-          isJoined,
-          joinRequests: details.JoinRequest, // CORRECTED: Log correct field name
-          finalState: newRequestState
-        });
       } else {
         console.error('[GroupDetail] Group not found for slug:', groupSlug);
         toast({
@@ -368,6 +363,7 @@ const GroupDetail = () => {
     }
   };
 
+  //  handleRSVP function in group detail page
   const handleRSVP = async (eventId) => {
     if (!currentUser) {
       toast({
@@ -378,9 +374,11 @@ const GroupDetail = () => {
       return;
     }
 
+    // : Consistent status format throughout
     const currentStatus = rsvpStatus[eventId] ? "going" : "not_going";
-    const newStatus = currentStatus === "going" ? "not going" : "going";
+    const newStatus = currentStatus === "going" ? "not_going" : "going";
 
+    // Optimistic UI update
     setRsvpStatus(prev => ({ ...prev, [eventId]: newStatus === "going" }));
 
     const updatedEvents = groupData.events.map(event => {
@@ -405,13 +403,21 @@ const GroupDetail = () => {
     updateGroupData(updatedGroupData);
 
     try {
-      await groupService.rsvpEvent(eventId, newStatus);
+
+      const result = await groupService.rsvpEvent(eventId, newStatus);
+
       toast({
         title: newStatus === "going" ? "RSVP Confirmed" : "RSVP Cancelled",
-        description: newStatus === "going" ? "You have successfully RSVP'd for this event!" : "You have un-RSVP'd for this event.",
+        description: newStatus === "going"
+          ? "You have successfully RSVP'd for this event!"
+          : "You have un-RSVP'd for this event.",
       });
     } catch (error) {
+      console.error('[handleRSVP] Error updating RSVP status:', error);
+
+      // Revert optimistic update on error
       setRsvpStatus(prev => ({ ...prev, [eventId]: currentStatus === "going" }));
+
       const revertedEvents = groupData.events.map(event => {
         if (event.id === eventId) {
           const revertedAttendees = currentStatus === "going"
@@ -425,7 +431,14 @@ const GroupDetail = () => {
         }
         return event;
       });
-      updateGroupData({ ...groupData, events: revertedEvents, Events: revertedEvents });
+
+      const revertedGroupData = {
+        ...groupData,
+        events: revertedEvents,
+        Events: revertedEvents,
+      };
+      updateGroupData(revertedGroupData);
+
       toast({
         title: "RSVP Failed",
         description: error.message || "Failed to update RSVP status. Please try again.",
