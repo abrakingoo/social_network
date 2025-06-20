@@ -44,38 +44,16 @@ func (app *App) LikeComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exist {
-		status := true
-		isTrue, err := app.Queries.CheckRow("comment_likes", []string{
-			"comment_id",
-			"user_id",
-			"is_like",
-		}, []any{
-			like.CommentId,
-			userID,
-			true,
-		})
-		if err != nil {
-			app.JSONResponse(w, r, http.StatusConflict, "Error while checking like status", Error)
-			return
-		}
-
-		if isTrue {
-			status = false
-		}
-
-		err = app.Queries.UpdateData("comment_likes", []string{
+		// If the like exists, delete it (unlike)
+		err = app.Queries.DeleteData("comment_likes", []string{
 			"comment_id",
 			"user_id",
 		}, []any{
 			like.CommentId,
 			userID,
-		}, []string{
-			"is_like",
-		}, []any{
-			status,
 		})
 		if err != nil {
-			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to update like status", Error)
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to delete like status", Error)
 			return
 		}
 	} else {
@@ -132,14 +110,13 @@ func (app *App) LikePost(w http.ResponseWriter, r *http.Request) {
 
 	if exist {
 		// If the like exists, delete it (unlike)
-		stmt, err := app.Queries.Db.Prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?")
-		if err != nil {
-			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to prepare unlike statement", Error)
-			return
-		}
-		defer stmt.Close()
-
-		_, err = stmt.Exec(like.PostId, userID)
+		err = app.Queries.DeleteData("post_likes", []string{
+			"post_id",
+			"user_id",
+		}, []any{
+			like.PostId,
+			userID,
+		})
 		if err != nil {
 			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to unlike post", Error)
 			return
