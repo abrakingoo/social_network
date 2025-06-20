@@ -237,3 +237,97 @@ func (c *Client) RespondSendInvitation(msg map[string]any, q *repository.Query) 
 		c.SendSuccess(fmt.Sprintf("Group invitation for %s declined", request.GroupId))
 	}
 }
+
+func (c *Client) SendMemberInvitationProposal(msg map[string]any, q *repository.Query, h *Hub) {
+	dataBytes, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var request model.GroupRequest
+	if err := json.Unmarshal(dataBytes, &request); err != nil {
+		c.SendError("Invalid invitation proposal data")
+		return
+	}
+
+	// Check if sender is ANY group member (not just admin)
+	isMember, err := q.CheckRow("group_members", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		request.GroupId,
+		c.UserID,
+	})
+	if err != nil {
+		c.SendError("error while checking user membership")
+		return
+	}
+
+	if !isMember {
+		c.SendError("Only group members can send invitation proposals")
+		return
+	}
+
+	// Check if target user is already a member
+	isAlreadyMember, err := q.CheckRow("group_members", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+	})
+	if err != nil {
+		c.SendError("error while checking target user membership")
+		return
+	}
+
+	if isAlreadyMember {
+		c.SendError("User is already a member")
+		return
+	}
+
+	// Get group info for notification
+	var groupTitle string
+	err = q.Db.QueryRow("SELECT title FROM groups WHERE id = ?", request.GroupId).Scan(&groupTitle)
+	if err != nil {
+		c.SendError("Error fetching group information")
+		return
+	}
+
+	notId := util.UUIDGen()
+
+	// Send notification to target user with "view group" action (not direct invitation)
+	err = q.InsertData("notifications", []string{
+		"id",
+		"recipient_id",
+		"actor_id",
+		"type",
+		"message",
+		"entity_id",
+		"entity_type",
+	}, []any{
+		notId,
+		request.RecipientID,
+		c.UserID,
+		"group_view_invitation", // NEW notification type
+		fmt.Sprintf("has suggested you check out the group: %s", groupTitle),
+		request.GroupId,
+		"group",
+	})
+	if err != nil {
+		c.SendError("failed to notify the recipient")
+		return
+	}
+
+	// Send real-time notification
+	h.ActionBasedNotification([]string{
+		request.RecipientID,
+	}, "group_view_invitation", map[string]any{
+		"group_id":    request.GroupId,
+		"group_title": groupTitle,
+		"actor_id":    c.UserID,
+	})
+
+	c.SendSuccess("Invitation proposal sent successfully")
+}
