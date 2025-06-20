@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationsContext';
 import { Card } from '@/components/ui/card';
@@ -32,14 +31,12 @@ const Notifications = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
 
-  // Redirect to login if not authenticated, but only after loading is false
   useEffect(() => {
     if (!authLoading && !currentUser) {
       router.push('/login');
     }
   }, [authLoading, currentUser, router]);
 
-  // Manual refresh handler
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -59,7 +56,13 @@ const Notifications = () => {
     }
   };
 
-  // Show loading spinner while auth is loading
+  const extractStringValue = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value.String) return value.String;
+    return String(value);
+  };
+
   if (authLoading) {
     return (
       <div className="max-w-2xl mx-auto flex items-center justify-center min-h-[400px]">
@@ -68,63 +71,52 @@ const Notifications = () => {
     );
   }
 
-  // Don't render if user is not authenticated
-  if (!currentUser) {
-    return null;
-  }
+  if (!currentUser) return null;
 
   const formatTime = (date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 60) {
-      return 'Just now';
-    }
+    if (diffInSeconds < 60) return 'Just now';
 
     const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes}m ago`;
-    }
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
 
     const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    }
+    if (diffInHours < 24) return `${diffInHours}h ago`;
 
     const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) {
-      return `${diffInDays}d ago`;
-    }
+    if (diffInDays < 7) return `${diffInDays}d ago`;
 
     return date.toLocaleDateString();
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'follow_request':
-        return <UserPlus className="h-5 w-5 text-blue-500" />;
-      case 'like':
-        return <Heart className="h-5 w-5 text-red-500" />;
-      case 'comment':
-        return <MessageSquare className="h-5 w-5 text-green-500" />;
-      case 'group_invitation':
-        return <Users className="h-5 w-5 text-purple-500" />;
-      case 'join_response':
-        return <Users className="h-5 w-5 text-social" />;
-      case 'message':
-        return <MessageSquare className="h-5 w-5 text-social" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
-    }
+    const icons = {
+      'follow_request': <UserPlus className="h-5 w-5 text-blue-500" />,
+      'like': <Heart className="h-5 w-5 text-red-500" />,
+      'comment': <MessageSquare className="h-5 w-5 text-green-500" />,
+      'group_invitation': <Users className="h-5 w-5 text-purple-500" />,
+      'join_response': <Users className="h-5 w-5 text-social" />,
+      'message': <MessageSquare className="h-5 w-5 text-social" />
+    };
+    return icons[type] || <Bell className="h-5 w-5 text-gray-500" />;
   };
 
-  // Handle group invitation response
   const handleGroupInvitationResponse = async (notification, status) => {
-    const success = await respondToGroupInvitation(
-      notification.id,
-      notification.groupId,
-      status
-    );
+    const groupId = extractStringValue(notification.entityId) ||
+                   extractStringValue(notification.data?.entity_id);
+
+    if (!groupId) {
+      toast({
+        title: "Error",
+        description: "Group ID missing from notification.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const success = await respondToGroupInvitation(notification.id, groupId, status);
 
     if (success) {
       toast({
@@ -133,24 +125,15 @@ const Notifications = () => {
           ? 'You have joined the group successfully!'
           : 'Group invitation declined',
       });
-
-      // Navigate to group if accepted
-      if (status === 'accepted' && notification.groupId) {
-        setTimeout(() => {
-          router.push(`/groups/${notification.groupId}`);
-        }, 1000);
-      }
     }
   };
 
-  // Handle notification click (mark as read)
   const handleNotificationClick = (notification) => {
     if (!notification.read) {
       markAsRead(notification.id);
     }
   };
 
-  // Filter notifications based on active tab
   const getFilteredNotifications = () => {
     if (activeTab === "all") return notifications;
 
@@ -167,7 +150,6 @@ const Notifications = () => {
 
   const filteredNotifications = getFilteredNotifications();
 
-  // Render notification content
   const renderNotificationContent = (notification) => {
     const actorName = notification.actor && (notification.actor.firstName || notification.actor.lastName)
       ? `${notification.actor.firstName || ''} ${notification.actor.lastName || ''}`.trim()
@@ -186,9 +168,7 @@ const Notifications = () => {
         </div>
 
         <Avatar className="h-10 w-10 mr-3">
-          {notification.actor && notification.actor.avatar ? (
-            <AvatarImage src={notification.actor.avatar} />
-          ) : null}
+          {notification.actor?.avatar && <AvatarImage src={notification.actor.avatar} />}
           <AvatarFallback>
             {notification.actor && (notification.actor.firstName || notification.actor.lastName)
               ? `${notification.actor.firstName?.[0] || ''}${notification.actor.lastName?.[0] || ''}`.toUpperCase() || '?'
@@ -199,12 +179,8 @@ const Notifications = () => {
         <div className="flex-1">
           <div className="flex justify-between items-start">
             <p className="text-sm">
-              <span className="font-medium">{actorName}</span>
-              {' '}
-              {notification.content}
-              {notification.groupName && (
-                <span className="font-medium"> {notification.groupName}</span>
-              )}
+              <span className="font-medium">{actorName}</span> {notification.content}
+              {notification.groupName && <span className="font-medium"> {notification.groupName}</span>}
             </p>
             <div className="flex items-center space-x-2">
               <span className="text-xs text-gray-500">
@@ -224,7 +200,6 @@ const Notifications = () => {
             </div>
           </div>
 
-          {/* Action buttons for actionable notifications */}
           {notification.actionable && !notification.read && (
             <div className="mt-2 flex space-x-2">
               {notification.type === 'group_invitation' && (
@@ -265,20 +240,6 @@ const Notifications = () => {
                     Decline
                   </Button>
                 </>
-              )}
-
-              {notification.type === 'join_response' && notification.data?.status === 'accepted' && (
-                <Button
-                  size="sm"
-                  className="bg-social hover:bg-social-dark"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/groups/${notification.groupId}`);
-                  }}
-                >
-                  <Users className="h-4 w-4 mr-1" />
-                  Visit Group
-                </Button>
               )}
             </div>
           )}
@@ -349,7 +310,7 @@ const Notifications = () => {
                 <div className="p-8 text-center">
                   <Loader2 className="h-10 w-10 text-gray-400 mx-auto mb-2 animate-spin" />
                   <h3 className="font-medium text-lg mb-1">Loading notifications...</h3>
-                  <p className="text-gray-500">Fetching your latest notifications from the database</p>
+                  <p className="text-gray-500">Fetching your latest notifications</p>
                 </div>
               ) : filteredNotifications.length > 0 ? (
                 filteredNotifications.map(renderNotificationContent)
@@ -363,7 +324,6 @@ const Notifications = () => {
             </div>
           </TabsContent>
 
-          {/* Other tabs use the same filtered content */}
           {['follow', 'like', 'comment', 'group', 'message'].map(tabValue => (
             <TabsContent key={tabValue} value={tabValue} className="mt-0">
               <div className="divide-y max-h-[600px] overflow-y-auto">
