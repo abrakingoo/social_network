@@ -230,6 +230,7 @@ const Profile = () => {
               <Button
                 variant="outline"
                 onClick={() => router.push("/settings")}
+                className="hover:bg-blue-600"
               >
                 Edit Profile
               </Button>
