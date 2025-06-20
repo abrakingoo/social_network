@@ -175,11 +175,11 @@ const PostCard = ({ post }) => {
   const renderInteractions = () => (
     <CardFooter className="flex justify-between p-2">
       <div className="flex space-x-4">
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => toggleLike(normalizedPost.id)}>
+        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-700 hover:bg-blue-200" onClick={() => toggleLike(normalizedPost.id)}>
           <Heart className={`h-5 w-5 ${normalizedPost.likedByCurrentUser ? 'text-red-500 fill-current' : ''}`} />
           <span>{formatCount(normalizedPost.likesCount)}</span>
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => setShowComments(!showComments)}>
+        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-700 hover:bg-blue-200" onClick={() => setShowComments(!showComments)}>
           <MessageSquare className="h-5 w-5" />
           <span>{formatCount(normalizedPost.comments.length)}</span>
         </Button>
