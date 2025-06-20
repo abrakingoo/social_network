@@ -47,6 +47,8 @@ func (c *Client) ProcessMessages(q *repository.Query, h *Hub) {
 			c.LoadGroupMessages(msg, q)
 		case "delete_notification":
 			c.DeleteNotification(msg, q)
+		case "member_group_invitation_proposal":
+			c.SendMemberInvitationProposal(msg, q, h)
 		default:
 			c.SendError("Unknown message type")
 		}
