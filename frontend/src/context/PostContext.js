@@ -22,7 +22,6 @@ const DEFAULT_POST_STRUCTURE = {
   images: [],
   privacy: PRIVACY_LEVELS.PUBLIC,
   createdAt: '',
-  likes: [],
   comments: []
 };
 
@@ -94,16 +93,15 @@ export const PostProvider = ({ children }) => {
       content: postData.content || '',
       privacy: postData.privacy || PRIVACY_LEVELS.PUBLIC,
       createdAt: postData.createdAt || postData.created_at || new Date().toISOString(),
-      likesCount: postData.likesCount || postData.likes || 0,
-      dislikesCount: postData.dislikesCount || postData.dislikes || 0,
-      commentsCount: postData.commentsCount || (postData.comments ? postData.comments.length : 0),
       comments: normalizedComments,
       media: Array.isArray(postData.media) ? postData.media : [],
       author: postData.user || postData.author || {
         id: currentUser?.id || '',
         first_name: currentUser?.firstName || '',
         last_name: currentUser?.lastName || ''
-      }
+      },
+      likesCount: postData.likes_count || 0,
+      likedByCurrentUser: postData.is_liked || false, 
     };
   }, [currentUser, normalizeComment]);
 
@@ -215,49 +213,6 @@ export const PostProvider = ({ children }) => {
     toast.success("Post deleted successfully");
     return true;
   }, [currentUser, posts]);
-
-  // Like/Unlike post
-  const toggleLike = useCallback(async (postId, shouldLike) => {
-    if (!currentUser) {
-      toast.error("You must be logged in to like posts");
-      return false;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/likePost`, {
-        method: 'POST',
-        credentials: "include",
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          post_id: postId,
-          is_like: shouldLike
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${shouldLike ? 'like' : 'unlike'} post: ${response.status}`);
-      }
-
-      const updatedData = await response.json();
-
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            return { ...post, user_liked: shouldLike, likes_count: updatedData.likes_count };
-          }
-          return post;
-        })
-      );
-      return true;
-    } catch (error) {
-      console.error(`Error ${shouldLike ? 'liking' : 'unliking'} post:`, error);
-      toast.error(`Failed to ${shouldLike ? 'like' : 'unlike'} post`);
-      return false;
-    }
-  }, [currentUser]);
 
   // Add comment to post
   const addComment = useCallback(async (postId, commentText) => {
@@ -388,12 +343,56 @@ export const PostProvider = ({ children }) => {
     return posts.filter(post => post.author && post.author.id === userId);
   }, [posts]);
 
+  const toggleLike = useCallback(async (postId) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to like a post.");
+      return;
+    }
+
+    const originalPosts = [...posts];
+    
+    // Optimistic UI update
+    setPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          const wasLiked = post.likedByCurrentUser;
+          return {
+            ...post,
+            likedByCurrentUser: !wasLiked,
+            likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
+          };
+        }
+        return post;
+      })
+    );
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/likePost`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to like post: ${response.status}`);
+      }
+      
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+      // Revert on error
+      setPosts(originalPosts);
+    }
+  }, [currentUser, posts]);
+
   const value = {
     posts,
     loading,
     addPost,
     deletePost,
-    toggleLike,
     addComment,
     deleteComment,
     getFilteredPosts,
@@ -401,6 +400,7 @@ export const PostProvider = ({ children }) => {
     fetchPosts,
     normalizePost,
     normalizeComment,
+    toggleLike,
     PRIVACY_LEVELS
   };
 
