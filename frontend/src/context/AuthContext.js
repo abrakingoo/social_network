@@ -63,18 +63,18 @@ export const AuthProvider = ({ children }) => {
           Object.keys(userObject).length > 0
         ) {
           setCurrentUser(userObject);
-          manageWebSocket(userObject); //  Single WebSocket management point
+          manageWebSocket(userObject); // Single WebSocket management point
           return userObject;
         }
       }
 
       setCurrentUser(null);
-      manageWebSocket(null); //  Single WebSocket management point
+      manageWebSocket(null); // Single WebSocket management point
       return null;
     } catch (error) {
       console.error("AuthContext: Error checking authentication:", error);
       setCurrentUser(null);
-      manageWebSocket(null); //  Single WebSocket management point
+      manageWebSocket(null); // Single WebSocket management point
       return null;
     } finally {
       // CRITICAL FIX: ALWAYS set loading to false, no matter what happens
@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }) => {
       // Immediate cleanup
       setCurrentUser(null);
       setLoading(false);
-      manageWebSocket(null); //  Single WebSocket management point
+      manageWebSocket(null); // Single WebSocket management point
 
       // Then call API
       await fetch(`${API_BASE_URL}/api/logout`, {
