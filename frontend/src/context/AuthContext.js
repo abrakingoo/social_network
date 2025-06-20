@@ -26,13 +26,11 @@ export const AuthProvider = ({ children }) => {
   const manageWebSocket = (user) => {
     if (user && !wsManager.isConnected()) {
       // User authenticated and WebSocket not connected
-      console.log("AuthContext: Initializing WebSocket for authenticated user");
       wsManager.setAuthState(true);
       const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/api/ws';
       wsManager.connect(wsUrl);
     } else if (!user && wsManager.isConnected()) {
       // User not authenticated and WebSocket is connected
-      console.log("AuthContext: Cleaning up WebSocket connection");
       wsManager.setAuthState(false);
     }
   };
