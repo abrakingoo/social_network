@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL, useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,9 @@ const Followers = () => {
   const { currentUser, getAllUsers, loading: authLoading } = useAuth();
   const [users, setUsers] = useState([]);
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("followers");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "followers";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
