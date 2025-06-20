@@ -37,7 +37,7 @@ const Settings = () => {
     date_of_birth: '',
     about: '',
     nickname: '',
-    isPublic: true
+    is_public: true
   });
 
   const [notifications, setNotifications] = useState({
@@ -73,7 +73,7 @@ const Settings = () => {
         date_of_birth: currentUser.date_of_birth ? new Date(currentUser.date_of_birth).toISOString().split('T')[0] : '',
         about: currentUser.about_me || '',
         nickname: currentUser.nickname || '',
-        isPublic: currentUser.is_public !== undefined ? currentUser.is_public : true
+        is_public: currentUser.is_public !== undefined ? currentUser.is_public : true
       });
 
     }
@@ -98,7 +98,7 @@ const Settings = () => {
           date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth).toISOString() : '',
           nickname: profile.nickname,
           about_me: profile.about,
-          is_public: profile.isPublic,
+          is_public: profile.is_public,
         };
 
         // Remove empty fields from payload to avoid sending unnecessary data
@@ -239,8 +239,8 @@ const Settings = () => {
                   </div>
                   <Switch
                     id="publicProfile"
-                    checked={profile.isPublic}
-                    onCheckedChange={(checked) => setProfile({ ...profile, isPublic: checked })}
+                    checked={profile.is_public}
+                    onCheckedChange={(checked) => setProfile({ ...profile, is_public: checked })}
                   />
                 </div>
 
