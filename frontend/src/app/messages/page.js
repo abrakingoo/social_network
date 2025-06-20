@@ -68,8 +68,12 @@ const Messages = () => {
   let usersToMessage = [];
 
 
-  if (users.followers != null){
-    usersToMessage = [...users.followers,...users.following]
+  if (users.followers != null) {
+    usersToMessage = [...users.followers]
+  }
+
+  if (users.following != null) {
+    usersToMessage = [...usersToMessage, ...users.following]
   }
   console.log(usersToMessage)
 
