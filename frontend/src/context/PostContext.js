@@ -391,6 +391,58 @@ export const PostProvider = ({ children }) => {
     }
   }, [currentUser, posts]);
 
+  const toggleCommentLike = useCallback(async (postId, commentId) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to like a comment.");
+      return;
+    }
+
+    const originalPosts = [...posts];
+
+    // Optimistic UI update
+    setPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            comments: post.comments.map(comment => {
+              if (comment.id === commentId) {
+                const wasLiked = comment.likedByCurrentUser;
+                return {
+                  ...comment,
+                  likedByCurrentUser: !wasLiked,
+                  likesCount: wasLiked ? comment.likesCount - 1 : comment.likesCount + 1,
+                };
+              }
+              return comment;
+            }),
+          };
+        }
+        return post;
+      })
+    );
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/likeComment`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId, comment_id: commentId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to like comment: ${response.status}`);
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+      // Revert on error
+      setPosts(originalPosts);
+    }
+  }, [currentUser, posts]);
+
   const value = {
     posts,
     loading,
@@ -404,6 +456,7 @@ export const PostProvider = ({ children }) => {
     normalizePost,
     normalizeComment,
     toggleLike,
+    toggleCommentLike,
     PRIVACY_LEVELS
   };
 

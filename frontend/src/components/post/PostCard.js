@@ -29,7 +29,7 @@ const PostCard = ({ post }) => {
   const [isMobile, setIsMobile] = useState(false);
   // Get the current user from context
   const { currentUser } = useAuth();
-  const { addComment, deletePost, toggleLike } = usePosts();
+  const { addComment, deletePost, toggleLike, toggleCommentLike } = usePosts();
 
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -151,6 +151,19 @@ const PostCard = ({ post }) => {
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   Recently
+                </div>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex items-center space-x-1 text-gray-500 hover:bg-blue-500 ${
+                      comment.likedByCurrentUser ? 'text-red-500 fill-current' : 'text-gray-500'
+                    }`}
+                    onClick={() => toggleCommentLike(normalizedPost.id, comment.id)}
+                  >
+                    <Heart className={`h-4 w-4 ${comment.likedByCurrentUser ? 'fill-current' : ''}`} />
+                    <span>{comment.likedByCurrentUser ? 1 : 0}</span>
+                  </Button>
                 </div>
               </div>
             </div>
