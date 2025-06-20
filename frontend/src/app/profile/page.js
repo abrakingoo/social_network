@@ -283,7 +283,11 @@ const Profile = () => {
             <TabsTrigger value="about" className="flex-1">
               About
             </TabsTrigger>
-            <TabsTrigger value="followers" className="flex-1">
+            <TabsTrigger
+              value="followers"
+              className="flex-1"
+              onClick={() => router.push("/followers?tab=followers")}
+            >
               Followers
             </TabsTrigger>
             <TabsTrigger value="photos" className="flex-1">
