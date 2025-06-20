@@ -60,7 +60,6 @@ func (c *Client) ExitGroup(msg map[string]any, q *repository.Query, h *Hub) {
 		return
 	}
 
-	// Clean up any join requests for this user/group (set to 'declined')
 	err = q.UpdateData("group_join_requests", []string{
 		"group_id",
 		"user_id",
@@ -68,13 +67,15 @@ func (c *Client) ExitGroup(msg map[string]any, q *repository.Query, h *Hub) {
 		request.GroupId,
 		c.UserID,
 	}, []string{"status"}, []any{"declined"})
-	// Ignore error if no join request exists
+	if err != nil {
+		c.SendError("Failed to update group join request status")
+		return
+	}
 
-	// Send real-time notification to user and admin (optional)
 	if h != nil {
 		h.ActionBasedNotification([]string{c.UserID, admin}, "group_left", map[string]any{
 			"group_id": request.GroupId,
-			"user_id": c.UserID,
+			"user_id":  c.UserID,
 		})
 	}
 }

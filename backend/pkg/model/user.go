@@ -22,7 +22,7 @@ type User struct {
 
 type UserNotification struct {
 	ID         string         `json:"id"`
-	ActorId    string         `json:"sender_id"`
+	Actor      *User          `json:"actor,omitempty"` // Full User details
 	Type       string         `json:"type"`
 	EntityID   sql.NullInt64  `json:"entity_id,omitempty"`
 	EntityType sql.NullString `json:"entity_type,omitempty"`

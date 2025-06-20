@@ -53,7 +53,6 @@ func (svc *FollowService) sendNotification(notifID, recipientID, actorID, ntype,
 		[]any{notifID, recipientID, actorID, ntype, message},
 	)
 	if err != nil {
-		// log or handle error sending notification insert
 		return
 	}
 
@@ -66,7 +65,6 @@ func (svc *FollowService) sendNotification(notifID, recipientID, actorID, ntype,
 
 // FollowRequest handles sending, re-sending, or auto-accepting follow requests.
 func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) {
-	// initialize service
 	svc := FollowService{Query: q, Hub: h}
 
 	req, ok := c.decodeFollowRequest(msg)
@@ -78,13 +76,23 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 		return
 	}
 
+	isReal, err := q.CheckRow("users", []string{
+		"id",
+	}, []any{
+		req.RecipientID,
+	})
+
+	if !isReal || err != nil {
+		c.SendError("Error: recipient does not exist")
+		return
+	}
+
 	exists, status, err := q.FollowExists(c.UserID, req.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking following status")
 		return
 	}
 
-	// fetch user info for notifications
 	var user model.UserData
 	if err := q.FetchUserInfo(req.RecipientID, &user); err != nil {
 		c.SendError("Error fetching recipient data")
@@ -94,13 +102,11 @@ func (c *Client) FollowRequest(msg map[string]any, q *repository.Query, h *Hub) 
 
 	notifID := util.UUIDGen()
 
-	// case: request already sent
 	if exists {
 		svc.handleExistingFollow(c, req, status, &user, notifID)
 		return
 	}
 
-	// new follow path: check privacy and insert accordingly
 	svc.handleNewFollow(c, req, &user, notifID)
 }
 
@@ -110,7 +116,6 @@ func (svc *FollowService) handleExistingFollow(c *Client, req model.FollowReques
 		return
 	}
 
-	// re-open declined request
 	err := svc.Query.UpdateData(
 		"user_follows",
 		[]string{"following_id", "follower_id"},
@@ -129,17 +134,14 @@ func (svc *FollowService) handleExistingFollow(c *Client, req model.FollowReques
 }
 
 func (svc *FollowService) handleNewFollow(c *Client, req model.FollowRequest, user *model.UserData, notifID string) {
-	// check if recipient is public
 	isPublic, err := svc.Query.CheckUserIsPublic(req.RecipientID)
 	if err != nil {
 		c.SendError("Error while checking user data")
 		return
 	}
 
-	// prepare common values
 	followID := util.UUIDGen()
 	if isPublic {
-		// auto-accept
 		err = svc.Query.InsertData("user_follows",
 			[]string{"id", "follower_id", "following_id", "status"},
 			[]any{followID, c.UserID, req.RecipientID, "accepted"},
@@ -153,7 +155,6 @@ func (svc *FollowService) handleNewFollow(c *Client, req model.FollowRequest, us
 			map[string]any{"avatar": user.Avatar, "message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName)}, false,
 		)
 	} else {
-		// pending request
 		err = svc.Query.InsertData("user_follows",
 			[]string{"id", "follower_id", "following_id", "status"},
 			[]any{followID, c.UserID, req.RecipientID, "pending"},
@@ -177,6 +178,17 @@ func (c *Client) RespondFollowRequest(msg map[string]any, q *repository.Query) {
 	}
 
 	if !c.validateNotSelf(req.RecipientID, "respond to") {
+		return
+	}
+
+	isReal, err := q.CheckRow("users", []string{
+		"id",
+	}, []any{
+		req.RecipientID,
+	})
+
+	if !isReal || err != nil {
+		c.SendError("Error: recipient does not exist")
 		return
 	}
 

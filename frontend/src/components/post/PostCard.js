@@ -61,8 +61,8 @@ const PostCard = ({ post }) => {
       id: inputPost.id || `post-${Math.random().toString(36).substring(2, 9)}`,
       author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
-      createdAt: inputPost.createdAt || inputPost.timestamp || new Date().toISOString(),
-      likesCount: inputPost.likesCount || inputPost.likes_count || 0,
+      createdAt: inputPost.createdAt || inputPost.created_at || inputPost.timestamp || new Date().toISOString(),
+      likesCount: inputPost.likesCount || 0,
       dislikesCount: inputPost.dislikesCount || 0,
       commentsCount: inputPost.commentsCount || 0,
       comments: Array.isArray(inputPost.comments) ? inputPost.comments : [],
@@ -272,7 +272,7 @@ const PostCard = ({ post }) => {
                     <img
                       src={`${API_BASE_URL}/${image}`}
                       alt={`Post image ${index + 1}`}
-                      className={`w-full h-full object-cover ${aspectRatio} transition-transform group-hover:scale-105`}
+                      className={`w-full h-full object-contain ${aspectRatio} transition-transform group-hover:scale-105`}
                     />
                     {normalizedPost.media.length > 4 && index === 3 && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">

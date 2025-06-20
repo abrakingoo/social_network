@@ -26,13 +26,11 @@ export const AuthProvider = ({ children }) => {
   const manageWebSocket = (user) => {
     if (user && !wsManager.isConnected()) {
       // User authenticated and WebSocket not connected
-      console.log("AuthContext: Initializing WebSocket for authenticated user");
       wsManager.setAuthState(true);
       const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/api/ws';
       wsManager.connect(wsUrl);
     } else if (!user && wsManager.isConnected()) {
       // User not authenticated and WebSocket is connected
-      console.log("AuthContext: Cleaning up WebSocket connection");
       wsManager.setAuthState(false);
     }
   };
@@ -63,18 +61,18 @@ export const AuthProvider = ({ children }) => {
           Object.keys(userObject).length > 0
         ) {
           setCurrentUser(userObject);
-          manageWebSocket(userObject); //  Single WebSocket management point
+          manageWebSocket(userObject); // Single WebSocket management point
           return userObject;
         }
       }
 
       setCurrentUser(null);
-      manageWebSocket(null); //  Single WebSocket management point
+      manageWebSocket(null); // Single WebSocket management point
       return null;
     } catch (error) {
       console.error("AuthContext: Error checking authentication:", error);
       setCurrentUser(null);
-      manageWebSocket(null); //  Single WebSocket management point
+      manageWebSocket(null); // Single WebSocket management point
       return null;
     } finally {
       // CRITICAL FIX: ALWAYS set loading to false, no matter what happens
@@ -172,7 +170,7 @@ export const AuthProvider = ({ children }) => {
       // Immediate cleanup
       setCurrentUser(null);
       setLoading(false);
-      manageWebSocket(null); //  Single WebSocket management point
+      manageWebSocket(null); // Single WebSocket management point
 
       // Then call API
       await fetch(`${API_BASE_URL}/api/logout`, {

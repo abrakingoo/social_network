@@ -87,3 +87,47 @@ func (c *Client) GroupMessage(msg map[string]any, q *repository.Query, h *Hub) {
 
 	h.BroadcastToGroup(c, message.GroupId, groupData)
 }
+
+func (c *Client) LoadGroupMessages(msg map[string]any, q *repository.Query) {
+	data, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var message model.GroupMessage
+	if err = json.Unmarshal(data, &message); err != nil {
+		c.SendError("Invalid messsage format")
+		return
+	}
+
+	isReal, err := q.CheckRow("group_members", []string{
+		"group_id",
+		"user_id",
+	}, []any{
+		message.GroupId,
+		c.UserID,
+	})
+	if !isReal || err != nil {
+		c.SendError("You are not a member of this group")
+		return
+	}
+
+	messages, err := q.GetGroupMessages(message.GroupId)
+	if err != nil {
+		c.SendError("Failed to load group messages")
+		return
+	}
+
+	payload := map[string]any{
+		"type":     "load_group_messages",
+		"messages": messages,
+	}
+
+	sendData, err := json.Marshal(payload)
+	if err != nil {
+		c.SendError("Failed to encode messages")
+		return
+	}
+	c.Send <- sendData
+}

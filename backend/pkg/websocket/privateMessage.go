@@ -23,6 +23,17 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 		return
 	}
 
+	isReal, err := q.CheckRow("users", []string{
+		"id",
+	}, []any{
+		private.RecipientID,
+	})
+
+	if !isReal || err != nil {
+		c.SendError("Error: recipient does not exist")
+		return
+	}
+
 	if strings.TrimSpace(private.Message) == "" {
 		c.SendError("Cannot send empty message")
 		return
@@ -119,4 +130,56 @@ func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {
 		c.SendError("Failed to update chat read status")
 		return
 	}
+}
+
+func (c *Client) LoadPrivateMessages(msg map[string]any, q *repository.Query) {
+	data, err := json.Marshal(msg["data"])
+	if err != nil {
+		c.SendError("Invalid data encoding")
+		return
+	}
+
+	var private model.PrivateMessage
+	if err = json.Unmarshal(data, &private); err != nil {
+		c.SendError("Invalid data format")
+		return
+	}
+
+	isReal, err := q.CheckRow("users", []string{
+		"id",
+	}, []any{
+		private.RecipientID,
+	})
+	if !isReal || err != nil {
+		c.SendError("Error: recipient does not exist")
+		return
+	}
+
+	if private.RecipientID == "" {
+		c.SendError("recipient not found")
+		return
+	}
+
+	if private.RecipientID == c.UserID {
+		c.SendError("You cannot load your own messages")
+		return
+	}
+	messages, err := q.GetMessagesBetweenUsers(c.UserID, private.RecipientID)
+	if err != nil {
+		c.SendError("Failed to load messages")
+		return
+	}
+
+	payload := map[string]any{
+		"type":     "load_private_messages",
+		"messages": messages,
+	}
+
+	sendData, err := json.Marshal(payload)
+	if err != nil {
+		c.SendError("Failed to encode messages")
+		return
+	}
+
+	c.Send <- sendData
 }

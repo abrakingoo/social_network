@@ -25,7 +25,11 @@ const HomeContent = () => {
 
     checkIfMobile();
     window.addEventListener("resize", checkIfMobile);
-    return () => window.removeEventListener("resize", checkIfMobile);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
   }, []);
 
   // FIXED: Proper authentication redirect with correct order
@@ -63,7 +67,9 @@ const HomeContent = () => {
           ></div>
         }
       >
-        <PostForm />
+        <div id="postForm">
+          <PostForm />
+        </div>
       </Suspense>
 
       {/* Feed */}

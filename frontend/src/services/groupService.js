@@ -331,11 +331,9 @@ export const groupService = {
   // Join a group - Uses corrected WebSocket infrastructure
   async joinGroup(groupId) {
     try {
-      console.log('[groupService.joinGroup] Sending WebSocket request for group:', groupId);
 
       const result = await webSocketOperations.joinGroup(groupId);
 
-      console.log('[groupService.joinGroup] WebSocket response:', result);
 
       return {
         success: true,
@@ -349,11 +347,9 @@ export const groupService = {
   // Leave a group - Uses corrected WebSocket infrastructure
   async leaveGroup(groupId) {
     try {
-      console.log('[groupService.leaveGroup] Sending WebSocket request for group:', groupId);
 
       const result = await webSocketOperations.leaveGroup(groupId);
 
-      console.log('[groupService.leaveGroup] WebSocket response:', result);
 
       return {
         success: true,
@@ -367,11 +363,9 @@ export const groupService = {
   // Invite user to group - Uses corrected WebSocket infrastructure
   async inviteToGroup(groupId, userId) {
     try {
-      console.log('[groupService.inviteToGroup] Sending WebSocket request:', { groupId, userId });
 
       const result = await webSocketOperations.inviteToGroup(groupId, userId);
 
-      console.log('[groupService.inviteToGroup] WebSocket response:', result);
 
       return {
         success: true,
@@ -385,11 +379,9 @@ export const groupService = {
   // Respond to group invitation - Uses corrected WebSocket infrastructure
   async respondToGroupInvitation(groupId, status) {
     try {
-      console.log('[groupService.respondToGroupInvitation] Sending WebSocket request:', { groupId, status });
 
       const result = await webSocketOperations.respondToGroupInvitation(groupId, status);
 
-      console.log('[groupService.respondToGroupInvitation] WebSocket response:', result);
 
       return {
         success: true,
@@ -403,11 +395,9 @@ export const groupService = {
   // Respond to join request - Uses corrected WebSocket infrastructure
   async respondToJoinRequest(groupId, userId, status) {
     try {
-      console.log('[groupService.respondToJoinRequest] Sending WebSocket request:', { groupId, userId, status });
 
       const result = await webSocketOperations.respondToJoinRequest(groupId, userId, status);
 
-      console.log('[groupService.respondToJoinRequest] WebSocket response:', result);
 
       return {
         success: true,

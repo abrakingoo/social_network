@@ -38,7 +38,7 @@ export const PostContext = createContext();
 export const PostProvider = ({ children }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { currentUser } = useAuth();
+  const { currentUser, checkAuth } = useAuth();
 
   // Normalize comment data
   const normalizeComment = useCallback((commentData) => {
@@ -181,6 +181,9 @@ export const PostProvider = ({ children }) => {
           await fetchPosts();
         }, 500);
 
+        // Refresh currentUser data to update userposts for Photos tab
+        await checkAuth();
+
         return true;
       } else {
         const errorText = await response.text();
@@ -197,7 +200,7 @@ export const PostProvider = ({ children }) => {
       toast.error(error.message || 'Failed to create post');
       return false;
     }
-  }, [currentUser, fetchPosts]);
+  }, [currentUser, fetchPosts, checkAuth, API_BASE_URL]);
 
   // Delete post
   const deletePost = useCallback((postId) => {

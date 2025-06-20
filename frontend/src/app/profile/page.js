@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import PostCardLightbox from "@/components/post/PostCardLightbox";
 import {
   Camera,
   Users,
@@ -18,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import PostCard from "@/components/post/PostCard";
+import PostForm from "@/components/post/PostForm"; // Import PostForm component
 import { useAuth } from "@/context/AuthContext";
 import { usePosts } from "@/context/PostContext";
 import { formatAvatarUrl } from "@/lib/utils";
@@ -35,6 +37,14 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [profileUser, setProfileUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPostForm, setShowPostForm] = useState(false); // Add state for post form visibility
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0); // Add state for lightbox index
+
+  // Function to handle successful post creation
+  const handlePostCreated = () => {
+    setShowPostForm(false); 
+  };
 
   // Extract username from pathname if available
   useEffect(() => {
@@ -56,9 +66,9 @@ const Profile = () => {
       }
     } else {
       setProfileUser(currentUser);
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [currentUser, pathname, router, getAllUsers]);
+  }, [currentUser, pathname, router, getAllUsers, authLoading]);
 
   // Modify the useEffect to only redirect after auth is loaded
   useEffect(() => {
@@ -87,15 +97,23 @@ const Profile = () => {
   }
 
   const isOwnProfile = currentUser.id === profileUser.id;
-  const userPosts = getUserPosts(profileUser.id);
+  const userPosts = isOwnProfile && currentUser && currentUser.userposts ? currentUser.userposts : getUserPosts(profileUser.id);
   const userFirstName = profileUser.first_name || profileUser.firstName;
   const userLastName = profileUser.last_name || profileUser.lastName;
   const userNickname = profileUser.nickname;
   const userEmail = profileUser.email;
   const userDateOfBirth = profileUser.date_of_birth || profileUser.dateOfBirth;
   const userCreatedAt = profileUser.created_at || profileUser.createdAt;
-  const userAbout = profileUser.about_me || profileUser.about;
 
+  // Extract all photos from user's posts for the Photos tab
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const userPhotos = userPosts.flatMap(post => post.media || post.images || []).map(photo => {
+    // Check if photo is an object with a URL property or a direct string
+    const photoUrl = typeof photo === 'object' && photo.URL ? photo.URL : (typeof photo === 'object' && photo.url ? photo.url : photo);
+    return `${API_BASE_URL}/${photoUrl}`;
+  });
+
+  const userAbout = profileUser.about_me || profileUser.about;
   const h1Name = userNickname || userFirstName || "";
   const subtitleName =
     userFirstName && userLastName
@@ -161,13 +179,13 @@ const Profile = () => {
           <div>
             <h1 className="text-2xl font-bold">{h1Name}</h1>
             <div className="flex items-center space-x-2 mt-1 text-gray-500">
-              {profileUser.isPublic ? (
+              {profileUser.is_public ? (
                 <Globe className="h-4 w-4" />
               ) : (
                 <Lock className="h-4 w-4" />
               )}
               <span>
-                {profileUser.isPublic ? "Public Profile" : "Private Profile"}
+                {profileUser.is_public ? "Public Profile" : "Private Profile"}
               </span>
             </div>
 
@@ -209,7 +227,13 @@ const Profile = () => {
 
           <div>
             {isOwnProfile ? (
-              <Button variant="outline">Edit Profile</Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/settings")}
+                className="hover:bg-blue-600"
+              >
+                Edit Profile
+              </Button>
             ) : (
               <Button className="bg-social hover:bg-social-dark">
                 Add Friend
@@ -240,7 +264,7 @@ const Profile = () => {
           <div className="flex items-center">
             <ImageIcon className="h-5 w-5 mr-2 text-gray-500" />
             <div className="text-sm">
-              <span className="font-semibold">0</span> photos
+              <span className="font-semibold">{userPhotos.length}</span> photos
             </div>
           </div>
         </div>
@@ -260,7 +284,11 @@ const Profile = () => {
             <TabsTrigger value="about" className="flex-1">
               About
             </TabsTrigger>
-            <TabsTrigger value="followers" className="flex-1">
+            <TabsTrigger
+              value="followers"
+              className="flex-1"
+              onClick={() => router.push("/followers?tab=followers")}
+            >
               Followers
             </TabsTrigger>
             <TabsTrigger value="photos" className="flex-1">
@@ -269,22 +297,32 @@ const Profile = () => {
           </TabsList>
           <div className="mt-4">
             <TabsContent value="posts" className="space-y-4">
+              {isOwnProfile && showPostForm && (
+                <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+                  <Suspense fallback={<div className="p-4 text-center">Loading form...</div>}>
+                    <PostForm onPostCreated={handlePostCreated} />
+                  </Suspense>
+                </div>
+              )}
               {userPosts.length > 0 ? (
                 userPosts.map((post) => <PostCard key={post.id} post={post} />)
-              ) : (
-                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                  <h3 className="text-lg font-medium text-gray-700">
-                    No posts yet
-                  </h3>
-                  <p className="text-gray-500 mt-1">
+              ) : !showPostForm && (
+                <div className="text-center p-8 bg-white rounded-lg shadow-sm">
+                  <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
+                  <p className="text-gray-500 mt-2">
                     {isOwnProfile
                       ? "When you create posts, they'll appear here."
-                      : "This user hasn't posted anything yet."}
+                      : `${profileUser.firstName} hasn't posted anything yet.`}
                   </p>
-
                   {isOwnProfile && (
-                    <Button className="mt-4 bg-social hover:bg-social-dark">
-                      Create Your First Post
+                    <Button
+                      onClick={() => {
+                        // Toggle the visibility of the post form on the profile page
+                        setShowPostForm(!showPostForm);
+                      }}
+                      className="mt-4 bg-social hover:bg-social-dark text-white"
+                    >
+                      Create your first post
                     </Button>
                   )}
                 </div>
@@ -391,7 +429,7 @@ const Profile = () => {
                       )}
                       <div className="py-3 flex items-center">
                         <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
-                          {profileUser.isPublic ? (
+                          {profileUser.is_public ? (
                             <Globe className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                           ) : (
                             <Lock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
@@ -399,7 +437,7 @@ const Profile = () => {
                           Profile Type
                         </dt>
                         <dd className="w-2/3 text-sm text-gray-900">
-                          {profileUser.isPublic ? "Public" : "Private"}
+                          {profileUser.is_public ? "Public" : "Private"}
                         </dd>
                       </div>
                     </dl>
@@ -428,12 +466,38 @@ const Profile = () => {
             <TabsContent value="photos">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-medium mb-4">Photos</h3>
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No photos uploaded yet.</p>
-                  {isOwnProfile && (
-                    <Button className="mt-4">Upload Photos</Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userPhotos.length > 0 ? (
+                    userPhotos.map((photo, index) => (
+                      <img
+                        key={index}
+                        src={photo}
+                        alt="User photo"
+                        className="w-full h-48 object-cover rounded-lg cursor-pointer"
+                        onClick={() => {
+                          setLightboxOpen(true);
+                          setLightboxIndex(index);
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No photos uploaded yet.</p>
+                      {isOwnProfile && (
+                        <Button className="mt-4">Upload Photos</Button>
+                      )}
+                    </div>
                   )}
                 </div>
+                {/* Lightbox for photos */}
+                <PostCardLightbox
+                  open={lightboxOpen}
+                  images={userPhotos}
+                  index={lightboxIndex}
+                  onClose={() => setLightboxOpen(false)}
+                  onPrev={() => setLightboxIndex((prev) => (prev - 1 + userPhotos.length) % userPhotos.length)}
+                  onNext={() => setLightboxIndex((prev) => (prev + 1) % userPhotos.length)}
+                />
               </div>
             </TabsContent>
           </div>
