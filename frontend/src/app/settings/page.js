@@ -95,45 +95,59 @@ const Settings = () => {
           first_name: profile.firstName,
           last_name: profile.lastName,
           email: profile.email,
-          date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth).toISOString() : null,
+          date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth).toISOString() : '',
           nickname: profile.nickname,
           about_me: profile.about,
           is_public: profile.isPublic,
         };
 
-        const response = await fetch('/api/updateUser', {
+        // Remove empty fields from payload to avoid sending unnecessary data
+        Object.keys(payload).forEach(key => {
+          if (payload[key] === '' || payload[key] === null) {
+            delete payload[key];
+          }
+        });
+
+        // Use environment variable consistent with other parts of the app
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${apiBaseUrl}/api/updateUser`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+          credentials: 'include', // Ensure cookies are sent with the request
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to update profile');
         }
 
+        const data = await response.json();
         toast({
-          title: 'Settings updated',
-          description: 'Your account settings have been saved.',
-          variant: 'success',
+          title: 'Success',
+          description: data.message || 'Profile updated successfully',
+          status: 'success',
+          duration: 3000,
         });
       } catch (error) {
         toast({
           title: 'Error',
-          description: error.message,
-          variant: 'destructive',
+          description: error.message || 'Failed to update profile',
+          status: 'error',
+          duration: 5000,
         });
       }
-    } else {
-      // In a real app, this would save to backend
+    } else if (section === 'notifications') {
+      // TODO: Implement notifications settings update
       toast({
-        title: 'Settings updated',
-        description: `Your ${section} settings have been saved.`,
-        variant: 'success',
+        title: 'Success',
+        description: 'Notifications settings saved',
+        status: 'success',
+        duration: 3000,
       });
-    }
+    } 
   };
 
   return (
