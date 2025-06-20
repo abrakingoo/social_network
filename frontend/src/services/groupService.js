@@ -247,27 +247,51 @@ export const groupService = {
   },
 
   // RSVP to an event - CORRECTED: Use exact backend endpoint and payload format
+// FIXED RSVP to an event - Corrected payload format to match backend exactly
   async rsvpEvent(eventId, status) {
     try {
+      // Ensure status is properly formatted - backend expects exact values
+      const formattedStatus = status === "going" ? "going" : "not_going";
+
+      const requestPayload = {
+        eventId: eventId,        //   Backend expects "eventId", not "event_id"
+        status: formattedStatus  //   Backend expects "status", not "response"
+      };
+
       const response = await fetch(`${API_BASE_URL}/api/rsvp`, {
         method: 'POST',
         credentials: 'include',
         headers: getHeaders(true),
-        body: JSON.stringify({
-          event_id: eventId,
-          response: status
-        })
+        body: JSON.stringify(requestPayload)
       });
 
       const data = await handleApiResponse(response, 'rsvpEvent');
+
       return {
         success: true,
-        message: data.message || 'RSVP updated successfully'
+        message: data.message || 'RSVP updated successfully',
+        attendeeCount: data.message || 0 // Backend returns count as message
       };
     } catch (error) {
+      console.error('[groupService.rsvpEvent] Error details:', {
+        error: error.message,
+        eventId,
+        status,
+        errorType: error.type
+      });
+
       if (error.type === GroupErrorTypes.NOT_FOUND) {
         throw new Error('Event not found or you do not have access to it.');
       }
+
+      if (error.status === 400) {
+        throw new Error('Invalid RSVP data. Please try again.');
+      }
+
+      if (error.status === 401) {
+        throw new Error('You must be logged in to RSVP to events.');
+      }
+
       throw new Error('Failed to update RSVP. Please try again.');
     }
   },
@@ -290,18 +314,13 @@ export const groupService = {
     }
   },
 
-  // Get all users for invitations - FIXED: Enhanced error handling and debugging
+  // Get all users for invitations -   Enhanced error handling and debugging
   async getAllUsers() {
     try {
-      console.log('[groupService.getAllUsers] Starting fetch...');
-
       const response = await fetch(`${API_BASE_URL}/api/users`, {
         credentials: 'include',
         headers: getHeaders(false)
       });
-
-      console.log('[groupService.getAllUsers] Response status:', response.status);
-      console.log('[groupService.getAllUsers] Response ok:', response.ok);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -311,33 +330,27 @@ export const groupService = {
 
       // Handle 204 No Content response
       if (response.status === 204) {
-        console.log('[groupService.getAllUsers] No content returned (204)');
         return [];
       }
 
       const data = await response.json();
-      console.log('[groupService.getAllUsers] Raw response data:', data);
 
       // Extract user relations from the response
       const userRelations = data.message || data;
-      console.log('[groupService.getAllUsers] User relations:', userRelations);
 
       // Validate that userRelations is an object
       if (!userRelations || typeof userRelations !== 'object') {
-        console.error('[groupService.getAllUsers] Invalid user relations format:', userRelations);
         return [];
       }
 
-      // FIXED: Safely combine all user categories with proper null/undefined handling
+      //   Safely combine all user categories with proper null/undefined handling
       const allUsers = [];
 
       // Helper function to safely add users from a category
       const addUsersFromCategory = (category, categoryName) => {
         if (Array.isArray(category) && category.length > 0) {
-          console.log(`[groupService.getAllUsers] Adding ${category.length} users from ${categoryName}`);
           allUsers.push(...category);
         } else {
-          console.log(`[groupService.getAllUsers] No users in ${categoryName} (or not an array)`);
         }
       };
 
@@ -348,12 +361,11 @@ export const groupService = {
       addUsersFromCategory(userRelations.received_request, 'received_request');
       addUsersFromCategory(userRelations.sent_request, 'sent_request');
 
-      console.log(`[groupService.getAllUsers] Total users combined: ${allUsers.length}`);
       if (allUsers.length > 0) {
         console.log(`[groupService.getAllUsers] Sample user:`, allUsers[0]);
       }
 
-      // FIXED: Remove duplicates based on user ID and ensure valid user objects
+      //   Remove duplicates based on user ID and ensure valid user objects
       const uniqueUsers = [];
       const seenIds = new Set();
 
@@ -368,8 +380,6 @@ export const groupService = {
           }
         }
       }
-
-      console.log(`[groupService.getAllUsers] Final unique users: ${uniqueUsers.length}`);
 
       return uniqueUsers;
 
@@ -390,9 +400,7 @@ export const groupService = {
   // Join a group - Uses corrected WebSocket infrastructure
   async joinGroup(groupId) {
     try {
-
       const result = await webSocketOperations.joinGroup(groupId);
-
 
       return {
         success: true,
@@ -406,10 +414,7 @@ export const groupService = {
   // Leave a group - Uses corrected WebSocket infrastructure
   async leaveGroup(groupId) {
     try {
-
       const result = await webSocketOperations.leaveGroup(groupId);
-
-
       return {
         success: true,
         message: result.message || 'Successfully left the group'
@@ -422,9 +427,7 @@ export const groupService = {
   // Invite user to group - Uses corrected WebSocket infrastructure
   async inviteToGroup(groupId, userId) {
     try {
-
       const result = await webSocketOperations.inviteToGroup(groupId, userId);
-
 
       return {
         success: true,
@@ -438,9 +441,7 @@ export const groupService = {
   // Respond to group invitation - Uses corrected WebSocket infrastructure
   async respondToGroupInvitation(groupId, status) {
     try {
-
       const result = await webSocketOperations.respondToGroupInvitation(groupId, status);
-
 
       return {
         success: true,
@@ -456,7 +457,6 @@ export const groupService = {
     try {
 
       const result = await webSocketOperations.respondToJoinRequest(groupId, userId, status);
-
 
       return {
         success: true,
