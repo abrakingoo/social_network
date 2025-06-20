@@ -30,7 +30,6 @@ class WebSocketManager {
 
   // Auth state with connection stability
   setAuthState(isAuthenticated) {
-    console.log(`WebSocket: Setting auth state to ${isAuthenticated}`);
 
     const wasAuthenticated = this.isAuthenticated;
     this.isAuthenticated = isAuthenticated;
@@ -45,7 +44,6 @@ class WebSocketManager {
   // Debounced connection to prevent rapid attempts
   connect(url) {
     if (!this.isAuthenticated) {
-      console.log("WebSocket: Not authenticated, skipping connection");
       return;
     }
 
@@ -57,12 +55,10 @@ class WebSocketManager {
       state.isConnected ||
       now - state.lastConnectionAttempt < state.connectionDebounceMs
     ) {
-      console.log("WebSocket: Connection attempt too soon, debouncing");
       return;
     }
 
     if (this.ws && this.ws.readyState !== WebSocket.CLOSED) {
-      console.log("WebSocket: Closing existing connection before new attempt");
       this.ws.close();
       this.ws = null;
     }
@@ -71,13 +67,11 @@ class WebSocketManager {
     state.isConnecting = true;
     this.connectionUrl = url;
 
-    console.log("WebSocket: Connecting to:", url);
 
     try {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        console.log("WebSocket: Connected successfully");
         state.isConnected = true;
         state.isConnecting = false;
         this.reconnectAttempts = 0;
@@ -87,7 +81,6 @@ class WebSocketManager {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log("WebSocket: Message received:", data);
 
           // Handle backend notifications with EXACT format matching
           if (data.type === "notification") {
@@ -109,14 +102,12 @@ class WebSocketManager {
       };
 
       this.ws.onclose = (event) => {
-        console.log("WebSocket: Connection closed", event.code, event.reason);
 
         state.isConnected = false;
         state.isConnecting = false;
         state.isDisconnecting = false;
 
         if (state.cleanupInProgress) {
-          console.log("WebSocket: Disconnect completed successfully");
         }
 
         this.notifyListeners("connection", { status: "disconnected" });
@@ -173,7 +164,6 @@ class WebSocketManager {
           this.handleGroupInvitationNotification(data);
           break;
         default:
-          console.log("WebSocket: Unknown group notification:", message);
       }
     }
   }
@@ -272,12 +262,10 @@ class WebSocketManager {
 
   // Perfect disconnect with proper sequencing
   disconnect() {
-    console.log("WebSocket: Disconnecting...");
 
     const state = this.connectionState;
 
     if (state.isDisconnecting) {
-      console.log("WebSocket: Already disconnecting, skipping");
       return;
     }
 
@@ -293,25 +281,19 @@ class WebSocketManager {
         currentState === WebSocket.OPEN ||
         currentState === WebSocket.CONNECTING
       ) {
-        console.log("WebSocket: Closing connection...");
         this.ws.close(1000, "Logout");
 
         setTimeout(() => {
           if (this.ws && state.cleanupInProgress) {
-            console.log("WebSocket: Force cleanup after timeout");
             this.ws = null;
             state.isDisconnecting = false;
-            console.log("WebSocket: Disconnect completed (fallback)");
           }
         }, 1000);
       } else {
-        console.log("WebSocket: Connection already closed");
         this.ws = null;
         state.isDisconnecting = false;
-        console.log("WebSocket: Disconnect completed (already closed)");
       }
     } else {
-      console.log("WebSocket: No connection to disconnect");
       state.isDisconnecting = false;
     }
 
@@ -410,7 +392,6 @@ class WebSocketManager {
     try {
       const message = JSON.stringify({ type, data });
       this.ws.send(message);
-      console.log("WebSocket: Message sent:", message);
     } catch (error) {
       console.error("WebSocket: Failed to send message:", error);
       throw error;
