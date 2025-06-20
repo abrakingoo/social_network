@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -19,6 +18,7 @@ const GroupHeader = ({
   isRequesting,
   onJoinLeave,
   onOpenManagement,
+  onOpenMemberInvite, // NEW: Added member invite handler
   onDeleteGroup
 }) => {
   // Get button props based on current state
@@ -111,9 +111,20 @@ const GroupHeader = ({
               </Button>
             </div>
           ) : groupData.is_joined ? (
-            <Button variant="outline" onClick={() => onJoinLeave(true)}>
-              Leave Group
-            </Button>
+            <div className="flex space-x-2">
+              {/* NEW: Invite Members button for regular members */}
+              <Button
+                variant="outline"
+                onClick={onOpenMemberInvite}
+                className="border-social text-social hover:bg-social hover:text-white"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite Members
+              </Button>
+              <Button variant="outline" onClick={() => onJoinLeave(true)}>
+                Leave Group
+              </Button>
+            </div>
           ) : (
             <Button
               {...getJoinButtonProps()}
