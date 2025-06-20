@@ -249,7 +249,7 @@ const Settings = () => {
                   className="bg-social hover:bg-social-dark mt-6"
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Save Account Settings
+                  Save Changes
                 </Button>
               </div>
             </TabsContent>
