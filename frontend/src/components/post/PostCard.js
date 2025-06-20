@@ -29,7 +29,7 @@ const PostCard = ({ post }) => {
   const [isMobile, setIsMobile] = useState(false);
   // Get the current user from context
   const { currentUser } = useAuth();
-  const { toggleLike, addComment, deletePost } = usePosts();
+  const { addComment, deletePost, toggleLike } = usePosts();
 
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -62,12 +62,13 @@ const PostCard = ({ post }) => {
       author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
       createdAt: inputPost.createdAt || inputPost.timestamp || new Date().toISOString(),
-      likesCount: inputPost.likesCount || 0,
+      likesCount: inputPost.likesCount || inputPost.likes_count || 0,
       dislikesCount: inputPost.dislikesCount || 0,
       commentsCount: inputPost.commentsCount || 0,
       comments: Array.isArray(inputPost.comments) ? inputPost.comments : [],
       media: Array.isArray(inputPost.media) ? inputPost.media.map(m => m.URL || m.url) : [],
-      privacy: inputPost.privacy || 'public'
+      privacy: inputPost.privacy || 'public',
+      likedByCurrentUser: inputPost.likedByCurrentUser || inputPost.is_liked || false,
     };
   };
 
@@ -81,8 +82,6 @@ const PostCard = ({ post }) => {
 
   const author = normalizedPost.author;
   const isAuthor = currentUser && currentUser.id === author.id;
-  const [hasLiked, setHasLiked] = useState(post.user_liked || false);
-  const [likeCount, setLikeCount] = useState(normalizedPost.likesCount);
 
   // Author data access with fallbacks from backend format
   const firstName = author.first_name || author.firstName || 'Unknown';
@@ -90,20 +89,6 @@ const PostCard = ({ post }) => {
   const authorName = author.nickname || `${firstName} ${lastName}`;
 
   const formattedDate = formatDistanceToNow(new Date(normalizedPost.createdAt), { addSuffix: true });
-
-  const handleLike = async () => {
-    if (typeof toggleLike === 'function') {
-      try {
-        const success = await toggleLike(normalizedPost.id, !hasLiked);
-        if (success) {
-          setHasLiked(!hasLiked);
-          setLikeCount(prevCount => hasLiked ? prevCount - 1 : prevCount + 1);
-        } else {
-        }
-      } catch (error) {
-      }
-    }
-  };
 
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this post?') && typeof deletePost === 'function') {
@@ -187,30 +172,24 @@ const PostCard = ({ post }) => {
     }
   };
 
-  const renderInteractions = () => {
-    return (
-      <div className="flex items-center justify-start gap-x-4 px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center space-x-2 hover:bg-blue-500"
-          onClick={handleLike}
-        >
-          <Heart className={`h-5 w-5 ${hasLiked ? 'fill-current text-pink-500' : ''}`} />
-          <span>{likeCount || normalizedPost.likesCount || 0}</span>
+  const renderInteractions = () => (
+    <CardFooter className="flex justify-between p-2">
+      <div className="flex space-x-4">
+        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:text-red-500" onClick={() => toggleLike(normalizedPost.id)}>
+          <Heart className={`h-5 w-5 ${normalizedPost.likedByCurrentUser ? 'text-red-500 fill-current' : ''}`} />
+          <span>{formatCount(normalizedPost.likesCount)}</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex items-center space-x-2 hover:bg-blue-500"
-          onClick={() => setShowComments(!showComments)}
-        >
+        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:text-blue-500" onClick={() => setShowComments(!showComments)}>
           <MessageSquare className="h-5 w-5" />
-          <span>{normalizedPost.commentsCount || 0}</span>
+          <span>{formatCount(normalizedPost.comments.length)}</span>
+        </Button>
+        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:text-green-500">
+          <Share2 className="h-5 w-5" />
+          <span>Share</span>
         </Button>
       </div>
-    );
-  };
+    </CardFooter>
+  );
 
   return (
     <div className={`max-w-4xl mx-auto ${isMobile ? '-mx-4' : ''}`}>
