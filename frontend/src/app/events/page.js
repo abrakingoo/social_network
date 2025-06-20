@@ -95,6 +95,7 @@ export default function Events() {
   }, [currentUser, authLoading, router]);
 
   // Handle RSVP toggle
+  //   Handle RSVP toggle - Consistent status formatting
   const toggleAttendance = async (eventId) => {
     if (!currentUser) {
       toast({
@@ -108,10 +109,13 @@ export default function Events() {
     const event = events.find(e => e.id === eventId);
     if (!event) return;
 
+    //  : Consistent status format throughout
     const currentStatus = event.isAttending ? "going" : "not_going";
-    const newStatus = currentStatus === "going" ? "not going" : "going";
+    const newStatus = currentStatus === "going" ? "not_going" : "going";
     const toastTitle = newStatus === "going" ? "RSVP Confirmed" : "RSVP Cancelled";
-    const toastDescription = newStatus === "going" ? "You have successfully RSVP'd for this event!" : "You have un-RSVP'd for this event.";
+    const toastDescription = newStatus === "going"
+      ? "You have successfully RSVP'd for this event!"
+      : "You have un-RSVP'd for this event.";
 
     // Set loading state for this specific event
     setRsvpLoading(prev => ({ ...prev, [eventId]: true }));
@@ -132,14 +136,14 @@ export default function Events() {
     }));
 
     try {
-      await groupService.rsvpEvent(eventId, newStatus);
+      const result = await groupService.rsvpEvent(eventId, newStatus);
 
       toast({
         title: toastTitle,
         description: toastDescription,
       });
     } catch (error) {
-      console.error('Error updating RSVP status:', error);
+      console.error('[toggleAttendance] Error updating RSVP status:', error);
 
       // Revert optimistic update on error
       setEvents(prevEvents => prevEvents.map(evt => {
@@ -162,7 +166,12 @@ export default function Events() {
         variant: "destructive"
       });
     } finally {
-      setRsvpLoading(prev => ({ ...prev, [eventId]: false }));
+      // Clear loading state for this specific event
+      setRsvpLoading(prev => {
+        const newState = { ...prev };
+        delete newState[eventId];
+        return newState;
+      });
     }
   };
 
