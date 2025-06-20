@@ -25,7 +25,7 @@ import {
 
 const Settings = () => {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('account');
 
@@ -64,6 +64,8 @@ const Settings = () => {
 
   // Redirect to login if not authenticated
   useEffect(() => {
+    if (loading) return; // Wait for the authentication check to complete
+
     if (!currentUser) {
       router.push('/login');
       return;
@@ -88,11 +90,15 @@ const Settings = () => {
         showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
       });
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, loading]);
 
   // Don't render if user is not authenticated
-  if (!currentUser) {
-    return null;
+  if (loading || !currentUser) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
   const saveSettings = (section) => {
