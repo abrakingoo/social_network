@@ -26,11 +26,11 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
   const [invitingUsers, setInvitingUsers] = useState(new Set());
   const [processingRequests, setProcessingRequests] = useState(new Set());
 
-  // CORRECTED: Join requests state management using correct field name
+  // Join requests state management using correct field name
   const [joinRequests, setJoinRequests] = useState([]);
   const [newRequestCount, setNewRequestCount] = useState(0);
 
-  // CORRECTED: Initialize join requests from groupData.JoinRequest or groupData.join_request
+  // Initialize join requests from groupData.JoinRequest or groupData.join_request
   useEffect(() => {
     const requests = groupData?.JoinRequest || groupData?.join_request || [];
     setJoinRequests(requests);
@@ -117,7 +117,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
     }
   }, [activeTab]);
 
-  // FIXED: Stable refresh function
+  // Stable refresh function
   const refreshGroupData = useCallback(async () => {
     if (!groupData?.title) return;
 
@@ -135,69 +135,49 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
         });
       }
     } catch (error) {
-      console.error('Error refreshing group data:', error);
+      // Silent error handling
     }
-  }, [groupData?.title, onGroupUpdated]); // Fixed dependencies
+  }, [groupData?.title, onGroupUpdated]);
 
-  // FIXED: Stable fetch function with better logging
+  // Stable fetch function
   const fetchAvailableUsers = useCallback(async () => {
-    console.log('[GroupManagementDialog] ==> fetchAvailableUsers called');
-    console.log('[GroupManagementDialog] ==> isOpen:', isOpen);
-    console.log('[GroupManagementDialog] ==> currentUser:', currentUser);
-    console.log('[GroupManagementDialog] ==> groupData:', groupData);
-
     setLoadingUsers(true);
     try {
-      console.log('[GroupManagementDialog] Fetching available users...');
-      console.log('[GroupManagementDialog] Current user ID:', currentUser?.id);
-      console.log('[GroupManagementDialog] Group members:', groupData?.members?.map(m => m.id));
-
       const users = await groupService.getAllUsers();
-      console.log('[GroupManagementDialog] Users from service:', users?.length);
-      console.log('[GroupManagementDialog] First few users:', users?.slice(0, 3));
 
-      // FIXED: Handle empty users array gracefully
+      // Handle empty users array gracefully
       if (!users || !Array.isArray(users)) {
-        console.warn('[GroupManagementDialog] No users returned or invalid format');
         setAvailableUsers([]);
         return;
       }
 
       if (users.length === 0) {
-        console.log('[GroupManagementDialog] No users available from backend');
         setAvailableUsers([]);
         return;
       }
 
       // Create set of existing member IDs for efficient filtering
       const memberIds = new Set(groupData?.members?.map(m => m.id) || []);
-      console.log('[GroupManagementDialog] Member IDs to exclude:', Array.from(memberIds));
 
-      // FIXED: Filter out current user and existing members with better logging
+      // Filter out current user and existing members
       const filtered = users.filter(user => {
         // Check if user object is valid
         if (!user || !user.id) {
-          console.warn('[GroupManagementDialog] Skipping invalid user:', user);
           return false;
         }
 
         // Exclude current user (handle case where currentUser.id might be undefined)
         if (currentUser?.id && user.id === currentUser.id) {
-          console.log('[GroupManagementDialog] Excluding current user:', user.id);
           return false;
         }
 
         // Exclude existing members
         if (memberIds.has(user.id)) {
-          console.log('[GroupManagementDialog] Excluding existing member:', user.id);
           return false;
         }
 
         return true;
       });
-
-      console.log('[GroupManagementDialog] Filtered users count:', filtered.length);
-      console.log('[GroupManagementDialog] Setting availableUsers to:', filtered);
 
       setAvailableUsers(filtered);
 
@@ -210,12 +190,6 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
       }
 
     } catch (error) {
-      console.error('[GroupManagementDialog] Error fetching users:', error);
-      console.error('[GroupManagementDialog] Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-
       toast({
         title: "Error",
         description: "Failed to load available users. Please try again later.",
@@ -225,31 +199,21 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
       // Set empty array to clear the loading state
       setAvailableUsers([]);
     } finally {
-      console.log('[GroupManagementDialog] Setting loadingUsers to false');
       setLoadingUsers(false);
     }
   }, [currentUser?.id, groupData?.members, toast]); // Simplified dependencies
 
-  // FIXED: Simple effect to load data when dialog opens
+  // Simple effect to load data when dialog opens
   useEffect(() => {
-    console.log('[GroupManagementDialog] ==> Main effect triggered');
-    console.log('[GroupManagementDialog] ==> isOpen:', isOpen);
-    console.log('[GroupManagementDialog] ==> currentUser:', currentUser);
-    console.log('[GroupManagementDialog] ==> groupData?.id:', groupData?.id);
-
     if (isOpen && groupData?.id) {
-      console.log('[GroupManagementDialog] ==> Conditions met, loading data...');
       refreshGroupData();
       fetchAvailableUsers();
-    } else {
-      console.log('[GroupManagementDialog] ==> Conditions not met, not loading data');
     }
   }, [isOpen, groupData?.id]); // Removed functions from dependencies
 
-  // FIXED: Separate effect to call functions when they change
+  // Separate effect to call functions when they change
   useEffect(() => {
     if (isOpen && groupData?.id) {
-      console.log('[GroupManagementDialog] ==> Functions changed, reloading...');
       fetchAvailableUsers();
     }
   }, [fetchAvailableUsers, isOpen, groupData?.id]);
@@ -278,7 +242,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
               JoinRequest: requests
             });
           } catch (error) {
-            console.error('Error refreshing group data:', error);
+            // Silent error handling
           }
         }, 500); // Small delay to ensure backend has processed
       }
@@ -291,9 +255,7 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
       });
 
     } catch (error) {
-      console.error('Error responding to join request:', error);
-
-      // CORRECTED: Revert optimistic update on error using correct field name
+      // Revert optimistic update on error using correct field name
       const originalRequest = (groupData.JoinRequest || groupData.join_request || []).find(req => req.id === requestId);
       if (originalRequest) {
         setJoinRequests(prev => [originalRequest, ...prev]);
@@ -330,8 +292,6 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
       });
 
     } catch (error) {
-      console.error('Error inviting user:', error);
-
       // Show appropriate error message
       toast({
         title: "Error",
@@ -353,12 +313,6 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
      user.lastname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
      user.nickname?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
-
-  console.log('[GroupManagementDialog] ==> Render state:');
-  console.log('[GroupManagementDialog] ==> isOpen:', isOpen);
-  console.log('[GroupManagementDialog] ==> loadingUsers:', loadingUsers);
-  console.log('[GroupManagementDialog] ==> availableUsers.length:', availableUsers.length);
-  console.log('[GroupManagementDialog] ==> filteredUsers.length:', filteredUsers.length);
 
   if (!isOpen) return null;
 
@@ -482,9 +436,6 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
                   <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-500">
                     {searchQuery ? 'No users found matching your search' : 'No users available to invite'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-2">
-                    Debug: availableUsers={availableUsers.length}, loadingUsers={loadingUsers.toString()}
                   </p>
                 </div>
               )}
