@@ -131,38 +131,17 @@ func (app *App) LikePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exist {
-		status := true
-		isTrue, err := app.Queries.CheckRow("post_likes", []string{
-			"post_id",
-			"user_id",
-			"is_like",
-		}, []any{
-			like.PostId,
-			userID,
-			true,
-		})
+		// If the like exists, delete it (unlike)
+		stmt, err := app.Queries.Db.Prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?")
 		if err != nil {
-			app.JSONResponse(w, r, http.StatusConflict, "Error while checking like status", Error)
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to prepare unlike statement", Error)
 			return
 		}
+		defer stmt.Close()
 
-		if isTrue {
-			status = false
-		}
-
-		err = app.Queries.UpdateData("post_likes", []string{
-			"post_id",
-			"user_id",
-		}, []any{
-			like.PostId,
-			userID,
-		}, []string{
-			"is_like",
-		}, []any{
-			status,
-		})
+		_, err = stmt.Exec(like.PostId, userID)
 		if err != nil {
-			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to update like status", Error)
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to unlike post", Error)
 			return
 		}
 	} else {
