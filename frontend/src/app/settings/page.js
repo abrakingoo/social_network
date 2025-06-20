@@ -34,14 +34,13 @@ const Settings = () => {
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
-    location: '',
+    date_of_birth: '',
     about: '',
-    nickname: ''
+    nickname: '',
+    isPublic: true
   });
 
   const [privacy, setPrivacy] = useState({
-    isPublic: true,
     showEmail: false,
     showPhone: false,
     showLocation: true
@@ -74,17 +73,16 @@ const Settings = () => {
     // Load user data
     if (currentUser) {
       setProfile({
-        firstName: currentUser.firstName || '',
-        lastName: currentUser.lastName || '',
+        firstName: currentUser.first_name || '',
+        lastName: currentUser.last_name || '',
         email: currentUser.email || '',
-        phone: currentUser.phone || '',
-        location: currentUser.location || '',
-        about: currentUser.about || '',
-        nickname: currentUser.nickname || ''
+        date_of_birth: currentUser.date_of_birth ? new Date(currentUser.date_of_birth).toISOString().split('T')[0] : '',
+        about: currentUser.about_me || '',
+        nickname: currentUser.nickname || '',
+        isPublic: currentUser.is_public !== undefined ? currentUser.is_public : true
       });
 
       setPrivacy({
-        isPublic: currentUser.isPublic !== undefined ? currentUser.isPublic : true,
         showEmail: currentUser.showEmail !== undefined ? currentUser.showEmail : false,
         showPhone: currentUser.showPhone !== undefined ? currentUser.showPhone : false,
         showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
@@ -101,13 +99,52 @@ const Settings = () => {
     );
   }
 
-  const saveSettings = (section) => {
-    // In a real app, this would save to backend
-    toast({
-      title: "Settings updated",
-      description: `Your ${section} settings have been saved.`,
-      variant: "success",
-    });
+  const saveSettings = async (section) => {
+    if (section === 'account') {
+      try {
+        const payload = {
+          first_name: profile.firstName,
+          last_name: profile.lastName,
+          email: profile.email,
+          date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth).toISOString() : null,
+          nickname: profile.nickname,
+          about_me: profile.about,
+          is_public: profile.isPublic,
+        };
+
+        const response = await fetch('/api/updateUser', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        toast({
+          title: 'Settings updated',
+          description: 'Your account settings have been saved.',
+          variant: 'success',
+        });
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // In a real app, this would save to backend
+      toast({
+        title: 'Settings updated',
+        description: `Your ${section} settings have been saved.`,
+        variant: 'success',
+      });
+    }
   };
 
   return (
@@ -150,7 +187,27 @@ const Settings = () => {
                       onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                        id="email"
+                        type="email"
+                        value={profile.email}
+                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="date_of_birth">Date of Birth</Label>
+                        <Input
+                        id="date_of_birth"
+                        type="date"
+                        value={profile.date_of_birth}
+                        onChange={(e) => setProfile({ ...profile, date_of_birth: e.target.value })}
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-2">
@@ -171,9 +228,23 @@ const Settings = () => {
                   />
                 </div>
 
+                <div className="flex items-center justify-between pt-4 border-t mt-4">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="publicProfile">Public Profile</Label>
+                    <div className="text-sm text-gray-500">
+                      Allow others to find your profile
+                    </div>
+                  </div>
+                  <Switch
+                    id="publicProfile"
+                    checked={profile.isPublic}
+                    onCheckedChange={(checked) => setProfile({ ...profile, isPublic: checked })}
+                  />
+                </div>
+
                 <Button
                   onClick={() => saveSettings('account')}
-                  className="bg-social hover:bg-social-dark"
+                  className="bg-social hover:bg-social-dark mt-6"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Account Settings
@@ -184,19 +255,7 @@ const Settings = () => {
             {/* Privacy Settings */}
             <TabsContent value="privacy">
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="publicProfile">Public Profile</Label>
-                    <div className="text-sm text-gray-500">
-                      Allow others to find your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="publicProfile"
-                    checked={privacy.isPublic}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, isPublic: checked })}
-                  />
-                </div>
+
 
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
