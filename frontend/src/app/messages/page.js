@@ -65,7 +65,13 @@ const Messages = () => {
     return () => window.removeEventListener('resize', checkIfMobile);
   }, [currentUser, router]);
 
-  console.log(users)
+  let usersToMessage = [];
+
+
+  if (users.followers != null){
+    usersToMessage = [...users.followers,...users.following]
+  }
+  console.log(usersToMessage)
 
   // Mock data
   const mockChats = [
@@ -151,11 +157,10 @@ const Messages = () => {
   };
 
   // Filter chats based on search query
-  const filteredChats = mockChats.filter(chat =>
-    (chat.user.firstName + ' ' + chat.user.lastName)
+  const filteredChats = usersToMessage.filter(user =>
+    (user.firstname + ' ' + user.lastname)
       .toLowerCase()
-      .includes(searchQuery.toLowerCase()) ||
-    chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+      .includes(searchQuery.toLowerCase())
   );
 
   // Return to chat list on mobile
@@ -193,8 +198,8 @@ const Messages = () => {
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={chat.user.avatar} />
-                      <AvatarFallback>{chat.user.firstName[0]}{chat.user.lastName[0]}</AvatarFallback>
+                      <AvatarImage src={chat.avatar} />
+                      <AvatarFallback>{chat.firstname[0]}{chat.lastname[0]}</AvatarFallback>
                     </Avatar>
                     {chat.unread && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-social rounded-full border-2 border-white"></span>
@@ -202,12 +207,12 @@ const Messages = () => {
                   </div>
                   <div className="ml-3 flex-1 overflow-hidden">
                     <div className="flex justify-between items-baseline">
-                      <h3 className="font-medium truncate">{chat.user.firstName} {chat.user.lastName}</h3>
-                      <span className="text-xs text-gray-500 ml-1 shrink-0">{formatDate(chat.timestamp)}</span>
+                      <h3 className="font-medium truncate">{chat.firstname} {chat.lastname}</h3>
+                      {/* <span className="text-xs text-gray-500 ml-1 shrink-0">{formatDate(chat.timestamp)}</span> */}
                     </div>
-                    <p className={`text-sm truncate ${chat.unread ? 'text-gray-800' : 'text-gray-500'}`}>
+                    {/* <p className={`text-sm truncate ${chat.unread ? 'text-gray-800' : 'text-gray-500'}`}>
                       {chat.lastMessage}
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               ))}
