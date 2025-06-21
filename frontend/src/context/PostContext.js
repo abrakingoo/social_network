@@ -22,7 +22,6 @@ const DEFAULT_POST_STRUCTURE = {
   images: [],
   privacy: PRIVACY_LEVELS.PUBLIC,
   createdAt: '',
-  likes: [],
   comments: []
 };
 
@@ -41,9 +40,68 @@ export const PostProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const { currentUser, checkAuth } = useAuth();
 
+  // Normalize comment data
+  const normalizeComment = useCallback((commentData) => {
+    let extractedFirstName = 'Unknown';
+    let extractedLastName = 'User';
+    if (currentUser?.avatar && currentUser.avatar.includes('name=')) {
+      const namePart = currentUser.avatar.split('name=')[1]?.split('&')[0];
+      if (namePart) {
+        const decodedName = decodeURIComponent(namePart).trim();
+        const nameParts = decodedName.split(' ');
+        if (nameParts.length >= 2) {
+          extractedFirstName = nameParts[0];
+          extractedLastName = nameParts[1];
+        } else if (nameParts.length === 1) {
+          extractedFirstName = nameParts[0];
+          extractedLastName = '';
+        }
+      }
+    }
+    
+    const authorName = currentUser?.nickname || `${extractedFirstName} ${extractedLastName}`.trim();
+    const nameParts = authorName.split(' ');
+    const firstNameToUse = nameParts.length > 0 ? nameParts[0] : 'Unknown';
+    const lastNameToUse = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User';
+    
+    return {
+      ...DEFAULT_COMMENT_STRUCTURE,
+      id: commentData.id || Date.now().toString(),
+      authorId: commentData.authorId || (currentUser?.id || ''),
+      createdAt: commentData.createdAt || commentData.created_at || new Date().toISOString(),
+      author: {
+        id: currentUser?.id || '',
+        firstName: currentUser?.firstName || firstNameToUse,
+        lastName: currentUser?.lastName || lastNameToUse,
+        nickname: currentUser?.nickname || '',
+        avatar: currentUser?.avatar || ''
+      },
+      likedByCurrentUser: commentData.likedByCurrentUser || commentData.is_liked || false,
+      likesCount: commentData.likesCount || commentData.likes_count || 0,
+      ...commentData
+    };
+  }, [currentUser]);
+
   // Normalize post data to ensure consistent structure
   const normalizePost = useCallback((postData) => {
     if (!postData) return null;
+
+    const normalizedComments = Array.isArray(postData.comments)
+      ? postData.comments
+          .map(comment => ({
+            ...normalizeComment(comment),
+            likedByCurrentUser: comment.likedByCurrentUser || comment.is_liked || false,
+            likesCount: comment.likesCount || comment.likes_count || 0,
+            author: comment.user || comment.author || {
+              id: comment.user?.id || "",
+              firstName: comment.user?.first_name || "",
+              lastName: comment.user?.last_name || "",
+              nickname: comment.user?.nickname || "",
+              avatar: comment.user?.avatar || ""
+            }
+          }))
+          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      : [];
 
     // Return a post with all required fields, using default values for missing ones
     return {
@@ -52,29 +110,17 @@ export const PostProvider = ({ children }) => {
       content: postData.content || '',
       privacy: postData.privacy || PRIVACY_LEVELS.PUBLIC,
       createdAt: postData.createdAt || postData.created_at || new Date().toISOString(),
-      likesCount: postData.likesCount || postData.likes || 0,
-      dislikesCount: postData.dislikesCount || postData.dislikes || 0,
-      commentsCount: postData.commentsCount || (postData.comments ? postData.comments.length : 0),
-      comments: Array.isArray(postData.comments) ? postData.comments : [],
+      comments: normalizedComments,
       media: Array.isArray(postData.media) ? postData.media : [],
       author: postData.user || postData.author || {
         id: currentUser?.id || '',
         first_name: currentUser?.firstName || '',
         last_name: currentUser?.lastName || ''
-      }
+      },
+      likesCount: postData.likes_count || 0,
+      likedByCurrentUser: postData.is_liked || false, 
     };
-  }, [currentUser]);
-
-  // Normalize comment data
-  const normalizeComment = useCallback((commentData) => {
-    return {
-      ...DEFAULT_COMMENT_STRUCTURE,
-      id: commentData.id || Date.now().toString(),
-      authorId: commentData.authorId || (currentUser?.id || ''),
-      createdAt: commentData.createdAt || new Date().toISOString(),
-      ...commentData
-    };
-  }, [currentUser]);
+  }, [currentUser, normalizeComment]);
 
   // Function to handle fetching posts from API
   const fetchPosts = useCallback(async () => {
@@ -188,31 +234,8 @@ export const PostProvider = ({ children }) => {
     return true;
   }, [currentUser, posts]);
 
-  // Like/Unlike post
-  const toggleLike = useCallback((postId) => {
-    if (!currentUser) {
-      toast.error("You must be logged in to like posts");
-      return false;
-    }
-
-    setPosts(prevPosts =>
-      prevPosts.map(post => {
-        if (post.id === postId) {
-          const userLiked = post.likes.includes(currentUser.id);
-          const updatedLikes = userLiked
-            ? post.likes.filter(id => id !== currentUser.id)
-            : [...post.likes, currentUser.id];
-
-          return { ...post, likes: updatedLikes };
-        }
-        return post;
-      })
-    );
-    return true;
-  }, [currentUser]);
-
   // Add comment to post
-  const addComment = useCallback((postId, commentText) => {
+  const addComment = useCallback(async (postId, commentText) => {
     if (!currentUser) {
       toast.error("You must be logged in to comment");
       return false;
@@ -224,24 +247,63 @@ export const PostProvider = ({ children }) => {
     }
 
     const newComment = normalizeComment({
-      authorId: currentUser.id,
       content: commentText
     });
 
+    // Optimistically update the UI
     setPosts(prevPosts =>
       prevPosts.map(post => {
         if (post.id === postId) {
           return {
             ...post,
-            comments: [...post.comments, newComment]
+            comments: [...(post.comments || []), newComment],
+            commentsCount: (post.commentsCount || 0) + 1
           };
         }
         return post;
       })
     );
 
-    return true;
-  }, [currentUser, normalizeComment]);
+    try {
+      // Send comment to backend
+      const response = await fetch(`${API_BASE_URL}/api/addComment`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          post_id: postId,
+          content: commentText,
+          comment_id: newComment.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add comment: ${response.status} ${response.statusText}`);
+      }
+
+      // Comment successfully added to backend
+      return true;
+    } catch (error) {
+      toast.error(`Failed to add comment: ${error.message}`);
+      // Revert optimistic update on failure
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: (post.comments || []).filter(c => c.id !== newComment.id),
+              commentsCount: (post.commentsCount || 1) - 1
+            };
+          }
+          return post;
+        })
+      );
+      return false;
+    }
+  }, [currentUser, normalizeComment, API_BASE_URL]);
 
   // Delete comment
   const deleteComment = useCallback((postId, commentId) => {
@@ -301,12 +363,108 @@ export const PostProvider = ({ children }) => {
     return posts.filter(post => post.author && post.author.id === userId);
   }, [posts]);
 
+  const toggleLike = useCallback(async (postId) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to like a post.");
+      return;
+    }
+
+    const originalPosts = [...posts];
+    
+    // Optimistic UI update
+    setPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          const wasLiked = post.likedByCurrentUser;
+          return {
+            ...post,
+            likedByCurrentUser: !wasLiked,
+            likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
+          };
+        }
+        return post;
+      })
+    );
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/likePost`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to like post: ${response.status}`);
+      }
+      
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+      // Revert on error
+      setPosts(originalPosts);
+    }
+  }, [currentUser, posts]);
+
+  const toggleCommentLike = useCallback(async (postId, commentId) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to like a comment.");
+      return;
+    }
+
+    const originalPosts = [...posts];
+
+    // Optimistic UI update
+    setPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            comments: post.comments.map(comment => {
+              if (comment.id === commentId) {
+                const wasLiked = comment.likedByCurrentUser;
+                return {
+                  ...comment,
+                  likedByCurrentUser: !wasLiked,
+                  likesCount: wasLiked ? comment.likesCount - 1 : comment.likesCount + 1,
+                };
+              }
+              return comment;
+            }),
+          };
+        }
+        return post;
+      })
+    );
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/likeComment`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId, comment_id: commentId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to like comment: ${response.status}`);
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+      // Revert on error
+      setPosts(originalPosts);
+    }
+  }, [currentUser, posts]);
+
   const value = {
     posts,
     loading,
     addPost,
     deletePost,
-    toggleLike,
     addComment,
     deleteComment,
     getFilteredPosts,
@@ -314,6 +472,8 @@ export const PostProvider = ({ children }) => {
     fetchPosts,
     normalizePost,
     normalizeComment,
+    toggleLike,
+    toggleCommentLike,
     PRIVACY_LEVELS
   };
 
