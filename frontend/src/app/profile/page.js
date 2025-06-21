@@ -2,7 +2,6 @@
 
 import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import PostCardLightbox from "@/components/post/PostCardLightbox";
 import {
   Camera,
   Users,
@@ -38,8 +37,6 @@ const Profile = () => {
   const [profileUser, setProfileUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showPostForm, setShowPostForm] = useState(false); // Add state for post form visibility
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0); // Add state for lightbox index
 
   // Function to handle successful post creation
   const handlePostCreated = () => {
@@ -66,9 +63,9 @@ const Profile = () => {
       }
     } else {
       setProfileUser(currentUser);
-      setIsLoading(false);
     }
-  }, [currentUser, pathname, router, getAllUsers, authLoading]);
+    setIsLoading(false);
+  }, [currentUser, pathname, router, getAllUsers]);
 
   // Modify the useEffect to only redirect after auth is loaded
   useEffect(() => {
@@ -179,13 +176,13 @@ const Profile = () => {
           <div>
             <h1 className="text-2xl font-bold">{h1Name}</h1>
             <div className="flex items-center space-x-2 mt-1 text-gray-500">
-              {profileUser.is_public ? (
+              {profileUser.isPublic ? (
                 <Globe className="h-4 w-4" />
               ) : (
                 <Lock className="h-4 w-4" />
               )}
               <span>
-                {profileUser.is_public ? "Public Profile" : "Private Profile"}
+                {profileUser.isPublic ? "Public Profile" : "Private Profile"}
               </span>
             </div>
 
@@ -227,13 +224,7 @@ const Profile = () => {
 
           <div>
             {isOwnProfile ? (
-              <Button
-                variant="outline"
-                onClick={() => router.push("/settings")}
-                className="hover:bg-blue-600"
-              >
-                Edit Profile
-              </Button>
+              <Button variant="outline">Edit Profile</Button>
             ) : (
               <Button className="bg-social hover:bg-social-dark">
                 Add Friend
@@ -429,7 +420,7 @@ const Profile = () => {
                       )}
                       <div className="py-3 flex items-center">
                         <dt className="w-1/3 text-sm font-medium text-gray-500 flex items-center">
-                          {profileUser.is_public ? (
+                          {profileUser.isPublic ? (
                             <Globe className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                           ) : (
                             <Lock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
@@ -437,7 +428,7 @@ const Profile = () => {
                           Profile Type
                         </dt>
                         <dd className="w-2/3 text-sm text-gray-900">
-                          {profileUser.is_public ? "Public" : "Private"}
+                          {profileUser.isPublic ? "Public" : "Private"}
                         </dd>
                       </div>
                     </dl>
@@ -473,11 +464,7 @@ const Profile = () => {
                         key={index}
                         src={photo}
                         alt="User photo"
-                        className="w-full h-48 object-cover rounded-lg cursor-pointer"
-                        onClick={() => {
-                          setLightboxOpen(true);
-                          setLightboxIndex(index);
-                        }}
+                        className="w-full h-48 object-cover rounded-lg"
                       />
                     ))
                   ) : (
@@ -489,15 +476,6 @@ const Profile = () => {
                     </div>
                   )}
                 </div>
-                {/* Lightbox for photos */}
-                <PostCardLightbox
-                  open={lightboxOpen}
-                  images={userPhotos}
-                  index={lightboxIndex}
-                  onClose={() => setLightboxOpen(false)}
-                  onPrev={() => setLightboxIndex((prev) => (prev - 1 + userPhotos.length) % userPhotos.length)}
-                  onNext={() => setLightboxIndex((prev) => (prev + 1) % userPhotos.length)}
-                />
               </div>
             </TabsContent>
           </div>

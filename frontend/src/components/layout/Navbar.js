@@ -1,3 +1,4 @@
+// frontend/src/components/layout/Navbar.js - Updated with real notification counts
 "use client";
 
 import React, { useState } from "react";
@@ -26,11 +27,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationsContext";
 import { formatAvatarUrl } from "@/lib/utils";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { currentUser, logout } = useAuth();
+  const { unreadCount, notificationCounts } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -43,11 +46,22 @@ const Navbar = () => {
     router.push("/login");
   };
 
-  const navItems = [
+  // Navigation items with dynamic badge counts
+  const getNavItems = () => [
     { icon: Home, label: "Home", path: "/" },
-    { icon: Users, label: "Friends", path: "/followers" },
-    { icon: MessageSquare, label: "Messages", path: "/messages", badge: 3 },
-    { icon: Bell, label: "Notifications", path: "/notifications", badge: 5 },
+    { icon: Users, label: "Groups", path: "/groups" },
+    {
+      icon: MessageSquare,
+      label: "Messages",
+      path: "/messages",
+      badge: notificationCounts.message > 0 ? notificationCounts.message : null
+    },
+    {
+      icon: Bell,
+      label: "Notifications",
+      path: "/notifications",
+      badge: unreadCount > 0 ? unreadCount : null
+    },
   ];
 
   // Simplified version of navbar for auth pages
@@ -72,6 +86,8 @@ const Navbar = () => {
     currentUser?.firstName && currentUser?.lastName
       ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
       : "??";
+
+  const navItems = getNavItems();
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -106,12 +122,14 @@ const Navbar = () => {
                 <Link
                   key={item.label}
                   href={item.path}
-                  className="px-3 py-2 rounded-md text-gray-500 hover:bg-social-light hover:text-social relative"
+                  className={`px-3 py-2 rounded-md text-gray-500 hover:bg-social-light hover:text-social relative transition-colors ${
+                    pathname === item.path ? 'bg-social-light text-social' : ''
+                  }`}
                 >
                   <item.icon className="h-6 w-6" />
                   {item.badge && (
-                    <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                      {item.badge}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
                 </Link>
@@ -196,14 +214,16 @@ const Navbar = () => {
               <Link
                 key={item.label}
                 href={item.path}
-                className="flex items-center px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md relative"
+                className={`flex items-center px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md relative ${
+                  pathname === item.path ? 'bg-gray-100 text-gray-900' : ''
+                }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <item.icon className="mr-3 h-6 w-6 text-gray-500" />
                 {item.label}
                 {item.badge && (
-                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                    {item.badge}
+                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                    {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </Link>

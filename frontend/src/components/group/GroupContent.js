@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -60,7 +59,7 @@ const GroupContent = ({
         </TabsContent>
 
         <TabsContent value="events" className="mt-6">
-          {groupData.user_role === 'admin' && (
+          {groupData.is_joined && (
             <div className="mb-6">
               <Button
                 className="w-full bg-social hover:bg-social-dark"
@@ -136,7 +135,7 @@ const GroupContent = ({
                 <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                 <h3 className="text-lg font-medium mb-1">No upcoming events</h3>
                 <p className="text-gray-500">
-                  {groupData.user_role === 'admin' ? 'Create the first event for this group!' : 'There are no scheduled events for this group yet'}
+                  {groupData.is_joined ? 'Create the first event for this group!' : 'There are no scheduled events for this group yet'}
                 </p>
               </Card>
             )}
