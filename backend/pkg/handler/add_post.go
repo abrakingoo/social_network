@@ -132,6 +132,36 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid visible_to field", Error)
 			return
 		}
+
+		for _, id := range userIDs {
+			if id == userID {
+				continue
+			}
+
+			isReal, err := app.Queries.CheckRow("users", []string{
+				"id",
+			}, []any{
+				id,
+			})
+			if err != nil || !isReal {
+				app.JSONResponse(w, r, http.StatusBadRequest, "Invalid user ID in visible_to field", Error)
+				return
+			}
+
+			err = app.Queries.InsertData("post_visibility", []string{
+				"id",
+				"post_id",
+				"user_id",
+			}, []any{
+				util.UUIDGen(),
+				postId,
+				id,
+			})
+			if err != nil {
+				app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post visibility into database", Error)
+				return
+			}
+		}
 	}
 
 	app.JSONResponse(w, r, http.StatusOK, "Post added successfully", Success)
