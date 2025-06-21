@@ -12,7 +12,6 @@ import (
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
-
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
@@ -99,6 +98,12 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+
+	privacy := r.FormValue("privacy")
+	if privacy != "public" && privacy != "private" && privacy != "almost_private" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid privacy setting", Error)
+		return
 	}
 
 	err = app.Queries.InsertData("posts", []string{
