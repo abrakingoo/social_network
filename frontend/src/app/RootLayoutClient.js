@@ -11,6 +11,7 @@ import Navbar from "@/components/layout/Navbar";
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { NotificationProvider } from "@/context/NotificationsContext";
 
 // Dynamic imports for non-critical components
 const LeftSidebar = dynamic(() => import("@/components/layout/LeftSidebar"), {
@@ -89,9 +90,11 @@ export default function RootLayoutClient({ children }) {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProvider>
-            <PostProvider>
-              {children}
-            </PostProvider>
+            <NotificationProvider>
+              <PostProvider>
+                {children}
+              </PostProvider>
+            </NotificationProvider>
           </AuthProvider>
           <Toaster />
         </ToastProvider>
@@ -104,14 +107,16 @@ export default function RootLayoutClient({ children }) {
       <TooltipProvider>
         <ToastProvider>
           <AuthProvider>
-            <PostProvider>
-              <GroupProvider>
-                <Toaster />
-                <AuthenticatedLayout>
-                  {children}
-                </AuthenticatedLayout>
-              </GroupProvider>
-            </PostProvider>
+            <NotificationProvider>
+              <PostProvider>
+                <GroupProvider>
+                  <Toaster />
+                  <AuthenticatedLayout>
+                    {children}
+                  </AuthenticatedLayout>
+                </GroupProvider>
+              </PostProvider>
+            </NotificationProvider>
           </AuthProvider>
         </ToastProvider>
       </TooltipProvider>

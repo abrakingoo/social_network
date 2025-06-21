@@ -20,8 +20,8 @@ import {
 import { Button } from '@/components/ui/button';
 import EventForm from '@/components/group/EventForm';
 import GroupManagementDialog from '@/components/group/GroupManagementDialog';
-
-// Import our new components
+import MemberInviteDialog from '@/components/group/MemberInviteDialog';
+// Import our existing components
 import GroupHeader from '@/components/group/GroupHeader';
 import GroupContent from '@/components/group/GroupContent';
 import NonMemberView from '@/components/group/NonMemberView';
@@ -48,6 +48,7 @@ const GroupDetail = () => {
   const [rsvpStatus, setRsvpStatus] = useState({});
   const [isRefreshingEvents, setIsRefreshingEvents] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [isMemberInviteOpen, setIsMemberInviteOpen] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [requestState, setRequestState] = useState(REQUEST_STATES.NOT_REQUESTED);
 
@@ -60,7 +61,7 @@ const GroupDetail = () => {
     setGroupData(data);
   };
 
-  // CORRECTED: Use backend's exact field name 'JoinRequest' and user_join_request
+  // Use backend's exact field name 'JoinRequest' and user_join_request
   const determineRequestState = (groupData, currentUser) => {
     if (groupData.is_joined) {
       return REQUEST_STATES.JOINED;
@@ -143,6 +144,15 @@ const GroupDetail = () => {
     };
   }, [groupData?.id, groupData?.user_role]);
 
+  // Handler functions for member invite dialog
+  const handleOpenMemberInvite = () => {
+    setIsMemberInviteOpen(true);
+  };
+
+  const handleCloseMemberInvite = () => {
+    setIsMemberInviteOpen(false);
+  };
+
   // Full fetch for initial load
   const fetchGroupDetails = async () => {
     if (!currentUser || authLoading) {
@@ -183,13 +193,7 @@ const GroupDetail = () => {
         const newRequestState = determineRequestState(groupDataWithUser, currentUser);
         setRequestState(newRequestState);
 
-        console.log('[GroupDetail] Request state determined from backend:', {
-          isJoined,
-          joinRequests: details.JoinRequest, // CORRECTED: Log correct field name
-          finalState: newRequestState
-        });
       } else {
-        console.error('[GroupDetail] Group not found for slug:', groupSlug);
         toast({
           title: "Error",
           description: "Group not found.",
@@ -198,7 +202,6 @@ const GroupDetail = () => {
         router.push('/groups');
       }
     } catch (error) {
-      console.error('[GroupDetail] Error in fetchGroupDetails:', error);
       toast({
         title: "Error",
         description: "Failed to load group details. Please try again.",
@@ -244,7 +247,6 @@ const GroupDetail = () => {
       setRequestState(newRequestState);
 
     } catch (error) {
-      console.error('[GroupDetail] Error refreshing events:', error);
       throw error;
     } finally {
       setIsRefreshingEvents(false);
@@ -252,14 +254,10 @@ const GroupDetail = () => {
   };
 
   useEffect(() => {
-    let isMounted = true;
     const fetchData = async () => {
       await fetchGroupDetails();
     };
     fetchData();
-    return () => {
-      isMounted = false;
-    };
   }, [groupSlug, currentUser, authLoading]);
 
   useEffect(() => {
@@ -290,7 +288,6 @@ const GroupDetail = () => {
         description: "Your event has been created and added to the list.",
       });
     } catch (error) {
-      console.error('[GroupDetail] Error refreshing events after creation:', error);
       toast({
         title: "Event Created",
         description: "Event was created successfully. Please refresh the page to see it.",
@@ -368,6 +365,7 @@ const GroupDetail = () => {
     }
   };
 
+  //  handleRSVP function in group detail page
   const handleRSVP = async (eventId) => {
     if (!currentUser) {
       toast({
@@ -378,9 +376,11 @@ const GroupDetail = () => {
       return;
     }
 
+    // : Consistent status format throughout
     const currentStatus = rsvpStatus[eventId] ? "going" : "not_going";
-    const newStatus = currentStatus === "going" ? "not going" : "going";
+    const newStatus = currentStatus === "going" ? "not_going" : "going";
 
+    // Optimistic UI update
     setRsvpStatus(prev => ({ ...prev, [eventId]: newStatus === "going" }));
 
     const updatedEvents = groupData.events.map(event => {
@@ -405,13 +405,19 @@ const GroupDetail = () => {
     updateGroupData(updatedGroupData);
 
     try {
-      await groupService.rsvpEvent(eventId, newStatus);
+
+      const result = await groupService.rsvpEvent(eventId, newStatus);
+
       toast({
         title: newStatus === "going" ? "RSVP Confirmed" : "RSVP Cancelled",
-        description: newStatus === "going" ? "You have successfully RSVP'd for this event!" : "You have un-RSVP'd for this event.",
+        description: newStatus === "going"
+          ? "You have successfully RSVP'd for this event!"
+          : "You have un-RSVP'd for this event.",
       });
     } catch (error) {
+      // Revert optimistic update on error
       setRsvpStatus(prev => ({ ...prev, [eventId]: currentStatus === "going" }));
+
       const revertedEvents = groupData.events.map(event => {
         if (event.id === eventId) {
           const revertedAttendees = currentStatus === "going"
@@ -425,7 +431,14 @@ const GroupDetail = () => {
         }
         return event;
       });
-      updateGroupData({ ...groupData, events: revertedEvents, Events: revertedEvents });
+
+      const revertedGroupData = {
+        ...groupData,
+        events: revertedEvents,
+        Events: revertedEvents,
+      };
+      updateGroupData(revertedGroupData);
+
       toast({
         title: "RSVP Failed",
         description: error.message || "Failed to update RSVP status. Please try again.",
@@ -444,7 +457,6 @@ const GroupDetail = () => {
       });
       router.push('/groups');
     } catch (error) {
-      console.error('Error deleting group:', error);
       toast({
         title: "Deletion Failed",
         description: error.message || "Failed to delete group. Please try again.",
@@ -482,6 +494,7 @@ const GroupDetail = () => {
         isRequesting={isRequesting}
         onJoinLeave={handleJoinLeaveGroup}
         onOpenManagement={() => setIsManageDialogOpen(true)}
+        onOpenMemberInvite={handleOpenMemberInvite}
         onDeleteGroup={() => setIsDeleteDialogOpen(true)}
       />
 
@@ -555,16 +568,22 @@ const GroupDetail = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Group Management Dialog */}
+      {/* Group Management Dialog (for admins) */}
       <GroupManagementDialog
         isOpen={isManageDialogOpen}
         onClose={() => setIsManageDialogOpen(false)}
         groupData={groupData}
         onGroupUpdated={updateGroupData}
       />
+
+      {/* Member Invite Dialog (for regular members) */}
+      <MemberInviteDialog
+        isOpen={isMemberInviteOpen}
+        onClose={handleCloseMemberInvite}
+        groupData={groupData}
+      />
     </div>
   );
 };
 
 export default GroupDetail;
-
