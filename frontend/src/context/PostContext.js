@@ -77,7 +77,7 @@ export const PostProvider = ({ children }) => {
         avatar: currentUser?.avatar || ''
       },
       likedByCurrentUser: commentData.likedByCurrentUser || commentData.is_liked || false,
-      likesCount: commentData.likedByCurrentUser || commentData.is_liked ? 1 : 0,
+      likesCount: commentData.likesCount || commentData.likes_count || 0,
       ...commentData
     };
   }, [currentUser]);
@@ -86,7 +86,7 @@ export const PostProvider = ({ children }) => {
   const normalizePost = useCallback((postData) => {
     if (!postData) return null;
 
-    const normalizedComments = Array.isArray(postData.comments) ? postData.comments.map(comment => ({ ...normalizeComment(comment), likedByCurrentUser: comment.likedByCurrentUser || comment.is_liked || false, likesCount: comment.likedByCurrentUser || comment.is_liked ? 1 : 0, author: comment.user || comment.author || { id: comment.user?.id || "", firstName: comment.user?.first_name || "", lastName: comment.user?.last_name || "", nickname: comment.user?.nickname || "", avatar: comment.user?.avatar || "" } })) : [];
+    const normalizedComments = Array.isArray(postData.comments) ? postData.comments.map(comment => ({ ...normalizeComment(comment), likedByCurrentUser: comment.likedByCurrentUser || comment.is_liked || false, likesCount: comment.likesCount || comment.likes_count || 0, author: comment.user || comment.author || { id: comment.user?.id || "", firstName: comment.user?.first_name || "", lastName: comment.user?.last_name || "", nickname: comment.user?.nickname || "", avatar: comment.user?.avatar || "" } })) : [];
 
     // Return a post with all required fields, using default values for missing ones
     return {
@@ -413,7 +413,7 @@ export const PostProvider = ({ children }) => {
                 return {
                   ...comment,
                   likedByCurrentUser: !wasLiked,
-                  likesCount: !wasLiked ? 1 : 0,
+                  likesCount: wasLiked ? comment.likesCount - 1 : comment.likesCount + 1,
                 };
               }
               return comment;

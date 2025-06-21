@@ -162,7 +162,7 @@ const PostCard = ({ post }) => {
                     onClick={() => toggleCommentLike(normalizedPost.id, comment.id)}
                   >
                     <Heart className={`h-4 w-4 ${comment.likedByCurrentUser ? 'fill-current' : ''}`} />
-                    <span>{comment.likedByCurrentUser ? 1 : 0}</span>
+                    <span>{comment.likesCount || 0}</span>
                   </Button>
                 </div>
               </div>
