@@ -68,7 +68,7 @@ export const PostProvider = ({ children }) => {
       ...DEFAULT_COMMENT_STRUCTURE,
       id: commentData.id || Date.now().toString(),
       authorId: commentData.authorId || (currentUser?.id || ''),
-      createdAt: commentData.createdAt || new Date().toISOString(),
+      createdAt: commentData.createdAt || commentData.created_at || new Date().toISOString(),
       author: {
         id: currentUser?.id || '',
         firstName: currentUser?.firstName || firstNameToUse,
