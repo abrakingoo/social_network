@@ -46,17 +46,17 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 	}
 	if !pendingOrAccepted {
 		pendingOrAccepted, err = q.CheckRow("group_join_requests", []string{
-		"group_id",
-		"user_id",
-		"status",
-	}, []any{
-		request.GroupId,
-		c.UserID,
+			"group_id",
+			"user_id",
+			"status",
+		}, []any{
+			request.GroupId,
+			c.UserID,
 			"accepted",
-	})
-	if err != nil {
-		c.SendError("Error while checking status")
-		return
+		})
+		if err != nil {
+			c.SendError("Error while checking status")
+			return
 		}
 	}
 
@@ -68,55 +68,55 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 	notId := util.UUIDGen()
 
 	_ = q.DeleteData("group_join_requests", []string{
-			"group_id",
-			"user_id",
+		"group_id",
+		"user_id",
 		"status",
-		}, []any{
-			request.GroupId,
-			c.UserID,
+	}, []any{
+		request.GroupId,
+		c.UserID,
 		"declined",
 	})
 
-		err = q.InsertData("group_join_requests", []string{
-			"id",
-			"group_id",
-			"user_id",
-			"status",
-		}, []any{
-			util.UUIDGen(),
-			request.GroupId,
-			c.UserID,
-			"pending",
-		})
-		if err != nil {
-			c.SendError("failed to send join request")
-			return
-		}
+	err = q.InsertData("group_join_requests", []string{
+		"id",
+		"group_id",
+		"user_id",
+		"status",
+	}, []any{
+		util.UUIDGen(),
+		request.GroupId,
+		c.UserID,
+		"pending",
+	})
+	if err != nil {
+		c.SendError("failed to send join request")
+		return
+	}
 
-		err = q.InsertData("notifications", []string{
-			"id",
-			"recipient_id",
-			"actor_id",
-			"type",
-			"message",
-		}, []any{
-			notId,
-			admin,
-			c.UserID,
-			"group_join_request",
-			"new request to join group",
-		})
-		if err != nil {
-			c.SendError("failed to notify the recipient")
-			return
-		}
+	err = q.InsertData("notifications", []string{
+		"id",
+		"recipient_id",
+		"actor_id",
+		"type",
+		"message",
+	}, []any{
+		notId,
+		admin,
+		c.UserID,
+		"group_join_request",
+		"new request to join group",
+	})
+	if err != nil {
+		c.SendError("failed to notify the recipient")
+		return
+	}
 
-		h.ActionBasedNotification([]string{
-			admin,
-		}, "group_join_request", map[string]any{
-			"group_id": request.GroupId,
-		"request": fetchLatestJoinRequest(q, request.GroupId, c.UserID),
-		})
+	h.ActionBasedNotification([]string{
+		admin,
+	}, "group_join_request", map[string]any{
+		"group_id": request.GroupId,
+		"request":  fetchLatestJoinRequest(q, request.GroupId, c.UserID),
+	})
 }
 
 func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query, h *Hub) {
@@ -214,7 +214,7 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 			request.RecipientID,
 		}, "group_join_accept", map[string]any{
 			"group_id": request.GroupId,
-			"status": "accepted",
+			"status":   "accepted",
 		})
 	} else if request.ResponseStatus == "declined" {
 		// Send real-time notification to the user for declined
@@ -222,7 +222,7 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 			request.RecipientID,
 		}, "group_join_accept", map[string]any{
 			"group_id": request.GroupId,
-			"status": "declined",
+			"status":   "declined",
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -12,7 +13,6 @@ import (
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
-
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
@@ -101,18 +101,67 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	privacy := r.FormValue("privacy")
+	if privacy != "public" && privacy != "private" && privacy != "almost_private" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid privacy setting", Error)
+		return
+	}
+
 	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
 		"content",
+		"privacy",
 	}, []any{
 		postId,
 		userID,
 		content,
+		privacy,
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
 		return
+	}
+
+	if privacy == "private" {
+		raw := r.FormValue("visible_to")
+		var userIDs []string
+
+		err := json.Unmarshal([]byte(raw), &userIDs)
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid visible_to field", Error)
+			return
+		}
+
+		for _, id := range userIDs {
+			if id == userID {
+				continue
+			}
+
+			isReal, err := app.Queries.CheckRow("users", []string{
+				"id",
+			}, []any{
+				id,
+			})
+			if err != nil || !isReal {
+				app.JSONResponse(w, r, http.StatusBadRequest, "Invalid user ID in visible_to field", Error)
+				return
+			}
+
+			err = app.Queries.InsertData("post_visibility", []string{
+				"id",
+				"post_id",
+				"user_id",
+			}, []any{
+				util.UUIDGen(),
+				postId,
+				id,
+			})
+			if err != nil {
+				app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post visibility into database", Error)
+				return
+			}
+		}
 	}
 
 	app.JSONResponse(w, r, http.StatusOK, "Post added successfully", Success)

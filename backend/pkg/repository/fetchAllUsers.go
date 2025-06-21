@@ -42,13 +42,13 @@ func (q *Query) FetchAllUsers(userID string) (model.AllUsers, error) {
 		return model.AllUsers{}, err
 	}
 
-    var notFollowedBack []model.Follower
-    notFollowedBack , err = q.GetFollowersNotFollowedBack(userID)
-    if err != nil {
-        return model.AllUsers{}, err
-    }
+	var notFollowedBack []model.Follower
+	notFollowedBack, err = q.GetFollowersNotFollowedBack(userID)
+	if err != nil {
+		return model.AllUsers{}, err
+	}
 
-    users.NonMutual = append(users.NonMutual, notFollowedBack...)
+	users.NonMutual = append(users.NonMutual, notFollowedBack...)
 
 	return users, nil
 }

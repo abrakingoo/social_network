@@ -77,16 +77,16 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 		"actor_id",
 		"type",
 		"message",
-		"entity_id",      // ADDED: Store group_id here
-		"entity_type",    // ADDED: Store entity type
+		"entity_id",   // ADDED: Store group_id here
+		"entity_type", // ADDED: Store entity type
 	}, []any{
 		notId,
 		request.RecipientID,
 		c.UserID,
 		"group_invitation",
 		"new group invitation request",
-		request.GroupId,  // FIXED: Store the group_id
-		"group",          // FIXED: Entity type for groups
+		request.GroupId, // FIXED: Store the group_id
+		"group",         // FIXED: Entity type for groups
 	})
 	if err != nil {
 		c.SendError("failed to notify the recipient")
@@ -225,7 +225,7 @@ func (c *Client) RespondSendInvitation(msg map[string]any, q *repository.Query) 
 			"system", // System notification
 			"group_join_success",
 			"You have successfully joined the group",
-			request.GroupId,  // Store group_id for reference
+			request.GroupId, // Store group_id for reference
 			"group",
 		})
 		if err != nil {
