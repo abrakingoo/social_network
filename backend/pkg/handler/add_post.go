@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -120,6 +121,17 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
 		return
+	}
+
+	if privacy == "private" {
+		raw := r.FormValue("visible_to")
+		var userIDs []string
+
+		err := json.Unmarshal([]byte(raw), &userIDs)
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid visible_to field", Error)
+			return
+		}
 	}
 
 	app.JSONResponse(w, r, http.StatusOK, "Post added successfully", Success)
