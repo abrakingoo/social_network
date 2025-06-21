@@ -86,7 +86,22 @@ export const PostProvider = ({ children }) => {
   const normalizePost = useCallback((postData) => {
     if (!postData) return null;
 
-    const normalizedComments = Array.isArray(postData.comments) ? postData.comments.map(comment => ({ ...normalizeComment(comment), likedByCurrentUser: comment.likedByCurrentUser || comment.is_liked || false, likesCount: comment.likesCount || comment.likes_count || 0, author: comment.user || comment.author || { id: comment.user?.id || "", firstName: comment.user?.first_name || "", lastName: comment.user?.last_name || "", nickname: comment.user?.nickname || "", avatar: comment.user?.avatar || "" } })).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)) : [];
+    const normalizedComments = Array.isArray(postData.comments)
+      ? postData.comments
+          .map(comment => ({
+            ...normalizeComment(comment),
+            likedByCurrentUser: comment.likedByCurrentUser || comment.is_liked || false,
+            likesCount: comment.likesCount || comment.likes_count || 0,
+            author: comment.user || comment.author || {
+              id: comment.user?.id || "",
+              firstName: comment.user?.first_name || "",
+              lastName: comment.user?.last_name || "",
+              nickname: comment.user?.nickname || "",
+              avatar: comment.user?.avatar || ""
+            }
+          }))
+          .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      : [];
 
     // Return a post with all required fields, using default values for missing ones
     return {
