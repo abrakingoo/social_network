@@ -118,6 +118,19 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid group ID", Error)
 			return
 		}
+
+		// Check if the user is a member of the group
+		isMember, err := app.Queries.CheckRow("group_members", []string{
+			"group_id",
+			"user_id",
+		}, []any{
+			groupId,
+			userID,
+		})
+		if err != nil || !isMember {
+			app.JSONResponse(w, r, http.StatusForbidden, "You are not a member of this group", Error)
+			return
+		}
 	}
 
 	err = app.Queries.InsertData("posts", []string{
