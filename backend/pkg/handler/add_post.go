@@ -125,11 +125,13 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		"user_id",
 		"content",
 		"privacy",
+		"group_id",
 	}, []any{
 		postId,
 		userID,
 		content,
 		privacy,
+		groupId,
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
