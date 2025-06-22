@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -102,9 +103,12 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	privacy := r.FormValue("privacy")
-	if privacy != "public" && privacy != "private" && privacy != "almost_private" {
+	if privacy != "public" && privacy != "private" && privacy != "almost_private" && privacy != "" {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid privacy setting", Error)
 		return
+	}
+	if privacy == "" {
+		privacy = "public"
 	}
 
 	groupId := r.FormValue("group_id")
@@ -133,6 +137,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+
 	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
@@ -147,6 +152,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		groupId,
 	})
 	if err != nil {
+		fmt.Println(err)
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
 		return
 	}
