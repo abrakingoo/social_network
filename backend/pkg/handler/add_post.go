@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -102,9 +103,44 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	privacy := r.FormValue("privacy")
-	if privacy != "public" && privacy != "private" && privacy != "almost_private" {
+	if privacy != "public" && privacy != "private" && privacy != "almost_private" && privacy != "" {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid privacy setting", Error)
 		return
+	}
+	if privacy == "" {
+		privacy = "public"
+	}
+
+	var GroupID sql.NullString
+
+	groupId := r.FormValue("group_id")
+	if groupId != "" {
+		isReal, err := app.Queries.CheckRow("groups", []string{
+			"id",
+		}, []any{
+			groupId,
+		})
+		if err != nil || !isReal {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid group ID", Error)
+			return
+		}
+
+		// Check if the user is a member of the group
+		isMember, err := app.Queries.CheckRow("group_members", []string{
+			"group_id",
+			"user_id",
+		}, []any{
+			groupId,
+			userID,
+		})
+		if err != nil || !isMember {
+			app.JSONResponse(w, r, http.StatusForbidden, "You are not a member of this group", Error)
+			return
+		}
+		GroupID = sql.NullString{
+			String: groupId,
+			Valid:  true,
+		}
 	}
 
 	err = app.Queries.InsertData("posts", []string{
@@ -112,11 +148,13 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		"user_id",
 		"content",
 		"privacy",
+		"group_id",
 	}, []any{
 		postId,
 		userID,
 		content,
 		privacy,
+		GroupID,
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
