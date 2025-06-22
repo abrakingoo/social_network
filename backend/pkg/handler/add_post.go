@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -111,6 +112,8 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		privacy = "public"
 	}
 
+	var GroupID sql.NullString
+
 	groupId := r.FormValue("group_id")
 	if groupId != "" {
 		isReal, err := app.Queries.CheckRow("groups", []string{
@@ -135,8 +138,11 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 			app.JSONResponse(w, r, http.StatusForbidden, "You are not a member of this group", Error)
 			return
 		}
+		GroupID = sql.NullString{
+			String: groupId,
+			Valid:  true,
+		}
 	}
-
 
 	err = app.Queries.InsertData("posts", []string{
 		"id",
@@ -149,7 +155,7 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		userID,
 		content,
 		privacy,
-		groupId,
+		GroupID,
 	})
 	if err != nil {
 		fmt.Println(err)
