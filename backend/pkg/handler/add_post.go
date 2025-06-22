@@ -107,6 +107,19 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	groupId := r.FormValue("group_id")
+	if groupId != "" {
+		isReal, err := app.Queries.CheckRow("groups", []string{
+			"id",
+		}, []any{
+			groupId,
+		})
+		if err != nil || !isReal {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid group ID", Error)
+			return
+		}
+	}
+
 	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
