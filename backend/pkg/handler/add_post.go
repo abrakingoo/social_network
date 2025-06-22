@@ -3,7 +3,6 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -158,7 +157,6 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		GroupID,
 	})
 	if err != nil {
-		fmt.Println(err)
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
 		return
 	}
