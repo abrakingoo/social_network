@@ -83,9 +83,12 @@ const Messages = () => {
 
 
   if (users.followers != null) {
-    usersToMessage = [...users.followers, ...users.following]
+    usersToMessage = [...users.followers]
   }
 
+  if (users.following != null){
+    usersToMessage = [...usersToMessage,...users.following]
+  }
 
   // Mock data
   const mockChats = [
