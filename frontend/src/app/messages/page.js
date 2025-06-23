@@ -21,6 +21,7 @@ const Messages = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [users, setUsers] = useState([]);
   const [prevMessages, setPreviousMessages] = useState([]);
+  const [uuid, setUuid] = useState("");
 
 
   const fetchUsers = async () => {
@@ -46,7 +47,12 @@ const Messages = () => {
   const prevMsg = async (userid) => {
     const data = await webSocketOperations.loadPreviousMessages(userid);
     setPreviousMessages(data.messages);
-    console.log(prevMessages);
+    setUuid(userid);
+  }
+
+  const resetPrevMessages = () => {
+    setPreviousMessages([]);
+    setUuid("");
   }
 
   // Check if we're on mobile
@@ -160,10 +166,14 @@ const Messages = () => {
     }
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (message.trim() === '') return;
 
+    webSocketOperations.sendPrivateMessage(uuid, message);
+    setPreviousMessages([]);
+    const data = await webSocketOperations.loadPreviousMessages(uuid);
+    setPreviousMessages(data.messages)
     // In a real app, this would send the message to the backend
     toast({
       title: "Message sent",
@@ -249,7 +259,7 @@ const Messages = () => {
                       variant="ghost"
                       size="sm"
                       className="mr-2 p-0 h-8 w-8"
-                      onClick={() => setPreviousMessages([])}
+                      onClick={() => resetPrevMessages()}
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -276,7 +286,7 @@ const Messages = () => {
                   {prevMessages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${msg.sender_id === uuid ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
                         className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${msg.sender === 'me'
@@ -284,7 +294,7 @@ const Messages = () => {
                           : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
                           }`}
                       >
-                        <p>{msg.text}</p>
+                        <p>{msg.content}</p>
                         <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-white/70' : 'text-gray-500'}`}>
                           {formatTime(msg.created_at)}
                         </p>
