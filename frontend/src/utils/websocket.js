@@ -846,8 +846,20 @@ export const webSocketOperations = {
   },
 
   loadPreviousMessages(userID) {
-    return wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, {
-      "recipient_Id": userID
+    return new Promise((resolve, reject) => {
+      const listener = (data) => {
+        wsManager.removeListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
+        resolve(data);
+      };
+
+      wsManager.addListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
+
+      try {
+        wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, { recipient_Id: userID });
+      } catch (err) {
+        wsManager.removeListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
+        reject(err);
+      }
     });
   },
 
