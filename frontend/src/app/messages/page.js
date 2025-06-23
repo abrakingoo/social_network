@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { API_BASE_URL, useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Search, ArrowLeft } from 'lucide-react';
+import { webSocketOperations } from '@/utils/websocket';
 
 const Messages = () => {
   const router = useRouter();
@@ -20,6 +20,7 @@ const Messages = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [users, setUsers] = useState([]);
+  const [prevMessages, setPreviousMessages] = useState([]);
 
 
   const fetchUsers = async () => {
@@ -39,6 +40,13 @@ const Messages = () => {
     const res = await req.json();
 
     setUsers(res.message);
+  }
+
+
+  const prevMsg = async (userid) => {
+    const data = await webSocketOperations.loadPreviousMessages(userid);
+    setPreviousMessages(data.messages);
+    console.log(prevMessages);
   }
 
   // Check if we're on mobile
@@ -68,10 +76,10 @@ const Messages = () => {
   let usersToMessage = [];
 
 
-  if (users.followers != null){
-    usersToMessage = [...users.followers,...users.following]
+  if (users.followers != null) {
+    usersToMessage = [...users.followers, ...users.following]
   }
-  console.log(usersToMessage)
+
 
   // Mock data
   const mockChats = [
@@ -125,21 +133,30 @@ const Messages = () => {
     return null;
   }
 
+  const parseDate = (input) => {
+    if (input instanceof Date) {
+      return input;
+    }
+    return new Date(input);
+  };
+
   const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = parseDate(date);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatDate = (date) => {
+    const d = parseDate(date);
     const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) {
-      return formatTime(date);
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    if (d.toDateString() === today.toDateString()) {
+      return formatTime(d);
+    } else if (d.toDateString() === yesterday.toDateString()) {
       return 'Yesterday';
     } else {
-      return date.toLocaleDateString();
+      return d.toLocaleDateString();
     }
   };
 
@@ -163,17 +180,12 @@ const Messages = () => {
       .includes(searchQuery.toLowerCase())
   );
 
-  // Return to chat list on mobile
-  const handleBackToList = () => {
-    setSelectedChat(null);
-  };
-
   return (
     <div className={`h-[calc(100vh-120px)] ${isMobile ? '-mx-4' : ''}`}>
       <div className={`h-full ${isMobile ? 'rounded-none shadow-none' : 'border border-gray-200 rounded-lg shadow-sm'}`}>
         <div className="h-full flex">
           {/* Chat List - Hidden on mobile when a chat is selected */}
-          <div className={`${isMobile && selectedChat ? 'hidden' : 'block'} md:block w-full md:w-72 ${!isMobile && 'border-r border-gray-200'} flex-shrink-0 flex flex-col`}>
+          <div className={`${isMobile && prevMessages ? 'hidden' : 'block'} md:block w-full md:w-72 ${!isMobile && 'border-r border-gray-200'} flex-shrink-0 flex flex-col`}>
             <div className="p-3 border-b border-gray-200">
               <h2 className="text-xl font-semibold mb-3">Messages</h2>
               <div className="relative">
@@ -194,16 +206,16 @@ const Messages = () => {
                     ${selectedChat === chat.id ? 'bg-gray-100' : ''}
                     ${chat.unread ? 'font-medium' : ''}
                   `}
-                  onClick={() => setSelectedChat(chat.id)}
+                  onClick={() => prevMsg(chat.id)}
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={chat.avatar} />
                       <AvatarFallback>{chat.firstname[0]}{chat.lastname[0]}</AvatarFallback>
                     </Avatar>
-                    {chat.unread && (
+                    {/* {chat.unread && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-social rounded-full border-2 border-white"></span>
-                    )}
+                    )} */}
                   </div>
                   <div className="ml-3 flex-1 overflow-hidden">
                     <div className="flex justify-between items-baseline">
@@ -226,9 +238,9 @@ const Messages = () => {
 
           {/* Chat Window - Hidden on mobile when no chat is selected */}
           <div
-            className={`${isMobile && !selectedChat ? 'hidden' : 'flex'} md:flex flex-1 flex-col md:max-w-[calc(100%-18rem)] ${isMobile && selectedChat ? 'fixed inset-0 z-50' : 'border-l border-gray-200'}`}
+            className={`${isMobile && !prevMessages ? 'hidden' : 'flex'} md:flex flex-1 flex-col md:max-w-[calc(100%-18rem)] ${isMobile && prevMessages ? 'fixed inset-0 z-50' : 'border-l border-gray-200'}`}
           >
-            {selectedChat ? (
+            {prevMessages ? (
               <>
                 {/* Chat Header */}
                 <div className={`flex items-center p-4 border-b border-gray-200 bg-white ${!isMobile && 'rounded-tr-lg'}`}>
@@ -237,7 +249,7 @@ const Messages = () => {
                       variant="ghost"
                       size="sm"
                       className="mr-2 p-0 h-8 w-8"
-                      onClick={handleBackToList}
+                      onClick={() => setPreviousMessages([])}
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -261,7 +273,7 @@ const Messages = () => {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                  {mockMessages[selectedChat]?.map((msg) => (
+                  {prevMessages.map((msg) => (
                     <div
                       key={msg.id}
                       className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
@@ -274,7 +286,7 @@ const Messages = () => {
                       >
                         <p>{msg.text}</p>
                         <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-white/70' : 'text-gray-500'}`}>
-                          {formatTime(msg.timestamp)}
+                          {formatTime(msg.created_at)}
                         </p>
                       </div>
                     </div>
