@@ -109,8 +109,14 @@ const PostCard = ({ post }) => {
     let commentAuthorName = 'Anonymous User';
     let commentAvatarUrl = '';
 
-    // Check if comment has an author object (should be there for new comments)
-    if (comment.author && typeof comment.author === 'object') {
+    // First check if comment has a user object (backend response format)
+    if (comment.user && typeof comment.user === 'object') {
+      const firstName = comment.user.firstName || comment.user.first_name || 'Anonymous';
+      const lastName = comment.user.lastName || comment.user.last_name || 'User';
+      commentAuthorName = comment.user.nickname || `${firstName} ${lastName}`;
+      commentAvatarUrl = formatAvatarUrl(comment.user.avatar || '');
+    }
+    else if (comment.author && typeof comment.author === 'object') {
       const firstName = comment.author.firstName || comment.author.first_name || 'Anonymous';
       const lastName = comment.author.lastName || comment.author.last_name || 'User';
       commentAuthorName = comment.author.nickname || `${firstName} ${lastName}`;
