@@ -134,12 +134,6 @@ const Messages = () => {
     setPreviousMessages([]);
     const data = await webSocketOperations.loadPreviousMessages(uuid);
     setPreviousMessages(data.messages)
-    // In a real app, this would send the message to the backend
-    toast({
-      title: "Message sent",
-      description: "Your message has been delivered.",
-    });
-
     setMessage('');
   };
 
