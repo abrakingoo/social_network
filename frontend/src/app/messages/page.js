@@ -250,7 +250,7 @@ const Messages = () => {
           <div
             className={`${isMobile && !prevMessages ? 'hidden' : 'flex'} md:flex flex-1 flex-col md:max-w-[calc(100%-18rem)] ${isMobile && prevMessages ? 'fixed inset-0 z-50' : 'border-l border-gray-200'}`}
           >
-            {prevMessages ? (
+            {prevMessages.length > 0 ? (
               <>
                 {/* Chat Header */}
                 <div className={`flex items-center p-4 border-b border-gray-200 bg-white ${!isMobile && 'rounded-tr-lg'}`}>
@@ -286,16 +286,16 @@ const Messages = () => {
                   {prevMessages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.sender_id === uuid ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${msg.sender_id != uuid ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
-                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${msg.sender === 'me'
+                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${msg.sender_id != uuid
                           ? 'bg-social text-white rounded-tr-none'
                           : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
                           }`}
                       >
                         <p>{msg.content}</p>
-                        <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-white/70' : 'text-gray-500'}`}>
+                        <p className={`text-xs mt-1 ${msg.sender_id !== uuid ? 'text-white/70' : 'text-gray-500'}`}>
                           {formatTime(msg.created_at)}
                         </p>
                       </div>
