@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-
 )
 
 func (app *App) GetAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -14,7 +13,7 @@ func (app *App) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := app.Queries.FetchAllUsers(userID)
 	if err != nil {
-		 app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to fetch users", Error)
+		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to fetch users", Error)
 		return
 	}
 

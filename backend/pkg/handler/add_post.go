@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"database/sql"
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -12,7 +14,6 @@ import (
 // AddPost handles the addition of a new post
 func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
-
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusUnauthorized, "Unauthorized", Error)
 		return
@@ -101,18 +102,104 @@ func (app *App) AddPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	privacy := r.FormValue("privacy")
+	if privacy != "public" && privacy != "private" && privacy != "almost_private" && privacy != "" {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Invalid privacy setting", Error)
+		return
+	}
+	if privacy == "" {
+		privacy = "public"
+	}
+
+	var GroupID sql.NullString
+
+	groupId := r.FormValue("group_id")
+	if groupId != "" {
+		isReal, err := app.Queries.CheckRow("groups", []string{
+			"id",
+		}, []any{
+			groupId,
+		})
+		if err != nil || !isReal {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid group ID", Error)
+			return
+		}
+
+		// Check if the user is a member of the group
+		isMember, err := app.Queries.CheckRow("group_members", []string{
+			"group_id",
+			"user_id",
+		}, []any{
+			groupId,
+			userID,
+		})
+		if err != nil || !isMember {
+			app.JSONResponse(w, r, http.StatusForbidden, "You are not a member of this group", Error)
+			return
+		}
+		GroupID = sql.NullString{
+			String: groupId,
+			Valid:  true,
+		}
+	}
+
 	err = app.Queries.InsertData("posts", []string{
 		"id",
 		"user_id",
 		"content",
+		"privacy",
+		"group_id",
 	}, []any{
 		postId,
 		userID,
 		content,
+		privacy,
+		GroupID,
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post into database", Error)
 		return
+	}
+
+	if privacy == "private" {
+		raw := r.FormValue("visible_to")
+		var userIDs []string
+
+		err := json.Unmarshal([]byte(raw), &userIDs)
+		if err != nil {
+			app.JSONResponse(w, r, http.StatusBadRequest, "Invalid visible_to field", Error)
+			return
+		}
+
+		for _, id := range userIDs {
+			if id == userID {
+				continue
+			}
+
+			isReal, err := app.Queries.CheckRow("users", []string{
+				"id",
+			}, []any{
+				id,
+			})
+			if err != nil || !isReal {
+				app.JSONResponse(w, r, http.StatusBadRequest, "Invalid user ID in visible_to field", Error)
+				return
+			}
+
+			err = app.Queries.InsertData("post_visibility", []string{
+				"id",
+				"post_id",
+				"user_id",
+			}, []any{
+				util.UUIDGen(),
+				postId,
+				id,
+			})
+			if err != nil {
+				app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to insert post visibility into database", Error)
+				return
+			}
+		}
 	}
 
 	app.JSONResponse(w, r, http.StatusOK, "Post added successfully", Success)

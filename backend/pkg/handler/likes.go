@@ -44,38 +44,16 @@ func (app *App) LikeComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exist {
-		status := true
-		isTrue, err := app.Queries.CheckRow("comment_likes", []string{
-			"comment_id",
-			"user_id",
-			"is_like",
-		}, []any{
-			like.CommentId,
-			userID,
-			true,
-		})
-		if err != nil {
-			app.JSONResponse(w, r, http.StatusConflict, "Error while checking like status", Error)
-			return
-		}
-
-		if isTrue {
-			status = false
-		}
-
-		err = app.Queries.UpdateData("comment_likes", []string{
+		// If the like exists, delete it (unlike)
+		err = app.Queries.DeleteData("comment_likes", []string{
 			"comment_id",
 			"user_id",
 		}, []any{
 			like.CommentId,
 			userID,
-		}, []string{
-			"is_like",
-		}, []any{
-			status,
 		})
 		if err != nil {
-			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to update like status", Error)
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to delete like status", Error)
 			return
 		}
 	} else {
@@ -131,38 +109,16 @@ func (app *App) LikePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if exist {
-		status := true
-		isTrue, err := app.Queries.CheckRow("post_likes", []string{
-			"post_id",
-			"user_id",
-			"is_like",
-		}, []any{
-			like.PostId,
-			userID,
-			true,
-		})
-		if err != nil {
-			app.JSONResponse(w, r, http.StatusConflict, "Error while checking like status", Error)
-			return
-		}
-
-		if isTrue {
-			status = false
-		}
-
-		err = app.Queries.UpdateData("post_likes", []string{
+		// If the like exists, delete it (unlike)
+		err = app.Queries.DeleteData("post_likes", []string{
 			"post_id",
 			"user_id",
 		}, []any{
 			like.PostId,
 			userID,
-		}, []string{
-			"is_like",
-		}, []any{
-			status,
 		})
 		if err != nil {
-			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to update like status", Error)
+			app.JSONResponse(w, r, http.StatusInternalServerError, "Failed to unlike post", Error)
 			return
 		}
 	} else {

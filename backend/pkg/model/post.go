@@ -10,6 +10,7 @@ type Post struct {
 	LikesCount    int       `json:"likes_count"`
 	DislikesCount int       `json:"dislikes_count"`
 	CommentsCount int       `json:"comments_count"`
+	IsLiked       bool      `json:"is_liked"`
 	Comments      []Comment `json:"comments"`
 	Media         []Media   `json:"media"`
 	Privacy       string    `json:"privacy"`
@@ -24,6 +25,7 @@ type Comment struct {
 	Media         []Media   `json:"media"`
 	LikesCount    int       `json:"likes_count"`
 	DislikesCount int       `json:"dislikes_count"`
+	IsLiked       bool      `json:"is_liked"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 
