@@ -17,6 +17,18 @@ func (c *Client) SendError(text string) {
 	}
 }
 
+func (c *Client) SendSuccess(text string) {
+	payload, _ := json.Marshal(map[string]string{
+		"type":    "success",
+		"message": text,
+	})
+	select {
+	case c.Send <- payload:
+	default:
+		log.Println("sendSuccess: channel full")
+	}
+}
+
 func (c *Client) Cleanup() {
 	c.Once.Do(func() {
 		defer func() {

@@ -249,25 +249,48 @@ export const groupService = {
   // RSVP to an event - CORRECTED: Use exact backend endpoint and payload format
   async rsvpEvent(eventId, status) {
     try {
+      // Ensure status is properly formatted - backend expects exact values
+      const formattedStatus = status === "going" ? "going" : "not_going";
+
+      const requestPayload = {
+        eventId: eventId,        //   Backend expects "eventId", not "event_id"
+        status: formattedStatus  //   Backend expects "status", not "response"
+      };
+
       const response = await fetch(`${API_BASE_URL}/api/rsvp`, {
         method: 'POST',
         credentials: 'include',
         headers: getHeaders(true),
-        body: JSON.stringify({
-          event_id: eventId,
-          response: status
-        })
+        body: JSON.stringify(requestPayload)
       });
 
       const data = await handleApiResponse(response, 'rsvpEvent');
+
       return {
         success: true,
-        message: data.message || 'RSVP updated successfully'
+        message: data.message || 'RSVP updated successfully',
+        attendeeCount: data.message || 0 // Backend returns count as message
       };
     } catch (error) {
+      console.error('[groupService.rsvpEvent] Error details:', {
+        error: error.message,
+        eventId,
+        status,
+        errorType: error.type
+      });
+
       if (error.type === GroupErrorTypes.NOT_FOUND) {
         throw new Error('Event not found or you do not have access to it.');
       }
+
+      if (error.status === 400) {
+        throw new Error('Invalid RSVP data. Please try again.');
+      }
+
+      if (error.status === 401) {
+        throw new Error('You must be logged in to RSVP to events.');
+      }
+
       throw new Error('Failed to update RSVP. Please try again.');
     }
   },
@@ -290,15 +313,18 @@ export const groupService = {
     }
   },
 
-  // Get all users for invitations - CORRECTED: Use exact backend endpoint
+  // Get all users for invitations -   Enhanced error handling and debugging
   async getAllUsers() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/users`, {
         credentials: 'include',
+        headers: getHeaders(false)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        const errorText = await response.text();
+        console.error('[groupService.getAllUsers] Error response:', errorText);
+        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
       }
 
       // Handle 204 No Content response
@@ -307,35 +333,72 @@ export const groupService = {
       }
 
       const data = await response.json();
+
+      // Extract user relations from the response
       const userRelations = data.message || data;
 
-      // Combine all user categories into one array
-      const allUsers = [
-        ...(userRelations.followers || []),
-        ...(userRelations.following || []),
-        ...(userRelations.non_mutual || []),
-        ...(userRelations.received_request || []),
-        ...(userRelations.sent_request || [])
-      ];
+      // Validate that userRelations is an object
+      if (!userRelations || typeof userRelations !== 'object') {
+        return [];
+      }
 
-      return allUsers;
+      //   Safely combine all user categories with proper null/undefined handling
+      const allUsers = [];
+
+      // Helper function to safely add users from a category
+      const addUsersFromCategory = (category, categoryName) => {
+        if (Array.isArray(category) && category.length > 0) {
+          allUsers.push(...category);
+        } else {
+        }
+      };
+
+      // Process each user category with exact field names from backend
+      addUsersFromCategory(userRelations.followers, 'followers');
+      addUsersFromCategory(userRelations.following, 'following');
+      addUsersFromCategory(userRelations.non_mutual, 'non_mutual');
+      addUsersFromCategory(userRelations.received_request, 'received_request');
+      addUsersFromCategory(userRelations.sent_request, 'sent_request');
+
+      if (allUsers.length > 0) {
+        console.log(`[groupService.getAllUsers] Sample user:`, allUsers[0]);
+      }
+
+      //   Remove duplicates based on user ID and ensure valid user objects
+      const uniqueUsers = [];
+      const seenIds = new Set();
+
+      for (const user of allUsers) {
+        if (user && user.id && !seenIds.has(user.id)) {
+          // Validate user object has required fields
+          if (user.firstname || user.first_name) {
+            seenIds.add(user.id);
+            uniqueUsers.push(user);
+          } else {
+            console.warn('[groupService.getAllUsers] Skipping user with missing name fields:', user);
+          }
+        }
+      }
+
+      return uniqueUsers;
+
     } catch (error) {
-      console.error('Error fetching users:', error);
-      throw error;
+      console.error('[groupService.getAllUsers] Error:', error);
+      console.error('[groupService.getAllUsers] Error message:', error.message);
+      console.error('[groupService.getAllUsers] Error stack:', error.stack);
+
+      // Return empty array instead of throwing to prevent UI from breaking
+      // The UI will show "No users available to invite" which is better than a broken state
+      return [];
     }
   },
 
   // ==================== WEBSOCKET OPERATIONS ====================
-  // CORRECTED: All WebSocket operations now use the fixed webSocketOperations
 
   // Join a group - Uses corrected WebSocket infrastructure
   async joinGroup(groupId) {
     try {
-      console.log('[groupService.joinGroup] Sending WebSocket request for group:', groupId);
-
       const result = await webSocketOperations.joinGroup(groupId);
-
-      console.log('[groupService.joinGroup] WebSocket response:', result);
 
       return {
         success: true,
@@ -349,12 +412,7 @@ export const groupService = {
   // Leave a group - Uses corrected WebSocket infrastructure
   async leaveGroup(groupId) {
     try {
-      console.log('[groupService.leaveGroup] Sending WebSocket request for group:', groupId);
-
       const result = await webSocketOperations.leaveGroup(groupId);
-
-      console.log('[groupService.leaveGroup] WebSocket response:', result);
-
       return {
         success: true,
         message: result.message || 'Successfully left the group'
@@ -367,11 +425,7 @@ export const groupService = {
   // Invite user to group - Uses corrected WebSocket infrastructure
   async inviteToGroup(groupId, userId) {
     try {
-      console.log('[groupService.inviteToGroup] Sending WebSocket request:', { groupId, userId });
-
       const result = await webSocketOperations.inviteToGroup(groupId, userId);
-
-      console.log('[groupService.inviteToGroup] WebSocket response:', result);
 
       return {
         success: true,
@@ -385,11 +439,7 @@ export const groupService = {
   // Respond to group invitation - Uses corrected WebSocket infrastructure
   async respondToGroupInvitation(groupId, status) {
     try {
-      console.log('[groupService.respondToGroupInvitation] Sending WebSocket request:', { groupId, status });
-
       const result = await webSocketOperations.respondToGroupInvitation(groupId, status);
-
-      console.log('[groupService.respondToGroupInvitation] WebSocket response:', result);
 
       return {
         success: true,
@@ -403,11 +453,8 @@ export const groupService = {
   // Respond to join request - Uses corrected WebSocket infrastructure
   async respondToJoinRequest(groupId, userId, status) {
     try {
-      console.log('[groupService.respondToJoinRequest] Sending WebSocket request:', { groupId, userId, status });
 
       const result = await webSocketOperations.respondToJoinRequest(groupId, userId, status);
-
-      console.log('[groupService.respondToJoinRequest] WebSocket response:', result);
 
       return {
         success: true,
@@ -416,7 +463,21 @@ export const groupService = {
     } catch (error) {
       handleWebSocketError(error, 'respondToJoinRequest');
     }
-  }
+  },
+
+  // Propose member invitation - Uses WebSocket for member invitation proposals
+  async proposeMemberInvitation(groupId, userId) {
+    try {
+      const result = await webSocketOperations.proposeMemberInvitation(groupId, userId);
+
+      return {
+        success: true,
+        message: result.message || 'Invitation proposal sent successfully'
+      };
+    } catch (error) {
+      handleWebSocketError(error, 'proposeMemberInvitation');
+    }
+  },
 };
 
 export default groupService;
