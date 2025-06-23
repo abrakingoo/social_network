@@ -92,51 +92,6 @@ const Messages = () => {
     usersToMessage = [...usersToMessage,...users.following]
   }
 
-  // Mock data
-  const mockChats = [
-    {
-      id: '1',
-      user: { id: '101', firstName: 'John', lastName: 'Doe', avatar: null },
-      lastMessage: 'Hey, how are you doing?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      unread: true
-    },
-    {
-      id: '2',
-      user: { id: '102', firstName: 'Jane', lastName: 'Smith', avatar: null },
-      lastMessage: 'Did you see the latest post?',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      unread: false
-    },
-    {
-      id: '3',
-      user: { id: '103', firstName: 'Mike', lastName: 'Johnson', avatar: null },
-      lastMessage: 'Thanks for the help!',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      unread: false
-    }
-  ];
-
-  // Mock messages for the selected chat
-  const mockMessages = {
-    '1': [
-      { id: '1-1', text: 'Hey there!', sender: '101', timestamp: new Date(Date.now() - 1000 * 60 * 30) },
-      { id: '1-2', text: 'Hi! How are you?', sender: 'me', timestamp: new Date(Date.now() - 1000 * 60 * 28) },
-      { id: '1-3', text: 'Doing great, thanks for asking. How about you?', sender: '101', timestamp: new Date(Date.now() - 1000 * 60 * 26) },
-      { id: '1-4', text: "I'm good too. Just working on some projects.", sender: 'me', timestamp: new Date(Date.now() - 1000 * 60 * 25) },
-      { id: '1-5', text: 'Hey, how are you doing?', sender: '101', timestamp: new Date(Date.now() - 1000 * 60 * 5) }
-    ],
-    '2': [
-      { id: '2-1', text: 'Hello!', sender: '102', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5) },
-      { id: '2-2', text: 'Did you see the latest post?', sender: '102', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) }
-    ],
-    '3': [
-      { id: '3-1', text: 'I need some help with my project', sender: '103', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 26) },
-      { id: '3-2', text: 'Sure, what do you need?', sender: 'me', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25) },
-      { id: '3-3', text: 'Thanks for the help!', sender: '103', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) }
-    ]
-  };
-
 
 
   // Don't render if user is not authenticated
