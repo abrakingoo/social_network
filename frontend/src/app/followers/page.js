@@ -86,6 +86,11 @@ const Followers = () => {
     }
   };
 
+  // Navigate to messages
+  const navigateToMsg = () => {
+    router.push(`/messages`)
+  }
+
   // Handle rejecting a friend request
   const handleRejectFriend = (friendId) => {
     setUsers([]);
@@ -220,7 +225,7 @@ const Followers = () => {
                           Requested
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => navigateToMsg()}>
                           Message
                         </Button>
                       )}
@@ -243,7 +248,7 @@ const Followers = () => {
 
             {/* Following */}
             <TabsContent value="following" className="space-y-4">
-              {users.following != null? (
+              {users.following != null ? (
                 users.following.map((friend) => (
                   <div
                     key={friend.id}
@@ -294,7 +299,7 @@ const Followers = () => {
                           Requested
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => navigateToMsg()}>
                           Message
                         </Button>
                       )}
