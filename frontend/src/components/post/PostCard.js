@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Heart, Share2, MoreHorizontal, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const PostCard = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const textareaRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   // Get the current user from context
   const { currentUser } = useAuth();
@@ -101,6 +103,10 @@ const PostCard = ({ post }) => {
     if (commentText.trim() && typeof addComment === 'function') {
       addComment(normalizedPost.id, commentText);
       setCommentText('');
+      // Reset textarea height
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
   };
 
@@ -143,17 +149,17 @@ const PostCard = ({ post }) => {
           const { commentAuthorName, commentAvatarUrl } = getCommentAuthor(comment);
 
           return (
-            <div key={comment.id || Math.random().toString(36).substring(2)} className="flex space-x-3">
+            <div key={comment.id || Math.random().toString(36).substring(2)} className="flex space-x-3 w-full">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={commentAvatarUrl} alt={commentAuthorName} />
                 <AvatarFallback>
                   {commentAuthorName.split(' ')[0]?.[0] || 'A'}{commentAuthorName.split(' ')[1]?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <div className="bg-gray-100 rounded-2xl px-4 py-2">
-                  <div className="font-medium">{commentAuthorName}</div>
-                  <p className="text-sm">{comment.content}</p>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{commentAuthorName}</div>
+                <div className="bg-gray-100 rounded-2xl px-4 py-2 max-w-full overflow-hidden">
+                  <p className="text-sm break-words whitespace-normal">{comment.content}</p>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {formatDistanceToNow(new Date(comment.createdAt || comment.created_at), { addSuffix: true })}
@@ -319,11 +325,17 @@ const PostCard = ({ post }) => {
                   <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={currentUser.firstName} />
                   <AvatarFallback>{currentUser.firstName?.[0] || ''}{currentUser.lastName?.[0] || ''}</AvatarFallback>
                 </Avatar>
-                <Input
+                <Textarea
                   placeholder="Write a comment..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  className="rounded-full bg-gray-100"
+                  className="resize-none bg-gray-100 rounded-lg min-h-[40px] max-h-[120px] overflow-hidden"
+                  rows={1}
+                  ref={textareaRef}
+                  onInput={(e) => {
+                    e.target.style.height = "auto";
+                    e.target.style.height = e.target.scrollHeight + "px";
+                  }}
                 />
                 <Button type="submit" size="icon" className="rounded-full">
                   <Send className="h-5 w-5" />
