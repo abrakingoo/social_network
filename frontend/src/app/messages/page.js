@@ -46,7 +46,9 @@ const Messages = () => {
 
   const prevMsg = async (userid) => {
     const data = await webSocketOperations.loadPreviousMessages(userid);
-    setPreviousMessages(data.messages);
+    if (data.messages != null){
+      setPreviousMessages(data.messages);
+    }
     setUuid(userid);
   }
 
@@ -253,7 +255,7 @@ const Messages = () => {
           <div
             className={`${isMobile && !prevMessages ? 'hidden' : 'flex'} md:flex flex-1 flex-col md:max-w-[calc(100%-18rem)] ${isMobile && prevMessages ? 'fixed inset-0 z-50' : 'border-l border-gray-200'}`}
           >
-            {prevMessages.length > 0 ? (
+            {uuid ? (
               <>
                 {/* Chat Header */}
                 <div className={`flex items-center p-4 border-b border-gray-200 bg-white ${!isMobile && 'rounded-tr-lg'}`}>
