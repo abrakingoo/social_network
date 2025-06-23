@@ -172,6 +172,10 @@ export const PostProvider = ({ children }) => {
       const formData = new FormData();
       formData.append('content', postData.content);
       formData.append('privacy', postData.privacy);
+      // Add visible_to for private posts
+      if (postData.privacy === 'private' && postData.selectedUsers && postData.selectedUsers.length > 0) {
+        formData.append('visible_to', JSON.stringify(postData.selectedUsers));
+      }
 
       // Add images
       if (postData.images && postData.images.length > 0) {
