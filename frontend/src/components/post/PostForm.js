@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Image, X } from "lucide-react";
+import { Image, X, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePosts, PRIVACY_LEVELS } from "@/context/PostContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatAvatarUrl } from "@/lib/utils";
@@ -18,8 +20,11 @@ const PostForm = ({ onPostCreated }) => {
   const [images, setImages] = useState([]);
   const [imageFiles, setImageFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]); // For private posts
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { currentUser } = useAuth();
+  const { currentUser, getAllUsers } = useAuth();
   const { addPost } = usePosts();
 
   // Check if we're on mobile
@@ -37,6 +42,55 @@ const PostForm = ({ onPostCreated }) => {
     // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
+
+  // Fetch available users when "Selected people only" is chosen
+  useEffect(() => {
+    if (privacy === PRIVACY_LEVELS.SELECTED && availableUsers.length === 0) {
+      fetchAvailableUsers();
+    }
+  }, [privacy]);
+
+  const fetchAvailableUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await fetch(`${API_BASE_URL}/api/users`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Filter out current user and get followers/following
+        const users = data.message?.followers || data.message?.following || [];
+        const filteredUsers = users.filter(
+          (user) => user.id !== currentUser.id,
+        );
+        setAvailableUsers(filteredUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleUserSelect = (userId, isSelected) => {
+    if (isSelected) {
+      setSelectedUsers((prev) => [...prev, userId]);
+    } else {
+      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
+    }
+  };
+
+  const handlePrivacyChange = (newPrivacy) => {
+    setPrivacy(newPrivacy);
+    // Clear selected users when switching away from "Selected people only"
+    if (newPrivacy !== PRIVACY_LEVELS.SELECTED) {
+      setSelectedUsers([]);
+    }
+  };
 
   if (!currentUser) return null;
 
@@ -69,6 +123,7 @@ const PostForm = ({ onPostCreated }) => {
         content: content.trim(),
         images: imageFiles, // Send the actual file objects
         privacy,
+        selectedUsers,
       });
 
       if (success) {
@@ -77,6 +132,7 @@ const PostForm = ({ onPostCreated }) => {
         setPrivacy(PRIVACY_LEVELS.PUBLIC);
         setImages([]);
         setImageFiles([]);
+        setSelectedUsers([]);
         // Notify parent component of successful post creation
         if (onPostCreated) {
           onPostCreated();
@@ -147,7 +203,7 @@ const PostForm = ({ onPostCreated }) => {
               <p className="text-sm font-medium mb-2">Privacy</p>
               <RadioGroup
                 value={privacy}
-                onValueChange={setPrivacy}
+                onValueChange={handlePrivacyChange}
                 className="flex flex-col space-y-1"
               >
                 <div className="flex items-center space-x-2">
@@ -179,6 +235,91 @@ const PostForm = ({ onPostCreated }) => {
                 </div>
               </RadioGroup>
             </div>
+
+            {/* User Selection for Private Posts */}
+            {privacy === PRIVACY_LEVELS.SELECTED && (
+              <div className="mt-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <Users className="h-4 w-4 mr-2 text-blue-600" />
+                    <h4 className="text-sm font-medium text-blue-900">
+                      Select People
+                    </h4>
+                  </div>
+                  {selectedUsers.length > 0 && (
+                    <span className="text-xs bg-social text-white px-2 py-1 rounded-full">
+                      {selectedUsers.length} selected
+                    </span>
+                  )}
+                </div>
+
+                {loadingUsers ? (
+                  <div className="text-sm text-gray-500 py-4 text-center">
+                    <div className="animate-pulse">
+                      Loading your followers...
+                    </div>
+                  </div>
+                ) : availableUsers.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-gray-600 mb-2">
+                      Choose who can see this post:
+                    </p>
+                    <ScrollArea className="h-36 border rounded bg-white p-2">
+                      <div className="space-y-3">
+                        {availableUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className="flex items-center space-x-3 hover:bg-gray-50 p-2 rounded"
+                          >
+                            <Checkbox
+                              id={`user-${user.id}`}
+                              checked={selectedUsers.includes(user.id)}
+                              onCheckedChange={(checked) =>
+                                handleUserSelect(user.id, checked)
+                              }
+                            />
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={formatAvatarUrl(user.avatar)} />
+                              <AvatarFallback className="text-xs">
+                                {user.firstname?.[0] ||
+                                  user.firstName?.[0] ||
+                                  "?"}
+                                {user.lastname?.[0] ||
+                                  user.lastName?.[0] ||
+                                  "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <Label
+                              htmlFor={`user-${user.id}`}
+                              className="text-sm cursor-pointer flex-1 font-medium"
+                            >
+                              {user.firstname || user.firstName}{" "}
+                              {user.lastname || user.lastName}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    {selectedUsers.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        ⚠️ Please select at least one person to share with
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 py-6 text-center bg-white rounded border-2 border-dashed">
+                    <Users className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="font-medium">No followers available</p>
+                    <p className="text-xs mt-1">
+                      You need followers to share posts with selected people.
+                    </p>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Try connecting with other users first!
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
 
           <CardFooter
@@ -205,7 +346,10 @@ const PostForm = ({ onPostCreated }) => {
               type="submit"
               className="bg-social hover:bg-social-dark"
               disabled={
-                isSubmitting || (!content.trim() && imageFiles.length === 0)
+                isSubmitting ||
+                (!content.trim() && imageFiles.length === 0) ||
+                (privacy === PRIVACY_LEVELS.SELECTED &&
+                  selectedUsers.length === 0)
               }
             >
               {isSubmitting ? "Posting..." : "Post"}
