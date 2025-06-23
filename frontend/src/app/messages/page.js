@@ -44,12 +44,13 @@ const Messages = () => {
   }
 
 
-  const prevMsg = async (userid) => {
+  const prevMsg = async (userid, idx) => {
     const data = await webSocketOperations.loadPreviousMessages(userid);
-    if (data.messages != null){
+    if (data.messages != null) {
       setPreviousMessages(data.messages);
     }
     setUuid(userid);
+    setSelectedChat(idx);
   }
 
   const resetPrevMessages = () => {
@@ -88,11 +89,11 @@ const Messages = () => {
     usersToMessage = [...users.followers]
   }
 
-  if (users.following != null){
-    usersToMessage = [...usersToMessage,...users.following]
+  if (users.following != null) {
+    usersToMessage = [...usersToMessage, ...users.following]
   }
 
-
+  console.log(usersToMessage)
 
   // Don't render if user is not authenticated
   if (!currentUser) {
@@ -163,14 +164,14 @@ const Messages = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {filteredChats.map((chat) => (
+              {filteredChats.map((chat, idx) => (
                 <div
                   key={chat.id}
                   className={`flex items-center p-3 cursor-pointer hover:bg-gray-50
                     ${selectedChat === chat.id ? 'bg-gray-100' : ''}
                     ${chat.unread ? 'font-medium' : ''}
                   `}
-                  onClick={() => prevMsg(chat.id)}
+                  onClick={() => prevMsg(chat.id, idx)}
                 >
                   <div className="relative">
                     <Avatar className="h-12 w-12">
@@ -184,7 +185,7 @@ const Messages = () => {
                   <div className="ml-3 flex-1 overflow-hidden">
                     <div className="flex justify-between items-baseline">
                       <h3 className="font-medium truncate">{chat.firstname} {chat.lastname}</h3>
-                      {/* <span className="text-xs text-gray-500 ml-1 shrink-0">{formatDate(chat.timestamp)}</span> */}
+                      {/* <span className="text-xs text-gray-500 ml-1 shrink-0">{formatDate(chat.created_at)}</span> */}
                     </div>
                     {/* <p className={`text-sm truncate ${chat.unread ? 'text-gray-800' : 'text-gray-500'}`}>
                       {chat.lastMessage}
@@ -219,17 +220,17 @@ const Messages = () => {
                     </Button>
                   )}
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={mockChats.find(c => c.id === selectedChat)?.user.avatar} />
+                    <AvatarImage src={usersToMessage[selectedChat].avatar} />
                     <AvatarFallback>
-                      {mockChats.find(c => c.id === selectedChat)?.user.firstName[0]}
-                      {mockChats.find(c => c.id === selectedChat)?.user.lastName[0]}
+                      {usersToMessage[selectedChat].firstname[0]}
+                      {usersToMessage[selectedChat].lastname[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="ml-3">
                     <h3 className="font-medium">
-                      {mockChats.find(c => c.id === selectedChat)?.user.firstName}
+                      {usersToMessage[selectedChat].firstname}
                       {' '}
-                      {mockChats.find(c => c.id === selectedChat)?.user.lastName}
+                      {usersToMessage[selectedChat].lastname}
                     </h3>
                     <p className="text-xs text-gray-500">Online</p>
                   </div>
