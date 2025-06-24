@@ -10,8 +10,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 // Privacy levels
 export const PRIVACY_LEVELS = {
   PUBLIC: 'public',
-  FOLLOWERS: 'followers',
-  SELECTED: 'selected'
+  FOLLOWERS: 'almost_private',
+  SELECTED: 'private'
 };
 
 // Default post structure for consistency
@@ -172,6 +172,10 @@ export const PostProvider = ({ children }) => {
       const formData = new FormData();
       formData.append('content', postData.content);
       formData.append('privacy', postData.privacy);
+      // Add visible_to for private posts
+      if (postData.privacy === 'private' && postData.selectedUsers && postData.selectedUsers.length > 0) {
+        formData.append('visible_to', JSON.stringify(postData.selectedUsers));
+      }
 
       // Add images
       if (postData.images && postData.images.length > 0) {
@@ -333,20 +337,12 @@ export const PostProvider = ({ children }) => {
     return true;
   }, [currentUser, posts]);
 
-  // Get filtered posts (simplified to only show public posts for now)
+  // Get filtered posts 
   const getFilteredPosts = useCallback(() => {
     if (!currentUser || !posts.length) return [];
 
     const filteredPosts = posts.filter(post => {
-      if (!post) return false;
-
-      // User can always see their own posts
-      if (post.author && post.author.id === currentUser.id) {
-        return true;
-      }
-
-      // If post is public, everyone can see it
-      return post.privacy === PRIVACY_LEVELS.PUBLIC;
+      return post && post.id; // Basic validation
     });
 
     // Sort posts by creation date (newest first)
