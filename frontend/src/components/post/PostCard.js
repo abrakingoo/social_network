@@ -202,6 +202,8 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
       .replace(/'/g, "&#39;");
   };
 
+
+
   const formatCount = (count) => {
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`;
@@ -213,18 +215,26 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
   };
 
   const renderInteractions = () => (
-    <CardFooter className="flex justify-between p-2">
-      <div className="flex space-x-4">
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => (onToggleLike || toggleLike)(normalizedPost.id)}>
-          <Heart className={`h-5 w-5 ${normalizedPost.likedByCurrentUser ? 'text-red-500 fill-current' : ''}`} />
-          <span>{formatCount(normalizedPost.likesCount)}</span>
+    <div className={`border-t border-gray-200 ${isMobile ? 'border-x-0' : ''}`}>
+      <div className="grid grid-cols-2 gap-1 py-1">
+        <Button
+          variant="ghost"
+          className={`flex items-center justify-center transition-all duration-200 hover:bg-red-50 hover:text-red-600 hover:scale-105 active:scale-95 ${normalizedPost.likedByCurrentUser ? 'text-red-500' : 'text-gray-600'}`}
+          onClick={() => (onToggleLike || toggleLike)(normalizedPost.id)}
+        >
+          <Heart className={`mr-1 h-5 w-5 transition-transform duration-200 ${normalizedPost.likedByCurrentUser ? 'fill-current' : ''}`} />
+          Like {normalizedPost.likesCount > 0 && formatCount(normalizedPost.likesCount)}
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => setShowComments(!showComments)}>
-          <MessageSquare className="h-5 w-5" />
-          <span>{formatCount(normalizedPost.comments.length)}</span>
+        <Button
+          variant="ghost"
+          className="flex items-center justify-center text-gray-600 transition-all duration-200 hover:bg-blue-50 hover:text-blue-600 hover:scale-105 active:scale-95"
+          onClick={() => setShowComments(!showComments)}
+        >
+          <MessageSquare className="mr-1 h-5 w-5 transition-transform duration-200" />
+          Comment {normalizedPost.comments.length > 0 && formatCount(normalizedPost.comments.length)}
         </Button>
       </div>
-    </CardFooter>
+    </div>
   );
 
   return (
