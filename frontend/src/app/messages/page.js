@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { API_BASE_URL, useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Search, ArrowLeft } from 'lucide-react';
-import { webSocketOperations } from '@/utils/websocket';
+import { webSocketOperations, wsManager } from '@/utils/websocket';
 
 const Messages = () => {
   const router = useRouter();
@@ -22,6 +22,11 @@ const Messages = () => {
   const [users, setUsers] = useState([]);
   const [prevMessages, setPreviousMessages] = useState([]);
   const [uuid, setUuid] = useState("");
+
+  const uuidRef = useRef(uuid);
+  useEffect(() => {
+    uuidRef.current = uuid;
+  }, [uuid]);
 
 
   const fetchUsers = async () => {
@@ -81,6 +86,41 @@ const Messages = () => {
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
   }, [currentUser, router]);
+
+  useEffect(() => {
+    const handlePrivateMessage = (msg) => {
+      const { action_type, data } = msg;
+
+      if (action_type !== 'private_message' || !data || !data.sender) {
+        return;
+      }
+
+      const senderId = data.sender.id;
+
+      if (uuidRef.current === senderId) {
+        setPreviousMessages((prev) => [
+          ...prev,
+          {
+            id : data.id,
+            sender_id: senderId,
+            content: data.message,
+            created_at: new Date().toISOString(),
+          }
+        ]);
+      } else {
+        toast({
+          title: `New message from ${data.sender.firstname || 'Someone'}`,
+          description: data.message,
+        });
+      }
+    };
+
+    wsManager.addListener('notification', handlePrivateMessage);
+
+    return () => {
+      wsManager.removeListener('notification', handlePrivateMessage);
+    };
+  }, [toast]);
 
   let usersToMessage = [];
 
