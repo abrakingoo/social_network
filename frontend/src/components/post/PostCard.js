@@ -291,29 +291,36 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
                   normalizedPost.media.length >= 4 ? 'grid-cols-2' : ''
               }`}>
               {normalizedPost.media.map((image, index) => {
-                // Calculate aspect ratio and row spans for different image counts
-                let aspectRatio = '';
+                // Calculate styling for different image counts
+                let containerClasses = '';
+                let imageClasses = '';
                 let rowSpan = '';
 
                 if (normalizedPost.media.length === 1) {
-                  aspectRatio = 'aspect-auto max-h-[500px]';
+                  // Single image: Full width, natural aspect ratio with social media standard limits
+                  containerClasses = 'w-full';
+                  imageClasses = 'w-full h-auto max-h-[70vh] min-h-[200px] object-contain';
                 } else if (normalizedPost.media.length === 2) {
-                  aspectRatio = 'aspect-square';
+                  containerClasses = 'aspect-square';
+                  imageClasses = 'w-full h-full object-cover';
                 } else if (normalizedPost.media.length === 3) {
                   if (index === 0) {
-                    aspectRatio = 'aspect-video';
+                    containerClasses = 'aspect-[4/3]';
                     rowSpan = 'row-span-2';
+                    imageClasses = 'w-full h-full object-cover';
                   } else {
-                    aspectRatio = 'aspect-square';
+                    containerClasses = 'aspect-square';
+                    imageClasses = 'w-full h-full object-cover';
                   }
                 } else if (normalizedPost.media.length >= 4) {
-                  aspectRatio = 'aspect-square';
+                  containerClasses = 'aspect-square';
+                  imageClasses = 'w-full h-full object-cover';
                 }
 
                 return (
                   <div
                     key={index}
-                    className={`relative ${rowSpan} group cursor-pointer`}
+                    className={`relative ${rowSpan} ${containerClasses} group cursor-pointer bg-gray-100 rounded-lg overflow-hidden`}
                     onClick={() => {
                       setLightboxIndex(index);
                       setLightboxOpen(true);
@@ -322,10 +329,12 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
                     <img
                       src={`${API_BASE_URL}/${image}`}
                       alt={`Post image ${index + 1}`}
-                      className={`w-full h-full object-contain ${aspectRatio} transition-transform group-hover:scale-105`}
+                      className={`${imageClasses} transition-all duration-300 group-hover:scale-[1.02] group-hover:brightness-95`}
+                      loading="lazy"
+                      style={normalizedPost.media.length === 1 ? { display: 'block' } : {}}
                     />
                     {normalizedPost.media.length > 4 && index === 3 && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
                         <span className="text-white text-2xl font-bold">
                           +{normalizedPost.media.length - 4}
                         </span>
