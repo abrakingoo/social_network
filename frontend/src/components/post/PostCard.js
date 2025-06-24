@@ -159,7 +159,7 @@ const PostCard = ({ post }) => {
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{commentAuthorName}</div>
                 <div className="bg-gray-100 rounded-2xl px-4 py-2 max-w-full overflow-hidden">
-                  <p className="text-sm break-words whitespace-normal">{comment.content}</p>
+                  <p className="text-sm break-words whitespace-normal">{escapeHtml(comment.content)}</p>
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {formatDistanceToNow(new Date(comment.createdAt || comment.created_at), { addSuffix: true })}
@@ -183,6 +183,17 @@ const PostCard = ({ post }) => {
         })}
       </div>
     );
+  };
+
+  // Function to escape HTML tags to prevent XSS and unwanted rendering
+  const escapeHtml = (text) => {
+    if (!text) return text;
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   };
 
   const formatCount = (count) => {
@@ -255,7 +266,7 @@ const PostCard = ({ post }) => {
         </CardHeader>
 
         <CardContent className="pt-3">
-          <p className="whitespace-pre-wrap">{normalizedPost.content}</p>
+          <p className="whitespace-pre-wrap">{escapeHtml(normalizedPost.content)}</p>
 
           {normalizedPost.media && normalizedPost.media.length > 0 && (
             <div className={`mt-3 rounded-xl overflow-hidden ${normalizedPost.media.length > 1 ? 'grid gap-1' : ''
