@@ -163,6 +163,9 @@ class WebSocketManager {
         case "group_invitation":
           this.handleGroupInvitationNotification(data);
           break;
+        case "private_message":
+          this.notifyListeners("notification", message);
+          break;
         default:
       }
     }
