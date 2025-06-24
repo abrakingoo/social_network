@@ -24,7 +24,7 @@ import { formatAvatarUrl } from '@/lib/utils';
 // API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const textareaRef = useRef(null);
@@ -64,9 +64,9 @@ const PostCard = ({ post }) => {
       author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
       createdAt: inputPost.createdAt || inputPost.created_at || inputPost.timestamp || new Date().toISOString(),
-      likesCount: inputPost.likesCount || 0,
-      dislikesCount: inputPost.dislikesCount || 0,
-      commentsCount: inputPost.commentsCount || 0,
+      likesCount: inputPost.likesCount || inputPost.likes_count || 0,
+      dislikesCount: inputPost.dislikesCount || inputPost.dislikes_count || 0,
+      commentsCount: inputPost.commentsCount || inputPost.comments_count || 0,
       comments: Array.isArray(inputPost.comments) ? inputPost.comments : [],
       media: Array.isArray(inputPost.media) ? inputPost.media.map(m => m.URL || m.url) : [],
       privacy: inputPost.privacy || 'public',
@@ -98,14 +98,20 @@ const PostCard = ({ post }) => {
     }
   };
 
-  const handleCommentSubmit = (e) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (commentText.trim() && typeof addComment === 'function') {
-      addComment(normalizedPost.id, commentText);
-      setCommentText('');
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+    if (commentText.trim()) {
+      // Use onAddComment prop if provided (for group posts), otherwise use context method
+      const commentHandler = onAddComment || addComment;
+      if (typeof commentHandler === 'function') {
+        const success = await commentHandler(normalizedPost.id, commentText);
+        if (success !== false) { // Success or undefined (context method doesn't return value)
+          setCommentText('');
+          // Reset textarea height
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+          }
+        }
       }
     }
   };
@@ -169,12 +175,12 @@ const PostCard = ({ post }) => {
                     variant="ghost"
                     size="sm"
                     className={`flex items-center space-x-1 text-gray-500 hover:bg-blue-500 ${
-                      comment.likedByCurrentUser ? 'text-red-500 fill-current' : 'text-gray-500'
+                      (comment.likedByCurrentUser || comment.is_liked) ? 'text-red-500 fill-current' : 'text-gray-500'
                     }`}
-                    onClick={() => toggleCommentLike(normalizedPost.id, comment.id)}
+                    onClick={() => (onToggleCommentLike || toggleCommentLike)(normalizedPost.id, comment.id)}
                   >
-                    <Heart className={`h-4 w-4 ${comment.likedByCurrentUser ? 'fill-current' : ''}`} />
-                    <span>{comment.likesCount || 0}</span>
+                    <Heart className={`h-4 w-4 ${(comment.likedByCurrentUser || comment.is_liked) ? 'fill-current' : ''}`} />
+                    <span>{comment.likesCount || comment.likes_count || 0}</span>
                   </Button>
                 </div>
               </div>
@@ -209,7 +215,7 @@ const PostCard = ({ post }) => {
   const renderInteractions = () => (
     <CardFooter className="flex justify-between p-2">
       <div className="flex space-x-4">
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => toggleLike(normalizedPost.id)}>
+        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => (onToggleLike || toggleLike)(normalizedPost.id)}>
           <Heart className={`h-5 w-5 ${normalizedPost.likedByCurrentUser ? 'text-red-500 fill-current' : ''}`} />
           <span>{formatCount(normalizedPost.likesCount)}</span>
         </Button>
