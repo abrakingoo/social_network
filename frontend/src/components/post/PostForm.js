@@ -14,7 +14,7 @@ import { usePosts, PRIVACY_LEVELS } from "@/context/PostContext";
 import { useAuth } from "@/context/AuthContext";
 import { formatAvatarUrl } from "@/lib/utils";
 
-const PostForm = ({ onPostCreated }) => {
+const PostForm = ({ onPostCreated, groupId }) => {
   const [content, setContent] = useState("");
   const [privacy, setPrivacy] = useState(PRIVACY_LEVELS.PUBLIC);
   const [images, setImages] = useState([]);
@@ -124,6 +124,7 @@ const PostForm = ({ onPostCreated }) => {
         images: imageFiles, // Send the actual file objects
         privacy,
         selectedUsers,
+        groupId, // Pass groupId for group posts
       });
 
       if (success) {
