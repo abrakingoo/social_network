@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,14 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { Users, Calendar, Info, Loader2 } from 'lucide-react';
 import PostForm from '@/components/post/PostForm';
 import PostCard from '@/components/post/PostCard';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 const GroupContent = ({
   groupData,
   rsvpStatus,
   isRefreshingEvents,
   onCreateEvent,
-  onRSVP
+  onRSVP,
+  onUpdateGroupData // Add callback to update group data
 }) => {
+  const { currentUser } = useAuth();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
   const formatEventDate = (dateString, time) => {
     const date = new Date(dateString);
     const formattedDate = date.toLocaleDateString('en-US', {
@@ -25,6 +31,208 @@ const GroupContent = ({
     });
     return time ? `${formattedDate}, ${time}` : formattedDate;
   };
+
+  // Group-specific like handler
+  const handleGroupPostLike = useCallback(async (postId) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to like a post.");
+      return;
+    }
+
+    // Find the post in group data
+    const postIndex = groupData.group_post?.findIndex(post => post.id === postId);
+    if (postIndex === -1) return;
+
+    const post = groupData.group_post[postIndex];
+    const wasLiked = post.likedByCurrentUser || post.is_liked;
+
+    // Optimistic UI update
+    const updatedPosts = [...groupData.group_post];
+    updatedPosts[postIndex] = {
+      ...post,
+      likedByCurrentUser: !wasLiked,
+      likesCount: wasLiked ? (post.likesCount || post.likes_count || 0) - 1 : (post.likesCount || post.likes_count || 0) + 1,
+    };
+
+    // Update group data immediately
+    if (onUpdateGroupData) {
+      onUpdateGroupData({
+        ...groupData,
+        group_post: updatedPosts
+      });
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/likePost`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to like post: ${response.status}`);
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+      // Revert on error
+      if (onUpdateGroupData) {
+        onUpdateGroupData(groupData);
+      }
+    }
+  }, [currentUser, groupData, onUpdateGroupData, API_BASE_URL]);
+
+  // Group-specific comment like handler
+  const handleGroupCommentLike = useCallback(async (postId, commentId) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to like a comment.");
+      return;
+    }
+
+    const postIndex = groupData.group_post?.findIndex(post => post.id === postId);
+    if (postIndex === -1) return;
+
+    const post = groupData.group_post[postIndex];
+    const commentIndex = post.comments?.findIndex(comment => comment.id === commentId);
+    if (commentIndex === -1) return;
+
+    const comment = post.comments[commentIndex];
+    const wasLiked = comment.likedByCurrentUser || comment.is_liked;
+
+    // Optimistic UI update
+    const updatedPosts = [...groupData.group_post];
+    const updatedComments = [...post.comments];
+    updatedComments[commentIndex] = {
+      ...comment,
+      likedByCurrentUser: !wasLiked,
+      likesCount: wasLiked ? (comment.likesCount || comment.likes_count || 0) - 1 : (comment.likesCount || comment.likes_count || 0) + 1,
+    };
+    updatedPosts[postIndex] = {
+      ...post,
+      comments: updatedComments
+    };
+
+    // Update group data immediately
+    if (onUpdateGroupData) {
+      onUpdateGroupData({
+        ...groupData,
+        group_post: updatedPosts
+      });
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/likeComment`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ post_id: postId, comment_id: commentId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to like comment: ${response.status}`);
+      }
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+      // Revert on error
+      if (onUpdateGroupData) {
+        onUpdateGroupData(groupData);
+      }
+    }
+  }, [currentUser, groupData, onUpdateGroupData, API_BASE_URL]);
+
+  // Group-specific add comment handler
+  const handleGroupAddComment = useCallback(async (postId, commentText) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to comment");
+      return false;
+    }
+
+    if (!commentText.trim()) {
+      toast.error("Comment cannot be empty");
+      return false;
+    }
+
+    const postIndex = groupData.group_post?.findIndex(post => post.id === postId);
+    if (postIndex === -1) return false;
+
+    const post = groupData.group_post[postIndex];
+
+    // Create new comment with temporary ID
+    const newComment = {
+      id: `temp-${Date.now()}`,
+      content: commentText.trim(),
+      author: {
+        id: currentUser.id,
+        first_name: currentUser.firstName,
+        last_name: currentUser.lastName,
+        nickname: currentUser.nickname,
+        avatar: currentUser.avatar
+      },
+      createdAt: new Date().toISOString(),
+      likesCount: 0,
+      likedByCurrentUser: false
+    };
+
+    // Optimistic UI update
+    const updatedPosts = [...groupData.group_post];
+    updatedPosts[postIndex] = {
+      ...post,
+      comments: [...(post.comments || []), newComment],
+      commentsCount: (post.commentsCount || 0) + 1
+    };
+
+    // Update group data immediately
+    if (onUpdateGroupData) {
+      onUpdateGroupData({
+        ...groupData,
+        group_post: updatedPosts
+      });
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/addComment`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          post_id: postId,
+          content: commentText.trim(),
+          comment_id: newComment.id
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to add comment: ${response.status}`);
+      }
+
+      return true;
+    } catch (error) {
+      toast.error(`Failed to add comment: ${error.message}`);
+      // Revert optimistic update on failure
+      if (onUpdateGroupData) {
+        const revertedPosts = [...groupData.group_post];
+        revertedPosts[postIndex] = {
+          ...post,
+          comments: (post.comments || []).filter(c => c.id !== newComment.id),
+          commentsCount: (post.commentsCount || 1) - 1
+        };
+        onUpdateGroupData({
+          ...groupData,
+          group_post: revertedPosts
+        });
+      }
+      return false;
+    }
+  }, [currentUser, groupData, onUpdateGroupData, API_BASE_URL]);
 
   return (
     <div className="w-full">
@@ -45,7 +253,13 @@ const GroupContent = ({
           {groupData.group_post && groupData.group_post.length > 0 ? (
             <div className="space-y-6">
               {groupData.group_post.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onToggleLike={handleGroupPostLike}
+                  onToggleCommentLike={handleGroupCommentLike}
+                  onAddComment={handleGroupAddComment}
+                />
               ))}
             </div>
           ) : (

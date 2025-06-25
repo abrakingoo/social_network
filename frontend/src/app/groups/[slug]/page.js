@@ -506,6 +506,7 @@ const GroupDetail = () => {
           isRefreshingEvents={isRefreshingEvents}
           onCreateEvent={() => setIsCreateEventOpen(true)}
           onRSVP={handleRSVP}
+          onUpdateGroupData={setLocalGroupData}
         />
       ) : (
         <NonMemberView
