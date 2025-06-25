@@ -25,6 +25,8 @@ const Messages = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [users, setUsers] = useState([]);
   const [prevMessages, setPreviousMessages] = useState([]);
+  const [conversationPreviews, setConversationPreviews] = useState({}); // Store last message for each user
+  const [loadingPreviews, setLoadingPreviews] = useState(false);
   const [uuid, setUuid] = useState("");
   const [newMsgs, setNewMsgs] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
@@ -55,6 +57,17 @@ const Messages = () => {
       // Scroll to bottom
       setTimeout(() => scrollToBottom(), 100);
     } else {
+      // Message from someone else - update conversation preview
+      setConversationPreviews(prev => ({
+        ...prev,
+        [message.sender.id]: {
+          content: message.message,
+          created_at: new Date().toISOString(),
+          sender_id: message.sender.id,
+          is_read: false
+        }
+      }));
+
       // Message from other users - add to new messages for notifications
       setNewMsgs((prev) => [...prev, message]);
     }
@@ -131,6 +144,37 @@ const Messages = () => {
 
     setUsers(res.message);
   }, [toast]);
+
+  // Load conversation previews (last message for each user)
+  const loadConversationPreviews = useCallback(async (userList) => {
+    if (!userList || userList.length === 0) return;
+
+    setLoadingPreviews(true);
+    const previews = {};
+
+    // For each user, load their last message
+    for (const user of userList) {
+      try {
+        const data = await webSocketOperations.loadPreviousMessages(user.id);
+        if (data.messages && data.messages.length > 0) {
+          // Get the last message
+          const lastMessage = data.messages[data.messages.length - 1];
+          previews[user.id] = {
+            content: lastMessage.content,
+            created_at: lastMessage.created_at,
+            sender_id: lastMessage.sender_id,
+            is_read: lastMessage.is_read
+          };
+        }
+      } catch (error) {
+        console.log(`Failed to load preview for user ${user.id}:`, error);
+        // Continue with other users even if one fails
+      }
+    }
+
+    setConversationPreviews(previews);
+    setLoadingPreviews(false);
+  }, []);
 
   const prevMsg = async (userid, idx) => {
     setLoadingMessages(true);
@@ -238,6 +282,22 @@ const Messages = () => {
     }
   }, [currentUser, fetchUsers]);
 
+  // Load conversation previews when users are loaded
+  useEffect(() => {
+    if (users && Object.keys(users).length > 0) {
+      // Combine all user arrays
+      const allUsers = [
+        ...(users.followers || []),
+        ...(users.following || []),
+        ...(users.non_mutual || [])
+      ];
+
+      if (allUsers.length > 0) {
+        loadConversationPreviews(allUsers);
+      }
+    }
+  }, [users, loadConversationPreviews]);
+
   // Check if we're on mobile
   useEffect(() => {
     const checkIfMobile = () => {
@@ -282,25 +342,36 @@ const Messages = () => {
 
   // Enhanced conversation data with last message and unread count
   const getConversationData = (user) => {
-    // Get all messages for this user (both sent and received)
+    // First check if we're viewing this specific conversation (prevMessages)
     const userMessages = prevMessages.filter(msg =>
       msg.sender_id === user.id || msg.receiver_id === user.id
     );
 
-    // Get last message
-    const lastMessage = userMessages.length > 0
-      ? userMessages[userMessages.length - 1]
-      : null;
+    // If we have messages loaded for this user (currently viewing), use them
+    let lastMessage = null;
+    let unreadCount = 0;
 
-    // Count unread messages from this user
-    const unreadCount = userMessages.filter(msg =>
-      msg.sender_id === user.id && !msg.is_read
-    ).length;
+    if (userMessages.length > 0) {
+      // Currently viewing this conversation - use prevMessages
+      lastMessage = userMessages[userMessages.length - 1];
+      unreadCount = userMessages.filter(msg =>
+        msg.sender_id === user.id && !msg.is_read
+      ).length;
+    } else {
+      // Not currently viewing - use conversation preview
+      const preview = conversationPreviews[user.id];
+      if (preview) {
+        lastMessage = preview;
+        // For previews, we can't accurately count unread messages without loading all
+        // So we'll show unread indicator based on the last message being unread
+        unreadCount = preview.sender_id === user.id && !preview.is_read ? 1 : 0;
+      }
+    }
 
     return {
       ...user,
       lastMessage: lastMessage?.content || "No messages yet",
-      lastMessageTime: lastMessage?.created_at || user.created_at,
+      lastMessageTime: lastMessage?.created_at || null,
       unreadCount,
       hasUnread: unreadCount > 0
     };
@@ -313,9 +384,13 @@ const Messages = () => {
 
   const parseDate = (input) => {
     if (input instanceof Date) {
-      return input;
+      return isNaN(input.getTime()) ? new Date() : input;
     }
-    return new Date(input);
+    if (!input) {
+      return new Date();
+    }
+    const parsed = new Date(input);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
   };
 
   const formatTime = (date) => {
@@ -406,6 +481,12 @@ const Messages = () => {
       // Sort by unread messages first, then by last message time
       if (a.hasUnread && !b.hasUnread) return -1;
       if (!a.hasUnread && b.hasUnread) return 1;
+
+      // Handle null lastMessageTime (no conversation history)
+      if (!a.lastMessageTime && !b.lastMessageTime) return 0;
+      if (!a.lastMessageTime) return 1; // Users with no messages go to bottom
+      if (!b.lastMessageTime) return -1; // Users with messages go to top
+
       return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
     });
 
@@ -460,7 +541,7 @@ const Messages = () => {
                         {chat.firstname} {chat.lastname}
                       </h3>
                       <span className="text-xs text-gray-500 ml-1 shrink-0">
-                        {formatTime(chat.lastMessageTime)}
+                        {chat.lastMessageTime ? formatTime(chat.lastMessageTime) : ""}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
