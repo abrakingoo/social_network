@@ -696,6 +696,7 @@ export const EVENT_TYPES = {
   PRIVATE_MESSAGE: "private_message",
   LOAD_PRIVATE_MESSAGES: "load_private_messages",
   GROUP_MESSAGE: "group_message",
+  LOAD_GROUP_MESSAGES: "load_group_messages",
   FOLLOW_REQUEST: "follow_request",
   RESPOND_FOLLOW_REQUEST: "respond_follow_request",
   UNFOLLOW: "unfollow",
@@ -939,6 +940,27 @@ export const webSocketOperations = {
   cancelFollowRequest(followerId) {
     wsManager.send(EVENT_TYPES.CANCEL_FOLLOW_REQUEST, {
       recipient_Id: followerId,
+    });
+  },
+
+  // Load group messages
+  loadGroupMessages(groupId) {
+    return new Promise((resolve, reject) => {
+      const listener = (data) => {
+        wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+        resolve(data);
+      };
+
+      wsManager.addListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+
+      try {
+        wsManager.send(EVENT_TYPES.LOAD_GROUP_MESSAGES, {
+          group_id: groupId,
+        });
+      } catch (err) {
+        wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+        reject(err);
+      }
     });
   },
 };
