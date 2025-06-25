@@ -78,19 +78,58 @@ class WebSocketManager {
 
       this.ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          // Handle potential multiple JSON messages concatenated together
+          let messageData = event.data;
 
-          // Handle backend notifications with EXACT format matching
-          if (data.type === "notification") {
-            this.handleBackendNotification(data);
-          } else if (data.type === "error") {
-            // Backend sends errors with exact format: { "type": "error", "message": "..." }
-            this.notifyListeners("error", { message: data.message });
-          } else {
-            this.notifyListeners(data.type, data.data || data);
+          if (typeof messageData === 'string') {
+            // Split by newlines in case backend sends multiple JSON objects separated by newlines
+            const lines = messageData.trim().split('\n').filter(line => line.trim());
+
+            if (lines.length > 1) {
+              // Process each JSON object separately
+              lines.forEach(line => {
+                try {
+                  const data = JSON.parse(line.trim());
+                  this.processMessage(data);
+                } catch (parseError) {
+                  console.error("WebSocket: Error parsing individual line:", parseError, "Line:", line);
+                }
+              });
+              return;
+            }
+
+            // Try to find and handle cases where JSON objects are concatenated without separators
+            if (messageData.includes('}{')) {
+              // Split on }{ pattern and reconstruct valid JSON
+              const parts = messageData.split('}{');
+              for (let i = 0; i < parts.length; i++) {
+                let jsonStr = parts[i];
+                if (i > 0) jsonStr = '{' + jsonStr;
+                if (i < parts.length - 1) jsonStr = jsonStr + '}';
+
+                try {
+                  const data = JSON.parse(jsonStr);
+                  this.processMessage(data);
+                } catch (parseError) {
+                  console.error("WebSocket: Error parsing split JSON:", parseError, "Part:", jsonStr);
+                }
+              }
+              return;
+            }
           }
+
+          // Standard single JSON message processing
+          const data = JSON.parse(messageData);
+          this.processMessage(data);
+
         } catch (error) {
           console.error("WebSocket: Error parsing message:", error);
+          // Only log raw data in development for debugging
+          if (process.env.NODE_ENV === 'development') {
+            console.error("WebSocket: Raw message data:", event.data);
+            console.error("WebSocket: Message type:", typeof event.data);
+            console.error("WebSocket: Message length:", event.data?.length);
+          }
         }
       };
 
@@ -139,6 +178,19 @@ class WebSocketManager {
     } catch (error) {
       console.error("WebSocket: Failed to create connection:", error);
       state.isConnecting = false;
+    }
+  }
+
+  // Process individual WebSocket messages
+  processMessage(data) {
+    // Handle backend notifications with EXACT format matching
+    if (data.type === "notification") {
+      this.handleBackendNotification(data);
+    } else if (data.type === "error") {
+      // Backend sends errors with exact format: { "type": "error", "message": "..." }
+      this.notifyListeners("error", { message: data.message });
+    } else {
+      this.notifyListeners(data.type, data.data || data);
     }
   }
 
@@ -210,40 +262,51 @@ class WebSocketManager {
     });
   }
 
-  // Handle join accept/decline notifications
+  // Handle join accept notifications
   handleJoinAcceptNotification(data) {
-    const { group_id, status } = data;
+    const { group_id } = data;
 
     // Dispatch event for components to handle
     this.dispatchNotificationEvent("group_join_response", {
-      title: status === "accepted" ? "Request Accepted!" : "Request Declined",
-      description:
-        status === "accepted"
-          ? "Your request to join the group was accepted"
-          : "Your request to join the group was declined",
-      variant: status === "accepted" ? "default" : "destructive",
-      action:
-        status === "accepted"
-          ? {
-              text: "Visit Group",
-              callback: () =>
-                (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
-            }
-          : undefined,
+      title: "Request Accepted!",
+      description: "Your request to join the group was accepted",
+      variant: "default",
+      action: {
+        text: "Visit Group",
+        callback: () =>
+          (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
+      },
       data: data,
     });
 
     // Update group page if user is currently viewing it
     this.triggerGroupPageUpdate(group_id, {
       type: "membership_changed",
-      data: { status: status, group_id },
+      data: { status: "accepted", group_id },
+    });
+  }
+
+  // Handle join decline notifications
+  handleJoinDeclineNotification(data) {
+    const { group_id } = data;
+
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent("group_join_response", {
+      title: "Request Declined",
+      description: "Your request to join the group was declined",
+      variant: "destructive",
+      data: data,
+    });
+
+    // Update group page if user is currently viewing it
+    this.triggerGroupPageUpdate(group_id, {
+      type: "membership_changed",
+      data: { status: "declined", group_id },
     });
   }
 
   // Handle group invitation notifications
   handleGroupInvitationNotification(data) {
-    const { group_id } = data;
-
     // Dispatch event for components to handle
     this.dispatchNotificationEvent("group_invitation", {
       title: "Group Invitation",
