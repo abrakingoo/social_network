@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { API_BASE_URL, useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +27,11 @@ const Messages = () => {
   const [prevMessages, setPreviousMessages] = useState([]);
   const [uuid, setUuid] = useState("");
   const [newMsgs, setNewMsgs] = useState([]);
+  const messageEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useWebSocket(EVENT_TYPES.PRIVATE_MESSAGE, (message) => {
     if (message.sender.id != uuid) {
@@ -89,7 +94,11 @@ const Messages = () => {
 
     // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
-  }, [currentUser, router]);
+  }, [currentUser, router, prevMsg]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [prevMessages]);
 
   let usersToMessage = [];
 
@@ -275,6 +284,7 @@ const Messages = () => {
                       </div>
                     </div>
                   ))}
+                  <div ref={messageEndRef} />
                 </div>
 
                 {/* Message Input */}
