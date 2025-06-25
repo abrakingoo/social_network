@@ -30,7 +30,6 @@ class WebSocketManager {
 
   // Auth state with connection stability
   setAuthState(isAuthenticated) {
-
     const wasAuthenticated = this.isAuthenticated;
     this.isAuthenticated = isAuthenticated;
 
@@ -67,7 +66,6 @@ class WebSocketManager {
     state.isConnecting = true;
     this.connectionUrl = url;
 
-
     try {
       this.ws = new WebSocket(url);
 
@@ -102,7 +100,6 @@ class WebSocketManager {
       };
 
       this.ws.onclose = (event) => {
-
         state.isConnected = false;
         state.isConnecting = false;
         state.isDisconnecting = false;
@@ -163,9 +160,17 @@ class WebSocketManager {
         case "group_invitation":
           this.handleGroupInvitationNotification(data);
           break;
+        case "private_message":
+          this.handlePrivateMessage(data);
+          break;
         default:
       }
     }
+  }
+
+  handlePrivateMessage(data) {
+    console.log("WebSocketManager received private_message:", data);
+    this.notifyListeners(EVENT_TYPES.PRIVATE_MESSAGE, data);
   }
 
   // Handle join request notifications matching backend format
@@ -220,10 +225,10 @@ class WebSocketManager {
       action:
         status === "accepted"
           ? {
-            text: "Visit Group",
-            callback: () =>
-              (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
-          }
+              text: "Visit Group",
+              callback: () =>
+                (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
+            }
           : undefined,
       data: data,
     });
@@ -262,7 +267,6 @@ class WebSocketManager {
 
   // Perfect disconnect with proper sequencing
   disconnect() {
-
     const state = this.connectionState;
 
     if (state.isDisconnecting) {
@@ -788,7 +792,7 @@ export const webSocketOperations = {
         {
           group_id: groupId,
           recipient_Id: userId, // Note: Backend expects recipient_Id (capital I)
-        }
+        },
       );
       return result;
     } catch (error) {
@@ -802,7 +806,7 @@ export const webSocketOperations = {
         throw new Error("Please log in to send invitation proposals.");
       } else if (message === "Connection not available") {
         throw new Error(
-          "Connection lost. Please refresh the page and try again."
+          "Connection lost. Please refresh the page and try again.",
         );
       }
       throw error;
@@ -855,7 +859,9 @@ export const webSocketOperations = {
       wsManager.addListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
 
       try {
-        wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, { recipient_Id: userID });
+        wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, {
+          recipient_Id: userID,
+        });
       } catch (err) {
         wsManager.removeListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
         reject(err);
