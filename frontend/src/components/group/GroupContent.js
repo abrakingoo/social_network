@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
-import { Users, Calendar, Info, Loader2 } from 'lucide-react';
+import { Users, Calendar, Info, MessageCircle, Loader2 } from 'lucide-react';
 import PostForm from '@/components/post/PostForm';
 import PostCard from '@/components/post/PostCard';
+import GroupChat from '@/components/group/GroupChat';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
@@ -92,6 +93,7 @@ const GroupContent = ({
       return;
     }
 
+    // Find the post and comment
     const postIndex = groupData.group_post?.findIndex(post => post.id === postId);
     if (postIndex === -1) return;
 
@@ -104,15 +106,17 @@ const GroupContent = ({
 
     // Optimistic UI update
     const updatedPosts = [...groupData.group_post];
-    const updatedComments = [...post.comments];
-    updatedComments[commentIndex] = {
-      ...comment,
-      likedByCurrentUser: !wasLiked,
-      likesCount: wasLiked ? (comment.likesCount || comment.likes_count || 0) - 1 : (comment.likesCount || comment.likes_count || 0) + 1,
-    };
     updatedPosts[postIndex] = {
       ...post,
-      comments: updatedComments
+      comments: post.comments.map((c, index) =>
+        index === commentIndex
+          ? {
+              ...c,
+              likedByCurrentUser: !wasLiked,
+              likesCount: wasLiked ? (c.likesCount || c.likes_count || 0) - 1 : (c.likesCount || c.likes_count || 0) + 1,
+            }
+          : c
+      ),
     };
 
     // Update group data immediately
@@ -130,7 +134,7 @@ const GroupContent = ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ post_id: postId, comment_id: commentId }),
+        body: JSON.stringify({ comment_id: commentId }),
       });
 
       if (!response.ok) {
@@ -149,15 +153,11 @@ const GroupContent = ({
   // Group-specific add comment handler
   const handleGroupAddComment = useCallback(async (postId, commentText) => {
     if (!currentUser) {
-      toast.error("You must be logged in to comment");
+      toast.error("You must be logged in to add a comment.");
       return false;
     }
 
-    if (!commentText.trim()) {
-      toast.error("Comment cannot be empty");
-      return false;
-    }
-
+    // Find the post in group data
     const postIndex = groupData.group_post?.findIndex(post => post.id === postId);
     if (postIndex === -1) return false;
 
@@ -237,8 +237,12 @@ const GroupContent = ({
   return (
     <div className="w-full">
       <Tabs defaultValue="posts" className="w-full mb-6">
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="posts">Posts</TabsTrigger>
+          <TabsTrigger value="chat">
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Chat
+          </TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
           <TabsTrigger value="about">About</TabsTrigger>
         </TabsList>
@@ -270,6 +274,13 @@ const GroupContent = ({
               </p>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="chat" className="mt-6">
+          <GroupChat
+            groupId={groupData.group_id}
+            groupData={groupData}
+          />
         </TabsContent>
 
         <TabsContent value="events" className="mt-6">
