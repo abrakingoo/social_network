@@ -1,6 +1,9 @@
 package websocket
 
-import "sync"
+import (
+	"encoding/json"
+	"sync"
+)
 
 type Hub struct {
 	Clients    map[*Client]bool
@@ -19,6 +22,42 @@ func NewHub() *Hub {
 	}
 }
 
+func (h *Hub) NotifyUserOnline(userID string) {
+	msg := map[string]any{
+		"type": "user_online",
+		"data": userID,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+
+	h.Mu.RLock()
+	defer h.Mu.RUnlock()
+	for client := range h.Clients {
+		client.Send <- data
+	}
+}
+
+func (h *Hub) NotifyUserOffline(userID string) {
+	msg := map[string]any{
+		"type": "user_offline",
+		"data": userID,
+	}
+
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+
+	h.Mu.RLock()
+	defer h.Mu.RUnlock()
+	for client := range h.Clients {
+		client.Send <- data
+	}
+}
+
 func (h *Hub) Run() {
 	for {
 		select {
@@ -33,6 +72,8 @@ func (h *Hub) Run() {
 			}
 			h.Mu.Unlock()
 
+			h.NotifyUserOnline(c.UserID)
+
 		case c := <-h.Unregister:
 			h.Mu.Lock()
 			delete(h.Clients, c)
@@ -40,11 +81,14 @@ func (h *Hub) Run() {
 				if members, ok := h.Groups[groupID]; ok {
 					delete(members, c)
 					if len(members) == 0 {
-						delete(h.Groups, groupID) // cleanup empty group
+						delete(h.Groups, groupID)
 					}
 				}
 			}
 			h.Mu.Unlock()
+
+			h.NotifyUserOffline(c.UserID)
+
 		}
 	}
 }
