@@ -261,6 +261,7 @@ export const AuthProvider = ({ children }) => {
         nickname: userData.nickname,
         about_me: userData.about,
         is_public: userData.isPublic,
+        date_of_birth: userData.dateOfBirth,
       };
 
       // Remove undefined values
