@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 
 	"social/pkg/model"
@@ -10,7 +11,7 @@ func (q *Query) GetMessagesBetweenUsers(userAID, userBID string) ([]model.Privat
 	query := `
 		SELECT id, sender_id, receiver_id, content, is_read, created_at
 		FROM private_messages
-		WHERE 
+		WHERE
 			(sender_id = ? AND receiver_id = ?) OR
 			(sender_id = ? AND receiver_id = ?)
 		ORDER BY created_at ASC
@@ -30,6 +31,12 @@ func (q *Query) GetMessagesBetweenUsers(userAID, userBID string) ([]model.Privat
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan message row: %w", err)
 		}
+
+		// Ensure compatibility with both RecipientID and ReceiverID fields
+		msg.RecipientID = msg.ReceiverID
+		// Ensure compatibility with both Content and Message fields
+		msg.Message = msg.Content
+
 		messages = append(messages, msg)
 	}
 
@@ -38,10 +45,13 @@ func (q *Query) GetMessagesBetweenUsers(userAID, userBID string) ([]model.Privat
 
 func (q *Query) GetGroupMessages(groupID string) ([]model.GroupMessage, error) {
 	query := `
-		SELECT id, group_id, sender_id, content, created_at
-		FROM group_messages
-		WHERE group_id = ?
-		ORDER BY created_at ASC
+		SELECT
+			gm.id, gm.group_id, gm.sender_id, gm.content, gm.created_at,
+			u.first_name, u.last_name, u.nickname, u.avatar
+		FROM group_messages gm
+		LEFT JOIN users u ON u.id = gm.sender_id
+		WHERE gm.group_id = ?
+		ORDER BY gm.created_at ASC
 	`
 
 	rows, err := q.Db.Query(query, groupID)
@@ -54,10 +64,28 @@ func (q *Query) GetGroupMessages(groupID string) ([]model.GroupMessage, error) {
 
 	for rows.Next() {
 		var msg model.GroupMessage
-		err := rows.Scan(&msg.ID, &msg.GroupId, &msg.SenderID, &msg.Content, &msg.CreatedAt)
+		var firstName, lastName, nickname, avatar sql.NullString
+
+		err := rows.Scan(
+			&msg.ID, &msg.GroupId, &msg.SenderID, &msg.Content, &msg.CreatedAt,
+			&firstName, &lastName, &nickname, &avatar,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan group message row: %w", err)
 		}
+
+		// Set sender information
+		msg.Sender = model.UserSummary{
+			ID:        msg.SenderID,
+			Firstname: firstName.String,
+			Lastname:  lastName.String,
+			Nickname:  nickname.String,
+			Avatar:    avatar.String,
+		}
+
+		// Ensure compatibility with both Content and Message fields
+		msg.Message = msg.Content
+
 		messages = append(messages, msg)
 	}
 
