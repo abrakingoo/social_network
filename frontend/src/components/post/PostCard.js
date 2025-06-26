@@ -24,7 +24,7 @@ import { formatAvatarUrl } from '@/lib/utils';
 // API base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const textareaRef = useRef(null);
@@ -64,9 +64,9 @@ const PostCard = ({ post }) => {
       author: inputPost.user || inputPost.author || {}, // Backend uses 'user' field for the author
       content: inputPost.content || '',
       createdAt: inputPost.createdAt || inputPost.created_at || inputPost.timestamp || new Date().toISOString(),
-      likesCount: inputPost.likesCount || 0,
-      dislikesCount: inputPost.dislikesCount || 0,
-      commentsCount: inputPost.commentsCount || 0,
+      likesCount: inputPost.likesCount || inputPost.likes_count || 0,
+      dislikesCount: inputPost.dislikesCount || inputPost.dislikes_count || 0,
+      commentsCount: inputPost.commentsCount || inputPost.comments_count || 0,
       comments: Array.isArray(inputPost.comments) ? inputPost.comments : [],
       media: Array.isArray(inputPost.media) ? inputPost.media.map(m => m.URL || m.url) : [],
       privacy: inputPost.privacy || 'public',
@@ -98,14 +98,20 @@ const PostCard = ({ post }) => {
     }
   };
 
-  const handleCommentSubmit = (e) => {
+  const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (commentText.trim() && typeof addComment === 'function') {
-      addComment(normalizedPost.id, commentText);
-      setCommentText('');
-      // Reset textarea height
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+    if (commentText.trim()) {
+      // Use onAddComment prop if provided (for group posts), otherwise use context method
+      const commentHandler = onAddComment || addComment;
+      if (typeof commentHandler === 'function') {
+        const success = await commentHandler(normalizedPost.id, commentText);
+        if (success !== false) { // Success or undefined (context method doesn't return value)
+          setCommentText('');
+          // Reset textarea height
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+          }
+        }
       }
     }
   };
@@ -169,12 +175,12 @@ const PostCard = ({ post }) => {
                     variant="ghost"
                     size="sm"
                     className={`flex items-center space-x-1 text-gray-500 hover:bg-blue-500 ${
-                      comment.likedByCurrentUser ? 'text-red-500 fill-current' : 'text-gray-500'
+                      (comment.likedByCurrentUser || comment.is_liked) ? 'text-red-500 fill-current' : 'text-gray-500'
                     }`}
-                    onClick={() => toggleCommentLike(normalizedPost.id, comment.id)}
+                    onClick={() => (onToggleCommentLike || toggleCommentLike)(normalizedPost.id, comment.id)}
                   >
-                    <Heart className={`h-4 w-4 ${comment.likedByCurrentUser ? 'fill-current' : ''}`} />
-                    <span>{comment.likesCount || 0}</span>
+                    <Heart className={`h-4 w-4 ${(comment.likedByCurrentUser || comment.is_liked) ? 'fill-current' : ''}`} />
+                    <span>{comment.likesCount || comment.likes_count || 0}</span>
                   </Button>
                 </div>
               </div>
@@ -196,6 +202,8 @@ const PostCard = ({ post }) => {
       .replace(/'/g, "&#39;");
   };
 
+
+
   const formatCount = (count) => {
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`;
@@ -207,18 +215,26 @@ const PostCard = ({ post }) => {
   };
 
   const renderInteractions = () => (
-    <CardFooter className="flex justify-between p-2">
-      <div className="flex space-x-4">
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => toggleLike(normalizedPost.id)}>
-          <Heart className={`h-5 w-5 ${normalizedPost.likedByCurrentUser ? 'text-red-500 fill-current' : ''}`} />
-          <span>{formatCount(normalizedPost.likesCount)}</span>
+    <div className={`border-t border-gray-200 ${isMobile ? 'border-x-0' : ''}`}>
+      <div className="grid grid-cols-2 gap-1 py-1">
+        <Button
+          variant="ghost"
+          className={`flex items-center justify-center transition-all duration-200 hover:bg-red-50 hover:text-red-600 hover:scale-105 active:scale-95 ${normalizedPost.likedByCurrentUser ? 'text-red-500' : 'text-gray-600'}`}
+          onClick={() => (onToggleLike || toggleLike)(normalizedPost.id)}
+        >
+          <Heart className={`mr-1 h-5 w-5 transition-transform duration-200 ${normalizedPost.likedByCurrentUser ? 'fill-current' : ''}`} />
+          Like {normalizedPost.likesCount > 0 && formatCount(normalizedPost.likesCount)}
         </Button>
-        <Button variant="ghost" size="sm" className="flex items-center space-x-1 text-gray-500 hover:bg-blue-500" onClick={() => setShowComments(!showComments)}>
-          <MessageSquare className="h-5 w-5" />
-          <span>{formatCount(normalizedPost.comments.length)}</span>
+        <Button
+          variant="ghost"
+          className="flex items-center justify-center text-gray-600 transition-all duration-200 hover:bg-blue-50 hover:text-blue-600 hover:scale-105 active:scale-95"
+          onClick={() => setShowComments(!showComments)}
+        >
+          <MessageSquare className="mr-1 h-5 w-5 transition-transform duration-200" />
+          Comment {normalizedPost.comments.length > 0 && formatCount(normalizedPost.comments.length)}
         </Button>
       </div>
-    </CardFooter>
+    </div>
   );
 
   return (
@@ -275,29 +291,36 @@ const PostCard = ({ post }) => {
                   normalizedPost.media.length >= 4 ? 'grid-cols-2' : ''
               }`}>
               {normalizedPost.media.map((image, index) => {
-                // Calculate aspect ratio and row spans for different image counts
-                let aspectRatio = '';
+                // Calculate styling for different image counts
+                let containerClasses = '';
+                let imageClasses = '';
                 let rowSpan = '';
 
                 if (normalizedPost.media.length === 1) {
-                  aspectRatio = 'aspect-auto max-h-[500px]';
+                  // Single image: Full width, natural aspect ratio with social media standard limits
+                  containerClasses = 'w-full';
+                  imageClasses = 'w-full h-auto max-h-[70vh] min-h-[200px] object-contain';
                 } else if (normalizedPost.media.length === 2) {
-                  aspectRatio = 'aspect-square';
+                  containerClasses = 'aspect-square';
+                  imageClasses = 'w-full h-full object-cover';
                 } else if (normalizedPost.media.length === 3) {
                   if (index === 0) {
-                    aspectRatio = 'aspect-video';
+                    containerClasses = 'aspect-[4/3]';
                     rowSpan = 'row-span-2';
+                    imageClasses = 'w-full h-full object-cover';
                   } else {
-                    aspectRatio = 'aspect-square';
+                    containerClasses = 'aspect-square';
+                    imageClasses = 'w-full h-full object-cover';
                   }
                 } else if (normalizedPost.media.length >= 4) {
-                  aspectRatio = 'aspect-square';
+                  containerClasses = 'aspect-square';
+                  imageClasses = 'w-full h-full object-cover';
                 }
 
                 return (
                   <div
                     key={index}
-                    className={`relative ${rowSpan} group cursor-pointer`}
+                    className={`relative ${rowSpan} ${containerClasses} group cursor-pointer bg-gray-100 rounded-lg overflow-hidden`}
                     onClick={() => {
                       setLightboxIndex(index);
                       setLightboxOpen(true);
@@ -306,10 +329,12 @@ const PostCard = ({ post }) => {
                     <img
                       src={`${API_BASE_URL}/${image}`}
                       alt={`Post image ${index + 1}`}
-                      className={`w-full h-full object-contain ${aspectRatio} transition-transform group-hover:scale-105`}
+                      className={`${imageClasses} transition-all duration-300 group-hover:scale-[1.02] group-hover:brightness-95`}
+                      loading="lazy"
+                      style={normalizedPost.media.length === 1 ? { display: 'block' } : {}}
                     />
                     {normalizedPost.media.length > 4 && index === 3 && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
                         <span className="text-white text-2xl font-bold">
                           +{normalizedPost.media.length - 4}
                         </span>

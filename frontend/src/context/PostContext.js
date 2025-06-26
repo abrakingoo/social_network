@@ -58,12 +58,12 @@ export const PostProvider = ({ children }) => {
         }
       }
     }
-    
+
     const authorName = currentUser?.nickname || `${extractedFirstName} ${extractedLastName}`.trim();
     const nameParts = authorName.split(' ');
     const firstNameToUse = nameParts.length > 0 ? nameParts[0] : 'Unknown';
     const lastNameToUse = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User';
-    
+
     return {
       ...DEFAULT_COMMENT_STRUCTURE,
       id: commentData.id || Date.now().toString(),
@@ -118,7 +118,7 @@ export const PostProvider = ({ children }) => {
         last_name: currentUser?.lastName || ''
       },
       likesCount: postData.likes_count || 0,
-      likedByCurrentUser: postData.is_liked || false, 
+      likedByCurrentUser: postData.is_liked || false,
     };
   }, [currentUser, normalizeComment]);
 
@@ -177,6 +177,11 @@ export const PostProvider = ({ children }) => {
         formData.append('visible_to', JSON.stringify(postData.selectedUsers));
       }
 
+      // Add group_id for group posts
+      if (postData.groupId) {
+        formData.append('group_id', postData.groupId);
+      }
+
       // Add images
       if (postData.images && postData.images.length > 0) {
         // Convert URLs back to File objects if needed
@@ -197,10 +202,13 @@ export const PostProvider = ({ children }) => {
       if (response.ok) {
         toast.success('Post created successfully!');
 
-        // Refresh the posts list after successful creation
-        setTimeout(async () => {
-          await fetchPosts();
-        }, 500);
+        // Only refresh global posts if this is NOT a group post
+        if (!postData.groupId) {
+          // Refresh the posts list after successful creation
+          setTimeout(async () => {
+            await fetchPosts();
+          }, 500);
+        }
 
         // Refresh currentUser data to update userposts for Photos tab
         await checkAuth();
@@ -337,7 +345,7 @@ export const PostProvider = ({ children }) => {
     return true;
   }, [currentUser, posts]);
 
-  // Get filtered posts 
+  // Get filtered posts
   const getFilteredPosts = useCallback(() => {
     if (!currentUser || !posts.length) return [];
 
@@ -366,7 +374,7 @@ export const PostProvider = ({ children }) => {
     }
 
     const originalPosts = [...posts];
-    
+
     // Optimistic UI update
     setPosts(prevPosts =>
       prevPosts.map(post => {
@@ -396,7 +404,7 @@ export const PostProvider = ({ children }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || `Failed to like post: ${response.status}`);
       }
-      
+
     } catch (error) {
       toast.error(`Error: ${error.message}`);
       // Revert on error
