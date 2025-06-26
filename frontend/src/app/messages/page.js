@@ -22,6 +22,13 @@ const Messages = () => {
   const [users, setUsers] = useState([]);
   const [prevMessages, setPreviousMessages] = useState([]);
   const [uuid, setUuid] = useState("");
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [prevMessages]);
 
   const uuidRef = useRef(uuid);
   useEffect(() => {
@@ -101,7 +108,7 @@ const Messages = () => {
         setPreviousMessages((prev) => [
           ...prev,
           {
-            id : data.id,
+            id: data.id,
             sender_id: senderId,
             content: data.message,
             created_at: new Date().toISOString(),
@@ -172,9 +179,16 @@ const Messages = () => {
     if (message.trim() === '') return;
 
     webSocketOperations.sendPrivateMessage(uuid, message);
-    setPreviousMessages([]);
-    const data = await webSocketOperations.loadPreviousMessages(uuid);
-    setPreviousMessages(data.messages)
+
+    setPreviousMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(), // temporary ID
+        sender_id: currentUser.id,
+        content: message,
+        created_at: new Date().toISOString(),
+      },
+    ]);
     setMessage('');
   };
 
@@ -294,6 +308,8 @@ const Messages = () => {
                           {formatTime(msg.created_at)}
                         </p>
                       </div>
+                      {/* Scroll anchor */}
+                      <div ref={messagesEndRef} />
                     </div>
                   ))}
                 </div>
