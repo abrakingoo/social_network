@@ -36,6 +36,7 @@ const Settings = () => {
     lastName: "",
     email: "",
     nickname: "",
+    dateOfBirth: "",
     about: "",
   });
 
@@ -75,6 +76,9 @@ const Settings = () => {
         lastName: currentUser.lastName || "",
         email: currentUser.email || "",
         nickname: currentUser.nickname || "",
+        dateOfBirth: currentUser.dateOfBirth
+          ? new Date(currentUser.dateOfBirth).toISOString().split("T")[0]
+          : "",
         about: currentUser.about || "",
       });
 
@@ -107,6 +111,7 @@ const Settings = () => {
           lastName: profile.lastName,
           email: profile.email,
           nickname: profile.nickname || "",
+          dateOfBirth: profile.dateOfBirth,
           about: profile.about,
           isPublic: privacy.isPublic,
         });
@@ -179,6 +184,18 @@ const Settings = () => {
                         setProfile({ ...profile, nickname: e.target.value })
                       }
                       placeholder="Optional display name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                    <Input
+                      id="dateOfBirth"
+                      type="date"
+                      value={profile.dateOfBirth}
+                      onChange={(e) =>
+                        setProfile({ ...profile, dateOfBirth: e.target.value })
+                      }
                     />
                   </div>
 
