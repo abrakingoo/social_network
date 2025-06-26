@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useWebSocket, EVENT_TYPES, webSocketOperations } from '@/utils/websocket';
+import { useWebSocket, EVENT_TYPES, webSocketOperations, wsManager } from '@/utils/websocket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,29 +21,46 @@ const GroupChat = ({ groupId, groupData }) => {
   const { isConnected } = useWebSocket(
     EVENT_TYPES.GROUP_MESSAGE,
     useCallback((data) => {
-      // Handle real-time group messages
-      if (data.type === 'notification' && data.action_type === 'group_message') {
-        try {
-          const messageData = typeof data.data === 'string' ? JSON.parse(data.data) : data.data;
-          const newMessage = {
-            id: Date.now().toString(),
-            group_id: groupId,
-            sender_id: messageData.sender?.id || messageData.sender?.ID,
-            content: messageData.message,
-            created_at: new Date().toISOString(),
-            sender: messageData.sender
-          };
-          setMessages(prev => [...prev, newMessage]);
-        } catch (error) {
-          console.error('Error parsing group message:', error);
-        }
+      // Handle real-time group messages from backend
+      try {
+        const messageData = typeof data === 'string' ? JSON.parse(data) : data;
+        const newMessage = {
+          id: Date.now().toString(),
+          group_id: groupId,
+          sender_id: messageData.sender?.id || messageData.sender?.ID,
+          content: messageData.message,
+          created_at: new Date().toISOString(),
+          sender: {
+            id: messageData.sender?.id || messageData.sender?.ID,
+            ID: messageData.sender?.id || messageData.sender?.ID,
+            firstname: messageData.sender?.firstname || messageData.sender?.first_name,
+            lastname: messageData.sender?.lastname || messageData.sender?.last_name,
+            nickname: messageData.sender?.nickname,
+            avatar: messageData.sender?.avatar
+          }
+        };
+        setMessages(prev => [...prev, newMessage]);
+      } catch (error) {
+        console.error('Error parsing group message:', error);
       }
     }, [groupId])
   );
 
   // Load messages when component mounts or reconnects
   useEffect(() => {
-    if (!groupId || !isConnected) return;
+    if (!groupId) return;
+
+    // Check WebSocket manager connection status directly
+    const wsConnected = wsManager.isConnected();
+    if (!wsConnected) {
+      // Retry after a short delay if not connected
+      const timer = setTimeout(() => {
+        if (wsManager.isConnected()) {
+          loadGroupMessages();
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
 
     loadGroupMessages();
   }, [groupId, isConnected]);
@@ -60,10 +77,31 @@ const GroupChat = ({ groupId, groupData }) => {
 
     try {
       const data = await webSocketOperations.loadGroupMessages(groupId);
-      setMessages(data.messages || []);
+
+      // Backend sends messages directly in the response, not nested in data.messages
+      const messages = data.messages || [];
+
+      // Transform messages to match frontend expectations
+      const transformedMessages = messages.map(msg => ({
+        id: msg.id,
+        group_id: msg.group_id,
+        sender_id: msg.sender_id,
+        content: msg.content,
+        created_at: msg.created_at,
+        sender: {
+          id: msg.sender?.id || msg.sender_id,
+          ID: msg.sender?.id || msg.sender_id,
+          firstname: msg.sender?.firstname,
+          lastname: msg.sender?.lastname,
+          nickname: msg.sender?.nickname,
+          avatar: msg.sender?.avatar
+        }
+      }));
+
+      setMessages(transformedMessages);
     } catch (error) {
       console.error('Error loading group messages:', error);
-      toast.error('Failed to load group messages');
+      toast.error('Failed to load group messages: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -85,15 +123,15 @@ const GroupChat = ({ groupId, groupData }) => {
     const optimisticMessage = {
       id: `temp-${Date.now()}`,
       group_id: groupId,
-      sender_id: currentUser?.id,
+      sender_id: currentUser?.id || currentUser?.ID,
       content: messageText,
       created_at: new Date().toISOString(),
       sending: true,
       sender: {
-        id: currentUser?.id,
-        ID: currentUser?.id,
-        firstname: currentUser?.firstName,
-        lastname: currentUser?.lastName,
+        id: currentUser?.id || currentUser?.ID,
+        ID: currentUser?.id || currentUser?.ID,
+        firstname: currentUser?.firstName || currentUser?.first_name,
+        lastname: currentUser?.lastName || currentUser?.last_name,
         nickname: currentUser?.nickname,
         avatar: currentUser?.avatar
       }
@@ -165,7 +203,7 @@ const GroupChat = ({ groupId, groupData }) => {
     }
 
     return messages.map((msg, index) => {
-      const isCurrentUser = msg.sender_id === currentUser?.id;
+      const isCurrentUser = msg.sender_id === (currentUser?.id || currentUser?.ID);
       const showDate = index === 0 ||
         new Date(messages[index - 1]?.created_at).toDateString() !== new Date(msg.created_at).toDateString();
 
