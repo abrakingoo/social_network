@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 import {
   User,
   Lock,
@@ -20,30 +20,30 @@ import {
   MapPin,
   Save,
   Check,
-  X
-} from 'lucide-react';
+  X,
+} from "lucide-react";
 
 const Settings = () => {
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('account');
+  const [activeTab, setActiveTab] = useState("account");
+  const [loading, setLoading] = useState(false);
 
   // Form states
   const [profile, setProfile] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    location: '',
-    about: ''
+    firstName: "",
+    lastName: "",
+    email: "",
+    nickname: "",
+    about: "",
   });
 
   const [privacy, setPrivacy] = useState({
     isPublic: true,
     showEmail: false,
     showPhone: false,
-    showLocation: true
+    showLocation: true,
   });
 
   const [notifications, setNotifications] = useState({
@@ -51,39 +51,44 @@ const Settings = () => {
     newComment: true,
     friendRequest: true,
     taggedPost: true,
-    emailNotifications: false
+    emailNotifications: false,
   });
 
   const [appearance, setAppearance] = useState({
     darkMode: false,
     highContrast: false,
-    fontSize: 'medium',
-    reducedMotion: false
+    fontSize: "medium",
+    reducedMotion: false,
   });
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!currentUser) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     // Load user data
     if (currentUser) {
       setProfile({
-        firstName: currentUser.firstName || '',
-        lastName: currentUser.lastName || '',
-        email: currentUser.email || '',
-        phone: currentUser.phone || '',
-        location: currentUser.location || '',
-        about: currentUser.about || ''
+        firstName: currentUser.firstName || "",
+        lastName: currentUser.lastName || "",
+        email: currentUser.email || "",
+        nickname: currentUser.nickname || "",
+        about: currentUser.about || "",
       });
 
       setPrivacy({
-        isPublic: currentUser.isPublic !== undefined ? currentUser.isPublic : true,
-        showEmail: currentUser.showEmail !== undefined ? currentUser.showEmail : false,
-        showPhone: currentUser.showPhone !== undefined ? currentUser.showPhone : false,
-        showLocation: currentUser.showLocation !== undefined ? currentUser.showLocation : true
+        isPublic:
+          currentUser.isPublic !== undefined ? currentUser.isPublic : true,
+        showEmail:
+          currentUser.showEmail !== undefined ? currentUser.showEmail : false,
+        showPhone:
+          currentUser.showPhone !== undefined ? currentUser.showPhone : false,
+        showLocation:
+          currentUser.showLocation !== undefined
+            ? currentUser.showLocation
+            : true,
       });
     }
   }, [currentUser, router]);
@@ -93,13 +98,37 @@ const Settings = () => {
     return null;
   }
 
-  const saveSettings = (section) => {
-    // In a real app, this would save to backend
-    toast({
-      title: "Settings updated",
-      description: `Your ${section} settings have been saved.`,
-      variant: "success",
-    });
+  const saveSettings = async (section) => {
+    setLoading(true);
+    try {
+      if (section === "account") {
+        await updateUser({
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          nickname: profile.nickname || "",
+          about: profile.about,
+          isPublic: privacy.isPublic,
+        });
+      }
+
+      toast({
+        title: "Settings updated",
+        description: `Your ${section} settings have been saved successfully.`,
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description:
+          error.message ||
+          `Failed to save ${section} settings. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -114,10 +143,6 @@ const Settings = () => {
               <TabsTrigger value="account" className="flex items-center">
                 <User className="h-4 w-4 mr-2" />
                 Account
-              </TabsTrigger>
-              <TabsTrigger value="privacy" className="flex items-center">
-                <Lock className="h-4 w-4 mr-2" />
-                Privacy
               </TabsTrigger>
             </TabsList>
 
@@ -139,7 +164,21 @@ const Settings = () => {
                     <Input
                       id="lastName"
                       value={profile.lastName}
-                      onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                      onChange={(e) =>
+                        setProfile({ ...profile, lastName: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="nickname">Nickname</Label>
+                    <Input
+                      id="nickname"
+                      value={profile.nickname}
+                      onChange={(e) =>
+                        setProfile({ ...profile, nickname: e.target.value })
+                      }
+                      placeholder="Optional display name"
                     />
                   </div>
 
@@ -151,31 +190,7 @@ const Settings = () => {
                         id="email"
                         type="email"
                         value={profile.email}
-                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <div className="flex items-center space-x-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <Input
-                        id="phone"
-                        value={profile.phone}
-                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location</Label>
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <Input
-                        id="location"
-                        value={profile.location}
-                        onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+                        onChange={(e) =>setProfile({ ...profile, email: e.target.value })}
                       />
                     </div>
                   </div>
@@ -191,19 +206,6 @@ const Settings = () => {
                   />
                 </div>
 
-                <Button
-                  onClick={() => saveSettings('account')}
-                  className="bg-social hover:bg-social-dark"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Account Settings
-                </Button>
-              </div>
-            </TabsContent>
-
-            {/* Privacy Settings */}
-            <TabsContent value="privacy">
-              <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="publicProfile">Public Profile</Label>
@@ -214,62 +216,22 @@ const Settings = () => {
                   <Switch
                     id="publicProfile"
                     checked={privacy.isPublic}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, isPublic: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showEmail">Show Email</Label>
-                    <div className="text-sm text-gray-500">
-                      Display your email on your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="showEmail"
-                    checked={privacy.showEmail}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showEmail: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showPhone">Show Phone Number</Label>
-                    <div className="text-sm text-gray-500">
-                      Display your phone number on your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="showPhone"
-                    checked={privacy.showPhone}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showPhone: checked })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="showLocation">Show Location</Label>
-                    <div className="text-sm text-gray-500">
-                      Display your location on your profile
-                    </div>
-                  </div>
-                  <Switch
-                    id="showLocation"
-                    checked={privacy.showLocation}
-                    onCheckedChange={(checked) => setPrivacy({ ...privacy, showLocation: checked })}
+                    onCheckedChange={(checked) =>
+                      setPrivacy({ ...privacy, isPublic: checked })
+                    }
                   />
                 </div>
 
                 <Button
-                  onClick={() => saveSettings('privacy')}
+                  onClick={() => saveSettings("account")}
                   className="bg-social hover:bg-social-dark"
+                  disabled={loading}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  Save Privacy Settings
+                  {loading ? "Saving..." : "Save Account Settings"}
                 </Button>
               </div>
             </TabsContent>
-
           </Tabs>
         </CardContent>
       </Card>
