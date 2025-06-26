@@ -25,12 +25,13 @@ type PrivateMessage struct {
 }
 
 type GroupMessage struct {
-	GroupId   string    `json:"group_id"`
-	Message   string    `json:"message"`
-	ID        string    `json:"id"`
-	SenderID  string    `json:"sender_id"`
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
+	GroupId   string      `json:"group_id"`
+	Message   string      `json:"message"`
+	ID        string      `json:"id"`
+	SenderID  string      `json:"sender_id"`
+	Content   string      `json:"content"`
+	CreatedAt time.Time   `json:"created_at"`
+	Sender    UserSummary `json:"sender"`
 }
 
 type Notification struct {
