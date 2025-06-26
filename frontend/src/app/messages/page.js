@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { API_BASE_URL, useAuth } from "@/context/AuthContext";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Send, Search, ArrowLeft, Check, CheckCheck, Clock, AlertCircle } from "lucide-react";
-import {
-  EVENT_TYPES,
-  useWebSocket,
-  webSocketOperations,
-} from "@/utils/websocket";
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { API_BASE_URL, useAuth } from '@/context/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { Send, Search, ArrowLeft } from 'lucide-react';
+import { webSocketOperations, wsManager } from '@/utils/websocket';
 
 const Messages = () => {
   const router = useRouter();
@@ -50,120 +46,25 @@ const Messages = () => {
   const [conversationPreviews, setConversationPreviews] = useState({});
   const [loadingPreviews, setLoadingPreviews] = useState(false);
   const [uuid, setUuid] = useState("");
-  const [newMsgs, setNewMsgs] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState(new Set());
-  // 🔥 REMOVED: loadingMessages - we don't use loading states anymore for modern UX
-  const [messageError, setMessageError] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('connected');
-  const [retryCount, setRetryCount] = useState(0);
-  const [allMessages, setAllMessages] = useState([]);
-  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const messagesEndRef = useRef(null);
 
-  // 🔥 NEW: Optimistic UI state for unread count flicker fix
-  const [readingChats, setReadingChats] = useState(new Set());
-  const [optimisticReadStates, setOptimisticReadStates] = useState(new Map());
-
-  const messageEndRef = useRef(null);
-
-  // 🔥 OPTIMIZED: Scroll to bottom function
-  const scrollToBottom = useCallback(() => {
-    if (messageEndRef.current) {
-      messageEndRef.current.scrollIntoView({
-        behavior: "auto", // Instant scroll, no animation flash
-        block: "end"
-      });
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, []);
+  }, [prevMessages]);
 
-  // Real-time message handling with optimistic updates
-  useWebSocket(EVENT_TYPES.PRIVATE_MESSAGE, (message) => {
-    if (message.sender.id === uuid) {
-      // Message from current chat partner - add to current conversation
-      const newMessage = {
-        id: message.id || Date.now().toString(),
-        sender_id: message.sender.id,
-        receiver_id: currentUser?.id,
-        content: message.message,
-        created_at: new Date().toISOString(),
-        is_read: false
-      };
+  const uuidRef = useRef(uuid);
+  useEffect(() => {
+    uuidRef.current = uuid;
+  }, [uuid]);
 
-      setPreviousMessages(prev => [...prev, newMessage]);
-      setTimeout(() => scrollToBottom(), 50);
 
-      // 🔥 CRITICAL: Mark as read immediately since user is viewing
-      setTimeout(() => markMessagesAsRead(message.sender.id), 100);
-    } else {
-      // Message from someone else - update conversation preview
-      setConversationPreviews(prev => ({
-        ...prev,
-        [message.sender.id]: {
-          content: message.message,
-          created_at: new Date().toISOString(),
-          sender_id: message.sender.id,
-          is_read: false
-        }
-      }));
-
-      // Add to new messages for notifications
-      setNewMsgs((prev) => [...prev, message]);
-    }
-  });
-
-  // Listen for connection events
-  useWebSocket("connection", (data) => {
-    if (data.status === "connected") {
-      setConnectionStatus('connected');
-      setRetryCount(0);
-    } else if (data.status === "disconnected") {
-      setConnectionStatus('disconnected');
-    }
-  });
-
-  // Retry failed messages
-  const retryFailedMessage = useCallback(async (messageId, userId, content) => {
-    try {
-      setPreviousMessages(prev =>
-        prev.map(msg =>
-          msg.id === messageId
-            ? { ...msg, failed: false, sending: true }
-            : msg
-        )
-      );
-
-      webSocketOperations.sendPrivateMessage(userId, content);
-
-      setPreviousMessages(prev =>
-        prev.map(msg =>
-          msg.id === messageId
-            ? { ...msg, sending: false }
-            : msg
-        )
-      );
-    } catch (error) {
-      setPreviousMessages(prev =>
-        prev.map(msg =>
-          msg.id === messageId
-            ? { ...msg, sending: false, failed: true }
-            : msg
-        )
-      );
-
-      toast({
-        title: "Retry failed",
-        description: "Please check your connection and try again",
-        variant: "destructive"
-      });
-    }
-  }, [toast]);
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      const req = await fetch(`${API_BASE_URL}/api/users`, {
-        method: "get",
-        credentials: "include",
-      });
+  const fetchUsers = async () => {
+    const req = await fetch(`${API_BASE_URL}/api/users`, {
+      method: 'get',
+      credentials: 'include'
+    });
 
       if (!req.ok) {
         toast({
@@ -459,17 +360,52 @@ const Messages = () => {
     };
 
     checkIfMobile();
-    window.addEventListener("resize", checkIfMobile);
-    return () => window.removeEventListener("resize", checkIfMobile);
-  }, []);
 
-  // 🔥 CRITICAL: Mark as read immediately when viewing conversation
+    // Add event listener
+    window.addEventListener('resize', checkIfMobile);
+    fetchUsers();
+
+
+
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, [currentUser, router]);
+
   useEffect(() => {
-    if (uuid && prevMessages.length > 0) {
-      // Mark as read immediately, not with delay
-      markMessagesAsRead(uuid);
-    }
-  }, [uuid, prevMessages, markMessagesAsRead]);
+    const handlePrivateMessage = (msg) => {
+      const { action_type, data } = msg;
+
+      if (action_type !== 'private_message' || !data || !data.sender) {
+        return;
+      }
+
+      const senderId = data.sender.id;
+
+      if (uuidRef.current === senderId) {
+        setPreviousMessages((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            sender_id: senderId,
+            content: data.message,
+            created_at: new Date().toISOString(),
+          }
+        ]);
+      } else {
+        toast({
+          title: `New message from ${data.sender.firstname || 'Someone'}`,
+          description: data.message,
+        });
+      }
+    };
+
+    wsManager.addListener('notification', handlePrivateMessage);
+
+    return () => {
+      wsManager.removeListener('notification', handlePrivateMessage);
+    };
+  }, [toast]);
 
   let usersToMessage = [];
 
@@ -552,174 +488,29 @@ const Messages = () => {
   };
 
   const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
-    if (message.trim() === "") return;
+    e.preventDefault();
+    if (message.trim() === '') return;
 
-    const messageText = message.trim();
-    const tempId = Date.now().toString();
+    webSocketOperations.sendPrivateMessage(uuid, message);
 
-    const optimisticMessage = {
-      id: tempId,
-      sender_id: currentUser?.id,
-      receiver_id: uuid,
-      content: messageText,
-      created_at: new Date().toISOString(),
-      is_read: false,
-      sending: true
-    };
-
-    setPreviousMessages(prev => [...prev, optimisticMessage]);
-    setMessage("");
-
-    setTimeout(() => scrollToBottom(), 50);
-
-    try {
-      webSocketOperations.sendPrivateMessage(uuid, messageText);
-
-      setPreviousMessages(prev =>
-        prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sending: false }
-            : msg
-        )
-      );
-    } catch (error) {
-      setPreviousMessages(prev =>
-        prev.map(msg =>
-          msg.id === tempId
-            ? { ...msg, sending: false, failed: true }
-            : msg
-        )
-      );
-
-      toast({
-        title: "Failed to send message",
-        description: "Please try again",
-        variant: "destructive"
-      });
-    }
+    setPreviousMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(), // temporary ID
+        sender_id: currentUser.id,
+        content: message,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+    setMessage('');
   };
 
-  const enhancedChats = usersToMessage.map(getConversationData);
-
-  const filteredChats = enhancedChats
-    .filter((user) =>
-      (user.firstname + " " + user.lastname)
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (a.hasUnread && !b.hasUnread) return -1;
-      if (!a.hasUnread && b.hasUnread) return 1;
-
-      if (!a.lastMessageTime && !b.lastMessageTime) return 0;
-      if (!a.lastMessageTime) return 1;
-      if (!b.lastMessageTime) return -1;
-
-      return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
-    });
-
-  // 🔥 MODERN UX: No loading state - instant feel like WhatsApp/Telegram
-  const renderMessages = () => {
-    // Only show error state if there's actually an error
-    if (messageError) {
-      return (
-        <div className="flex justify-center items-center py-8">
-          <div className="text-center">
-            <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-            <p className="text-red-600">{messageError}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => prevMsg(uuid, selectedChat)}
-            >
-              Try Again
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    // 🔥 MODERN: Show beautiful empty state instead of loading
-    if (prevMessages.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="text-6xl mb-4">💬</div>
-          <h3 className="text-lg font-medium text-gray-700 mb-2">
-            Start the conversation
-          </h3>
-          <p className="text-gray-500 text-center max-w-sm">
-            {usersToMessage[selectedChat]
-              ? `Send a message to begin chatting with ${usersToMessage[selectedChat].firstname}`
-              : "Send a message to start the conversation"
-            }
-          </p>
-        </div>
-      );
-    }
-
-    // Show messages with loading only for infinite scroll (older messages)
-    return (
-      <>
-        {loadingOlderMessages && (
-          <div className="flex justify-center items-center py-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-social"></div>
-            <span className="ml-2 text-sm text-gray-500">Loading older messages...</span>
-          </div>
-        )}
-
-        {prevMessages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.sender_id != uuid ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${
-                msg.sender_id != uuid
-                  ? "bg-social text-white rounded-tr-none"
-                  : "bg-white border border-gray-200 text-gray-800 rounded-tl-none"
-              }`}
-            >
-              <p>{msg.content}</p>
-              <div className={`flex items-center justify-between mt-1 ${msg.sender_id !== uuid ? "text-white/70" : "text-gray-500"}`}>
-                <span className="text-xs">
-                  {formatTime(msg.created_at)}
-                </span>
-                {msg.sender_id === currentUser?.id && (
-                  <div className="flex items-center ml-2">
-                    {msg.sending && (
-                      <Clock className="h-3 w-3 text-gray-400" />
-                    )}
-                    {msg.failed && (
-                      <div className="flex items-center">
-                        <AlertCircle className="h-3 w-3 text-red-400" />
-                        <button
-                          onClick={() => retryFailedMessage(msg.id, uuid, msg.content)}
-                          className="ml-1 text-xs text-red-400 hover:text-red-600 underline"
-                        >
-                          Retry
-                        </button>
-                      </div>
-                    )}
-                    {!msg.sending && !msg.failed && (
-                      <>
-                        {msg.is_read ? (
-                          <CheckCheck className="h-3 w-3 text-blue-400" />
-                        ) : (
-                          <Check className="h-3 w-3 text-gray-400" />
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </>
-    );
-  };
+  // Filter chats based on search query
+  const filteredChats = usersToMessage.filter(user =>
+    (user.firstname + ' ' + user.lastname)
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className={`h-[calc(100vh-120px)] ${isMobile ? "-mx-4" : ""}`}>
@@ -844,12 +635,26 @@ const Messages = () => {
                   </div>
                 </div>
 
-                {/* Connection Status */}
-                {connectionStatus === 'disconnected' && (
-                  <div className="bg-red-50 border-b border-red-200 p-2 text-center">
-                    <div className="flex items-center justify-center text-red-600 text-sm">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      Connection lost. Messages may not be delivered.
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                  {prevMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.sender_id != uuid ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 ${msg.sender_id != uuid
+                          ? 'bg-social text-white rounded-tr-none'
+                          : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'
+                          }`}
+                      >
+                        <p>{msg.content}</p>
+                        <p className={`text-xs mt-1 ${msg.sender_id !== uuid ? 'text-white/70' : 'text-gray-500'}`}>
+                          {formatTime(msg.created_at)}
+                        </p>
+                      </div>
+                      {/* Scroll anchor */}
+                      <div ref={messagesEndRef} />
                     </div>
                   </div>
                 )}

@@ -91,14 +91,32 @@ const Followers = () => {
     router.push(`/messages`)
   }
 
+  const handleUnfollowAUser = async (userID) => {
+    const res = await webSocketOperations.unfollowUser(userID);
+    if (res.success) {
+      setUsers([]);
+      fetchUsers();
+      toast({
+        title: "Follow request rejected",
+        description: "The follow request has been rejected.",
+      });
+    }
+  }
+
   // Handle rejecting a friend request
-  const handleRejectFriend = (friendId) => {
-    setUsers([]);
-    fetchUsers([]);
-    toast({
-      title: "Follow request rejected",
-      description: "The follow request has been rejected.",
-    });
+  const handleRejectFriend = async (friendId) => {
+    const res = await webSocketOperations.respondToFollowRequest(
+      friendId,
+      "declined",
+    );
+    if (res.success) {
+      setUsers([]);
+      fetchUsers();
+      toast({
+        title: "Follow request rejected",
+        description: "The follow request has been rejected.",
+      });
+    }
   };
 
   // Handle sending a friend request
@@ -299,9 +317,14 @@ const Followers = () => {
                           Requested
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => navigateToMsg()}>
-                          Message
-                        </Button>
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => navigateToMsg()}>
+                            Message
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleUnfollowAUser(friend.id)}>
+                            Unfollow
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>

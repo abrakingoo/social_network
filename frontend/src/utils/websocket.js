@@ -214,10 +214,7 @@ class WebSocketManager {
           this.handleGroupInvitationNotification(data);
           break;
         case "private_message":
-          this.handlePrivateMessage(data);
-          break;
-        case "group_message":
-          this.handleGroupMessage(data);
+          this.notifyListeners("notification", message);
           break;
         default:
       }

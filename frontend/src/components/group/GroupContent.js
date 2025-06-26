@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +20,12 @@ const GroupContent = ({
   onCreateEvent,
   onRSVP,
   onUpdateGroupData // Add callback to update group data
+  onRSVP,
+  onUpdateGroupData // Add callback to update group data
 }) => {
+  const { currentUser } = useAuth();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
   const { currentUser } = useAuth();
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -257,6 +263,13 @@ const GroupContent = ({
           {groupData.group_post && groupData.group_post.length > 0 ? (
             <div className="space-y-6">
               {groupData.group_post.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onToggleLike={handleGroupPostLike}
+                  onToggleCommentLike={handleGroupCommentLike}
+                  onAddComment={handleGroupAddComment}
+                />
                 <PostCard
                   key={post.id}
                   post={post}
