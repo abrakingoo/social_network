@@ -188,6 +188,7 @@ class WebSocketManager {
       this.handleBackendNotification(data);
     } else if (data.type === "error") {
       // Backend sends errors with exact format: { "type": "error", "message": "..." }
+      console.error('WebSocket error received:', data.message);
       this.notifyListeners("error", { message: data.message });
     } else {
       this.notifyListeners(data.type, data.data || data);
@@ -215,6 +216,9 @@ class WebSocketManager {
         case "private_message":
           this.handlePrivateMessage(data);
           break;
+        case "group_message":
+          this.handleGroupMessage(data);
+          break;
         default:
       }
     }
@@ -223,6 +227,11 @@ class WebSocketManager {
   handlePrivateMessage(data) {
     console.log("WebSocketManager received private_message:", data);
     this.notifyListeners(EVENT_TYPES.PRIVATE_MESSAGE, data);
+  }
+
+  handleGroupMessage(data) {
+    console.log("WebSocketManager received group_message:", data);
+    this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, data);
   }
 
   // Handle join request notifications matching backend format
@@ -946,7 +955,13 @@ export const webSocketOperations = {
   // Load group messages
   loadGroupMessages(groupId) {
     return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+        reject(new Error('Load group messages request timed out'));
+      }, 10000); // 10 second timeout
+
       const listener = (data) => {
+        clearTimeout(timeoutId);
         wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
         resolve(data);
       };
@@ -958,6 +973,7 @@ export const webSocketOperations = {
           group_id: groupId,
         });
       } catch (err) {
+        clearTimeout(timeoutId);
         wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
         reject(err);
       }
