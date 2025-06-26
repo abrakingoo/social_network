@@ -93,12 +93,18 @@ const Followers = () => {
 
   // Handle rejecting a friend request
   const handleRejectFriend = (friendId) => {
-    setUsers([]);
-    fetchUsers([]);
-    toast({
-      title: "Follow request rejected",
-      description: "The follow request has been rejected.",
-    });
+    const res = await webSocketOperations.respondToFollowRequest(
+      friendId,
+      "declined",
+    );
+    if (res.success) {
+      setUsers([]);
+      fetchUsers();
+      toast({
+        title: "Follow request rejected",
+        description: "The follow request has been rejected.",
+      });
+    }
   };
 
   // Handle sending a friend request
