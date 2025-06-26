@@ -221,21 +221,23 @@ const GroupChat = ({ groupId, groupData }) => {
             </div>
           )}
 
-          <div className={`flex items-start space-x-3 mb-4 ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={msg.sender?.avatar} />
-              <AvatarFallback>
-                {(msg.sender?.firstname?.[0] || msg.sender?.first_name?.[0] || '?').toUpperCase()}
-                {(msg.sender?.lastname?.[0] || msg.sender?.last_name?.[0] || '').toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          <div className={`flex items-start mb-4 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+            {!isCurrentUser && (
+              <Avatar className="h-8 w-8 mr-3">
+                <AvatarImage src={msg.sender?.avatar} />
+                <AvatarFallback>
+                  {(msg.sender?.firstname?.[0] || msg.sender?.first_name?.[0] || '?').toUpperCase()}
+                  {(msg.sender?.lastname?.[0] || msg.sender?.last_name?.[0] || '').toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
 
-            <div className={`flex-1 ${isCurrentUser ? 'text-right' : ''}`}>
-              <div className="flex items-center space-x-2 mb-1">
-                <span className={`text-sm font-medium ${isCurrentUser ? 'order-2' : ''}`}>
+            <div className={`flex flex-col max-w-xs ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+              <div className={`flex items-center space-x-2 mb-1 ${isCurrentUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <span className="text-sm font-medium">
                   {isCurrentUser ? 'You' : senderName}
                 </span>
-                <span className={`text-xs text-gray-500 ${isCurrentUser ? 'order-1' : ''}`}>
+                <span className="text-xs text-gray-500">
                   {formatTime(msg.created_at)}
                 </span>
                 {msg.sending && (
@@ -243,14 +245,24 @@ const GroupChat = ({ groupId, groupData }) => {
                 )}
               </div>
 
-              <div className={`inline-block px-4 py-2 rounded-lg max-w-xs break-words ${
+              <div className={`px-4 py-2 rounded-lg break-words ${
                 isCurrentUser
-                  ? 'bg-social text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  ? 'bg-social text-white rounded-br-sm'
+                  : 'bg-gray-100 text-gray-900 rounded-bl-sm'
               } ${msg.sending ? 'opacity-70' : ''}`}>
                 {msg.content}
               </div>
             </div>
+
+            {isCurrentUser && (
+              <Avatar className="h-8 w-8 ml-3">
+                <AvatarImage src={msg.sender?.avatar} />
+                <AvatarFallback>
+                  {(msg.sender?.firstname?.[0] || msg.sender?.first_name?.[0] || '?').toUpperCase()}
+                  {(msg.sender?.lastname?.[0] || msg.sender?.last_name?.[0] || '').toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            )}
           </div>
         </div>
       );
