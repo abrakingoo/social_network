@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"html"
 	"net/http"
 	"strings"
@@ -20,11 +19,12 @@ func (app *App) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	comment := Comment{}
-	if err := json.NewDecoder(r.Body).Decode(&comment); err != nil {
-		app.JSONResponse(w, r, http.StatusBadRequest, "invalid request body", Error)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		app.JSONResponse(w, r, http.StatusBadRequest, "Failed to parse form data", Error)
 		return
 	}
+
+	comment := Comment{}
 
 	if strings.TrimSpace(comment.Content) == "" || strings.TrimSpace(comment.CommentId) == "" {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Empty comment not allowed", Error)
