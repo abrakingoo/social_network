@@ -2,10 +2,30 @@
 
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { wsManager } from "@/utils/websocket";
+import userService from "@/services/userService";
 
 const AuthContext = createContext();
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// Transform backend user data to frontend format
+const transformUserData = (backendUser) => {
+  if (!backendUser) return null;
+
+  return {
+    ...backendUser,
+    firstName: backendUser.first_name || backendUser.firstName,
+    lastName: backendUser.last_name || backendUser.lastName,
+    dateOfBirth: backendUser.date_of_birth || backendUser.dateOfBirth,
+    aboutMe: backendUser.about_me || backendUser.aboutMe,
+    isPublic:
+      backendUser.is_public !== undefined
+        ? backendUser.is_public
+        : backendUser.isPublic,
+    createdAt: backendUser.created_at || backendUser.createdAt,
+  };
+};
 
 class AuthError extends Error {
   constructor(message, type = "general", field = null, status = null) {
@@ -27,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     if (user && !wsManager.isConnected()) {
       // User authenticated and WebSocket not connected
       wsManager.setAuthState(true);
-      const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/api/ws';
+      const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || "ws://localhost:8000/api/ws";
       wsManager.connect(wsUrl);
     } else if (!user && wsManager.isConnected()) {
       // User not authenticated and WebSocket is connected
@@ -60,9 +80,10 @@ export const AuthProvider = ({ children }) => {
           userObject !== null &&
           Object.keys(userObject).length > 0
         ) {
-          setCurrentUser(userObject);
-          manageWebSocket(userObject); // Single WebSocket management point
-          return userObject;
+          const transformedUser = transformUserData(userObject);
+          setCurrentUser(transformedUser);
+          manageWebSocket(transformedUser); // Single WebSocket management point
+          return transformedUser;
         }
       }
 
@@ -200,7 +221,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const data = await response.json();
-      return data.user;
+      return transformUserData(data.user);
     } catch (error) {
       throw error;
     }
@@ -209,7 +230,6 @@ export const AuthProvider = ({ children }) => {
   // Get all users
   const getAllUsers = async () => {
     if (currentUser) {
-
       try {
         const response = await fetch(`${API_BASE_URL}/api/users`, {
           credentials: "include",
@@ -223,10 +243,41 @@ export const AuthProvider = ({ children }) => {
         }
 
         const data = await response.json();
-        return data.users;
+        return data.users.map(transformUserData);
       } catch (error) {
         throw error;
       }
+    }
+  };
+
+  // Update user profile
+  const updateUser = async (userData) => {
+    try {
+      // Transform frontend field names to backend field names
+      const backendData = {
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        email: userData.email,
+        nickname: userData.nickname,
+        about_me: userData.about,
+        is_public: userData.isPublic,
+        date_of_birth: userData.dateOfBirth,
+      };
+
+      // Remove undefined values
+      const filteredData = Object.fromEntries(
+        Object.entries(backendData).filter(([_, value]) => value !== undefined),
+      );
+
+      const result = await userService.updateUser(filteredData);
+
+      // Refresh the current user data
+      await checkAuth();
+
+      return result;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      throw error;
     }
   };
 
@@ -239,6 +290,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         getUserById,
         getAllUsers,
+        updateUser,
         checkAuth,
       }}
     >
