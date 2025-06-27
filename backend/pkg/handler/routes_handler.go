@@ -99,6 +99,7 @@ func (app *App) Routes() http.Handler {
 	mux.Handle("/api/likeComment", app.AuthMiddleware(http.HandlerFunc(app.LikeComment)))
 	mux.Handle("/api/likePost", app.AuthMiddleware(http.HandlerFunc(app.LikePost)))
 	mux.Handle("/api/notifications", app.AuthMiddleware(http.HandlerFunc(app.Notifications)))
+	mux.Handle("/api/getProfile", app.AuthMiddleware(http.HandlerFunc(app.GetProfile)))
 
 	return mux
 }
