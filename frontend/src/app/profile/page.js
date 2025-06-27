@@ -40,31 +40,50 @@ const Profile = () => {
 
   // Function to handle successful post creation
   const handlePostCreated = () => {
-    setShowPostForm(false); 
+    setShowPostForm(false);
   };
 
   // Extract username from pathname if available
   useEffect(() => {
-    // Check if we're on a specific user's profile or the current user's profile
-    const pathParts = pathname.split("/");
-    const username = pathParts.length > 2 ? pathParts[2] : null;
+    const loadProfileUser = async () => {
+      // Check if we're on a specific user's profile or the current user's profile
+      const pathParts = pathname.split("/");
+      const username = pathParts.length > 2 ? pathParts[2] : null;
 
-    if (username) {
-      const foundUser = getAllUsers().find(
-        (u) =>
-          `${u.firstName.toLowerCase()}-${u.lastName.toLowerCase()}` ===
-          username.toLowerCase(),
-      );
+      if (username) {
+        try {
+          const allUsers = await getAllUsers();
+          const foundUser = allUsers?.find(
+            (u) =>
+              `${u.firstName?.toLowerCase()}-${u.lastName?.toLowerCase()}` ===
+              username.toLowerCase(),
+          );
 
-      if (foundUser) {
-        setProfileUser(foundUser);
+          if (foundUser) {
+            setProfileUser(foundUser);
+          } else {
+            router.push("/not-found");
+          }
+        } catch (error) {
+          console.error("Error fetching users:", error);
+          router.push("/not-found");
+        }
       } else {
-        router.push("/not-found");
+        console.log("Setting profile user to current user:", currentUser);
+        console.log(
+          "Current user isPublic value:",
+          currentUser?.isPublic,
+          "is_public value:",
+          currentUser?.is_public,
+        );
+        setProfileUser(currentUser);
       }
-    } else {
-      setProfileUser(currentUser);
+      setIsLoading(false);
+    };
+
+    if (currentUser) {
+      loadProfileUser();
     }
-    setIsLoading(false);
   }, [currentUser, pathname, router, getAllUsers]);
 
   // Modify the useEffect to only redirect after auth is loaded
@@ -94,7 +113,18 @@ const Profile = () => {
   }
 
   const isOwnProfile = currentUser.id === profileUser.id;
-  const userPosts = isOwnProfile && currentUser && currentUser.userposts ? currentUser.userposts : getUserPosts(profileUser.id);
+
+  // Debug logging for profile display
+  console.log("Profile User Data:", {
+    id: profileUser.id,
+    isPublic: profileUser.isPublic,
+    is_public: profileUser.is_public,
+    isOwnProfile,
+  });
+  const userPosts =
+    isOwnProfile && currentUser && currentUser.userposts
+      ? currentUser.userposts
+      : getUserPosts(profileUser.id);
   const userFirstName = profileUser.first_name || profileUser.firstName;
   const userLastName = profileUser.last_name || profileUser.lastName;
   const userNickname = profileUser.nickname;
@@ -103,12 +133,20 @@ const Profile = () => {
   const userCreatedAt = profileUser.created_at || profileUser.createdAt;
 
   // Extract all photos from user's posts for the Photos tab
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const userPhotos = userPosts.flatMap(post => post.media || post.images || []).map(photo => {
-    // Check if photo is an object with a URL property or a direct string
-    const photoUrl = typeof photo === 'object' && photo.URL ? photo.URL : (typeof photo === 'object' && photo.url ? photo.url : photo);
-    return `${API_BASE_URL}/${photoUrl}`;
-  });
+  const API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const userPhotos = userPosts
+    .flatMap((post) => post.media || post.images || [])
+    .map((photo) => {
+      // Check if photo is an object with a URL property or a direct string
+      const photoUrl =
+        typeof photo === "object" && photo.URL
+          ? photo.URL
+          : typeof photo === "object" && photo.url
+            ? photo.url
+            : photo;
+      return `${API_BASE_URL}/${photoUrl}`;
+    });
 
   const userAbout = profileUser.about_me || profileUser.about;
   const h1Name = userNickname || userFirstName || "";
@@ -176,13 +214,23 @@ const Profile = () => {
           <div>
             <h1 className="text-2xl font-bold">{h1Name}</h1>
             <div className="flex items-center space-x-2 mt-1 text-gray-500">
-              {profileUser.isPublic ? (
+              {(
+                profileUser.isPublic !== undefined
+                  ? profileUser.isPublic
+                  : profileUser.is_public
+              ) ? (
                 <Globe className="h-4 w-4" />
               ) : (
                 <Lock className="h-4 w-4" />
               )}
               <span>
-                {profileUser.isPublic ? "Public Profile" : "Private Profile"}
+                {(
+                  profileUser.isPublic !== undefined
+                    ? profileUser.isPublic
+                    : profileUser.is_public
+                )
+                  ? "Public Profile"
+                  : "Private Profile"}
               </span>
             </div>
 
@@ -224,7 +272,12 @@ const Profile = () => {
 
           <div>
             {isOwnProfile ? (
-              <Button variant="outline">Edit Profile</Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/settings")}
+              >
+                Edit Profile
+              </Button>
             ) : (
               <Button className="bg-social hover:bg-social-dark">
                 Add Friend
@@ -290,34 +343,42 @@ const Profile = () => {
             <TabsContent value="posts" className="space-y-4">
               {isOwnProfile && showPostForm && (
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                  <Suspense fallback={<div className="p-4 text-center">Loading form...</div>}>
+                  <Suspense
+                    fallback={
+                      <div className="p-4 text-center">Loading form...</div>
+                    }
+                  >
                     <PostForm onPostCreated={handlePostCreated} />
                   </Suspense>
                 </div>
               )}
-              {userPosts.length > 0 ? (
-                userPosts.map((post) => <PostCard key={post.id} post={post} />)
-              ) : !showPostForm && (
-                <div className="text-center p-8 bg-white rounded-lg shadow-sm">
-                  <h3 className="text-lg font-medium text-gray-700">No posts yet</h3>
-                  <p className="text-gray-500 mt-2">
-                    {isOwnProfile
-                      ? "When you create posts, they'll appear here."
-                      : `${profileUser.firstName} hasn't posted anything yet.`}
-                  </p>
-                  {isOwnProfile && (
-                    <Button
-                      onClick={() => {
-                        // Toggle the visibility of the post form on the profile page
-                        setShowPostForm(!showPostForm);
-                      }}
-                      className="mt-4 bg-social hover:bg-social-dark text-white"
-                    >
-                      Create your first post
-                    </Button>
+              {userPosts.length > 0
+                ? userPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))
+                : !showPostForm && (
+                    <div className="text-center p-8 bg-white rounded-lg shadow-sm">
+                      <h3 className="text-lg font-medium text-gray-700">
+                        No posts yet
+                      </h3>
+                      <p className="text-gray-500 mt-2">
+                        {isOwnProfile
+                          ? "When you create posts, they'll appear here."
+                          : `${profileUser.firstName} hasn't posted anything yet.`}
+                      </p>
+                      {isOwnProfile && (
+                        <Button
+                          onClick={() => {
+                            // Toggle the visibility of the post form on the profile page
+                            setShowPostForm(!showPostForm);
+                          }}
+                          className="mt-4 bg-social hover:bg-social-dark text-white"
+                        >
+                          Create your first post
+                        </Button>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
             </TabsContent>
             <TabsContent value="about">
               <div className="bg-white rounded-lg shadow-sm p-6">
