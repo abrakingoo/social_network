@@ -6,24 +6,6 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import RegisterForm from '@/components/auth/RegisterForm';
 
-const formatDateForInput = (dateValue) => {
-  if (!dateValue) return '';
-  if (typeof dateValue === 'string') {
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateValue)) return dateValue;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-      const [year, month, day] = dateValue.split('-');
-      return `${day}/${month}/${year}`;
-    }
-  }
-  if (dateValue instanceof Date) {
-    const day = String(dateValue.getDate()).padStart(2, '0');
-    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
-    const year = dateValue.getFullYear();
-    return `${day}/${month}/${year}`;
-  }
-  return '';
-};
-
 export default function RegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -42,7 +24,6 @@ export default function RegisterPage() {
   const handleRegister = async (formData) => {
     setIsLoading(true);
     setBackendErrors({});
-
     try {
       const backendFormData = {
         email: formData.email,
@@ -50,7 +31,9 @@ export default function RegisterPage() {
         confirmed_password: formData.confirmed_password,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        date_of_birth: formatDateForInput(formData.date_of_birth),
+        date_of_birth: formData.date_of_birth
+          ? new Date(formData.date_of_birth).toLocaleDateString('en-GB')
+          : new Date('2000-01-01').toLocaleDateString('en-GB'),
         avatar: formData.avatar,
         nickname: formData.nickname || formData.email.split('@')[0],
         about_me: formData.about || '',
