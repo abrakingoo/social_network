@@ -269,13 +269,9 @@ export const AuthProvider = ({ children }) => {
         Object.entries(backendData).filter(([_, value]) => value !== undefined),
       );
 
-      // Call the API
-      console.log("Sending update data to API:", filteredData);
       const result = await userService.updateUser(filteredData);
-      console.log("Update API response:", result);
 
       // Refresh the current user data
-      console.log("Refreshing user data after update...");
       await checkAuth();
 
       return result;
