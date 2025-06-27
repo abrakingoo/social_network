@@ -30,7 +30,7 @@ func (app *App) AddComment(w http.ResponseWriter, r *http.Request) {
 	comment.Content = r.FormValue("content")
 	comment.CommentId = r.FormValue("comment_id")
 
-	if strings.TrimSpace(comment.Content) == "" || strings.TrimSpace(comment.CommentId) == "" {
+	if strings.TrimSpace(comment.Content) == "" || strings.TrimSpace(comment.CommentId) == "" || strings.TrimSpace(comment.PostId) == "" {
 		app.JSONResponse(w, r, http.StatusBadRequest, "Empty comment not allowed", Error)
 		return
 	}
