@@ -52,4 +52,13 @@ func (app *App) GetProfile(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusForbidden, "Profile is private", Error)
 		return
 	}
+
+	userData, err := app.Queries.FetchUserData(queryId.UserID)
+	if err != nil {
+		fmt.Println("Error fetching user data:", err)
+		app.JSONResponse(w, r, http.StatusInternalServerError, "failed to fetch user data", Error)
+		return
+	}
+
+	app.JSONResponse(w, r, http.StatusOK, userData, Success)
 }
