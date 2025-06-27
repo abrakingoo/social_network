@@ -30,6 +30,7 @@ var allowedRoutes = map[string][]string{
 	"/api/likeComment":   {"POST", "OPTIONS"},
 	"/api/likePost":      {"POST", "OPTIONS"},
 	"/api/notifications": {"GET", "OPTIONS"},
+	"/api/getProfile":    {"GET", "OPTIONS", "POST"},
 }
 
 type App struct {
