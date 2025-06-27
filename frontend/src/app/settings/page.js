@@ -68,7 +68,6 @@ const Settings = () => {
       router.push("/login");
       return;
     }
-
     // Load user data
     if (currentUser) {
       setProfile({
@@ -79,7 +78,7 @@ const Settings = () => {
         dateOfBirth: currentUser.dateOfBirth
           ? new Date(currentUser.dateOfBirth).toISOString().split("T")[0]
           : "",
-        about: currentUser.about || "",
+        about: currentUser.about_me || "",
       });
 
       setPrivacy({
