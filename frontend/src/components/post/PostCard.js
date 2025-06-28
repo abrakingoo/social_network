@@ -119,7 +119,7 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
 
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
-    if (commentText.trim() || commentImageFiles.length > 0) {
+    if (commentText.trim()) {
       // Use onAddComment prop if provided (for group posts), otherwise use context method
       const commentHandler = onAddComment || addComment;
       if (typeof commentHandler === 'function') {
@@ -467,7 +467,7 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
                           type="submit"
                           size="sm"
                           className="rounded-full"
-                          disabled={!commentText.trim() && commentImageFiles.length === 0}
+                          disabled={!commentText.trim()}
                         >
                           <Send className="h-4 w-4" />
                         </Button>
