@@ -22,8 +22,18 @@ const GroupChat = ({ groupId, groupData }) => {
     EVENT_TYPES.GROUP_MESSAGE,
     useCallback((data) => {
       // Handle real-time group messages from backend
+      console.log("🔍 DEBUG 5: GroupChat useWebSocket callback received data:", data);
+      console.log("🔍 DEBUG 5.1: Current groupId in callback:", groupId);
       try {
         const messageData = typeof data === 'string' ? JSON.parse(data) : data;
+        console.log("🔍 DEBUG 5.2: Parsed message data:", messageData);
+
+        // Only process messages for the current group
+        if (messageData.group_id && messageData.group_id !== groupId) {
+          console.log("🔍 DEBUG 5.3: Message for different group, ignoring. Message group:", messageData.group_id, "Current group:", groupId);
+          return;
+        }
+
         const newMessage = {
           id: Date.now().toString(),
           group_id: groupId,
@@ -39,11 +49,17 @@ const GroupChat = ({ groupId, groupData }) => {
             avatar: messageData.sender?.avatar
           }
         };
-        setMessages(prev => [...prev, newMessage]);
+        console.log("🔍 DEBUG 5.4: Adding new message to state:", newMessage);
+        setMessages(prev => {
+          console.log("🔍 DEBUG 5.5: Previous messages count:", prev.length);
+          const newMessages = [...prev, newMessage];
+          console.log("🔍 DEBUG 5.6: New messages count:", newMessages.length);
+          return newMessages;
+        });
       } catch (error) {
         console.error('Error parsing group message:', error);
       }
-    }, [groupId])
+    }, [groupId]) // Include groupId dependency to ensure callback uses current groupId
   );
 
   // Load messages when component mounts or reconnects
