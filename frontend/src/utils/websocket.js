@@ -1,4 +1,3 @@
-// frontend/src/utils/websocket.js - Production Ready: Debug logs removed
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
