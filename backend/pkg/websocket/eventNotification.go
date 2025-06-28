@@ -83,4 +83,23 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		c.SendError("failed to add notification")
 		return
 	}
+	payload := map[string]any{
+		"type": "notification",
+		"case": "group_event",
+		"data": map[string]any{
+			"title":       event.Title,
+			"event_time":  event.EventTime.Format("2006-01-02 15:04:05"),
+			"location":    event.Location,
+			"description": event.Description,
+		},
+	}
+
+	sendData, err := json.Marshal(payload)
+	if err != nil {
+		c.SendError("failed to marshal event data")
+		return
+	}
+
+	h.BroadcastToGroup(c, groupId, sendData)
+	c.SendSuccess("Event created successfully")
 }
