@@ -2,19 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"time"
 
+	"social/pkg/model"
 	"social/pkg/util"
 )
-
-type AddEventData struct {
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	EventTime   time.Time `json:"event_time"`
-	GroupTitle  string    `json:"group_title"`
-	Location    string    `json:"location"`
-}
 
 func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 	userID, err := app.GetSessionData(r)
@@ -23,7 +16,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event := AddEventData{}
+	var event model.AddEventData
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		app.JSONResponse(w, r, http.StatusBadRequest, "invalid request body", Error)
 		return
@@ -39,7 +32,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		app.JSONResponse(w, r, http.StatusBadRequest, "missing required fields", Error)
 		return
 	}
-
+	eventID := util.UUIDGen()
 	err = app.Queries.InsertData("events", []string{
 		"id",
 		"title",
@@ -49,7 +42,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		"location",
 		"description",
 	}, []any{
-		util.UUIDGen(),
+		eventID,
 		event.Title,
 		userID,
 		groupId,
@@ -59,6 +52,32 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		app.JSONResponse(w, r, http.StatusConflict, "failed to add event", Error)
+		return
+	}
+
+	eventStr := fmt.Sprintf("created event - %s ", event.Title)
+	err = app.Queries.InsertData("notifications", []string{
+		"id",
+		"actor_id",
+		"recipient_id",
+		"recipient_group_id",
+		"type",
+		"message",
+		"entity_id",
+		"entity_type",
+	}, []any{
+		util.UUIDGen(),
+		userID,
+		"",
+		groupId,
+		"group_event",
+		eventStr,
+		eventID,
+		"group-event",
+	})
+
+	if err != nil {
+		app.JSONResponse(w, r, http.StatusConflict, "failed to add event notification", Error)
 		return
 	}
 
