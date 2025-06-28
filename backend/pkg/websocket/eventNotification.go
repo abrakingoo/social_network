@@ -3,6 +3,7 @@ package websocket
 import (
 	"encoding/json"
 	"fmt"
+
 	"social/pkg/model"
 	"social/pkg/repository"
 	"social/pkg/util"
@@ -78,4 +79,8 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		eventID,
 		"group-event",
 	})
+	if err != nil {
+		c.SendError("failed to add notification")
+		return
+	}
 }
