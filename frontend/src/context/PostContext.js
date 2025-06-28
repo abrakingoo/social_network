@@ -30,7 +30,8 @@ const DEFAULT_COMMENT_STRUCTURE = {
   id: '',
   authorId: '',
   content: '',
-  createdAt: ''
+  createdAt: '',
+  media: []
 };
 
 export const PostContext = createContext();
@@ -78,6 +79,7 @@ export const PostProvider = ({ children }) => {
       },
       likedByCurrentUser: commentData.likedByCurrentUser || commentData.is_liked || false,
       likesCount: commentData.likesCount || commentData.likes_count || 0,
+      media: Array.isArray(commentData.media) ? commentData.media : [],
       ...commentData
     };
   }, [currentUser]);
@@ -247,19 +249,20 @@ export const PostProvider = ({ children }) => {
   }, [currentUser, posts]);
 
   // Add comment to post
-  const addComment = useCallback(async (postId, commentText) => {
+  const addComment = useCallback(async (postId, commentText, commentImages = []) => {
     if (!currentUser) {
       toast.error("You must be logged in to comment");
       return false;
     }
 
-    if (!commentText.trim()) {
+    if (!commentText.trim() && commentImages.length === 0) {
       toast.error("Comment cannot be empty");
       return false;
     }
 
     const newComment = normalizeComment({
-      content: commentText
+      content: commentText,
+      media: commentImages.map(img => URL.createObjectURL(img)) // Create preview URLs for optimistic update
     });
 
     // Optimistically update the UI
@@ -282,6 +285,13 @@ export const PostProvider = ({ children }) => {
       formData.append('post_id', postId);
       formData.append('content', commentText);
       formData.append('comment_id', newComment.id);
+
+      // Add images to FormData
+      if (commentImages && commentImages.length > 0) {
+        commentImages.forEach((image) => {
+          formData.append('media', image);
+        });
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/addComment`, {
         method: 'POST',
