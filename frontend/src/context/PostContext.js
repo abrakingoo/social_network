@@ -255,8 +255,8 @@ export const PostProvider = ({ children }) => {
       return false;
     }
 
-    if (!commentText.trim() && commentImages.length === 0) {
-      toast.error("Comment cannot be empty");
+    if (!commentText.trim()) {
+      toast.error("Comment text is required");
       return false;
     }
 
