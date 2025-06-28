@@ -198,6 +198,7 @@ class WebSocketManager {
   // CORRECTED: Handle backend notifications with EXACT format matching
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
+    console.log("🔍 DEBUG 1: handleBackendNotification received:", { notificationCase, action_type, data });
 
     if (notificationCase === "action_based") {
       switch (action_type) {
@@ -216,7 +217,12 @@ class WebSocketManager {
         case "private_message":
           this.notifyListeners("notification", message);
           break;
+        case "group_message":
+          console.log("🔍 DEBUG 2: group_message case hit, calling handleGroupMessage");
+          this.handleGroupMessage(data);
+          break;
         default:
+          console.log("🔍 DEBUG 3: Unhandled action_type in switch:", action_type);
       }
     }
   }
@@ -228,7 +234,21 @@ class WebSocketManager {
 
   handleGroupMessage(data) {
     console.log("WebSocketManager received group_message:", data);
-    this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, data);
+    console.log("🔍 DEBUG 4: About to notify GROUP_MESSAGE listeners with data:", data);
+
+    // Decode base64 data if it's a string
+    let decodedData = data;
+    if (typeof data === 'string') {
+      try {
+        const decoded = atob(data);
+        decodedData = JSON.parse(decoded);
+        console.log("🔍 DEBUG 4.1: Decoded group message data:", decodedData);
+      } catch (error) {
+        console.error("Failed to decode group message data:", error);
+      }
+    }
+
+    this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, decodedData);
   }
 
   // Handle join request notifications matching backend format
@@ -428,23 +448,32 @@ class WebSocketManager {
       this.listeners.set(type, new Set());
     }
     this.listeners.get(type).add(callback);
+    console.log(`🔍 DEBUG 7: Added listener for type: ${type}, total listeners for this type: ${this.listeners.get(type).size}`);
   }
 
   removeListener(type, callback) {
     if (this.listeners.has(type)) {
+      const sizeBefore = this.listeners.get(type).size;
       this.listeners.get(type).delete(callback);
+      const sizeAfter = this.listeners.get(type).size;
+      console.log(`🔍 DEBUG 8: Removed listener for type: ${type}, size before: ${sizeBefore}, size after: ${sizeAfter}`);
       if (this.listeners.get(type).size === 0) {
         this.listeners.delete(type);
+        console.log(`🔍 DEBUG 8.1: Deleted entire listener set for type: ${type}`);
       }
     }
   }
 
   notifyListeners(type, data) {
+    console.log(`🔍 DEBUG 6: notifyListeners called for type: ${type}, has listeners: ${this.listeners.has(type)}, listener count: ${this.listeners.get(type)?.size || 0}`);
     if (this.listeners.has(type)) {
       const callbacks = Array.from(this.listeners.get(type));
-      callbacks.forEach((callback) => {
+      console.log(`🔍 DEBUG 6.1: About to execute ${callbacks.length} callbacks for type: ${type}`);
+      callbacks.forEach((callback, index) => {
         try {
+          console.log(`🔍 DEBUG 6.2: Executing callback ${index + 1} for type: ${type}`);
           callback(data);
+          console.log(`🔍 DEBUG 6.3: Successfully executed callback ${index + 1} for type: ${type}`);
         } catch (error) {
           console.error(`WebSocket: Error in listener for ${type}:`, error);
         }
