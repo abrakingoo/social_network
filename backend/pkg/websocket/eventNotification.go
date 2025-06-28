@@ -58,6 +58,12 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		return
 	}
 
+	memberIds, err := q.FetchAllGroupMembersId(groupId)
+	if err != nil {
+		c.SendError("failed to fetch group members")
+		return
+	}
+
 	// add notification
 	eventStr := fmt.Sprintf(" created event - %s", event.Title)
 	err = q.InsertData("notifications", []string{
