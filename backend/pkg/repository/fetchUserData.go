@@ -17,6 +17,9 @@ func (q *Query) FetchUserData(userid string) (model.UserData, error) {
 		return model.UserData{}, err
 	}
 
+	// Set the user ID (critical for frontend message ownership comparison)
+	user.ID = userid
+
 	// fetch all user created post
 	if err := q.FetchUserPost(userid, &user); err != nil {
 		return model.UserData{}, err

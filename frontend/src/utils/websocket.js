@@ -1,4 +1,4 @@
-// frontend/src/utils/websocket.js - CORRECTED: Perfect backend integration
+// frontend/src/utils/websocket.js - Production Ready: Debug logs removed
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,7 +30,6 @@ class WebSocketManager {
 
   // Auth state with connection stability
   setAuthState(isAuthenticated) {
-
     const wasAuthenticated = this.isAuthenticated;
     this.isAuthenticated = isAuthenticated;
 
@@ -67,7 +66,6 @@ class WebSocketManager {
     state.isConnecting = true;
     this.connectionUrl = url;
 
-
     try {
       this.ws = new WebSocket(url);
 
@@ -80,19 +78,58 @@ class WebSocketManager {
 
       this.ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          // Handle potential multiple JSON messages concatenated together
+          let messageData = event.data;
 
-          // Handle backend notifications with EXACT format matching
-          if (data.type === "notification") {
-            this.handleBackendNotification(data);
-          } else if (data.type === "error") {
-            // Backend sends errors with exact format: { "type": "error", "message": "..." }
-            this.notifyListeners("error", { message: data.message });
-          } else {
-            this.notifyListeners(data.type, data.data || data);
+          if (typeof messageData === 'string') {
+            // Split by newlines in case backend sends multiple JSON objects separated by newlines
+            const lines = messageData.trim().split('\n').filter(line => line.trim());
+
+            if (lines.length > 1) {
+              // Process each JSON object separately
+              lines.forEach(line => {
+                try {
+                  const data = JSON.parse(line.trim());
+                  this.processMessage(data);
+                } catch (parseError) {
+                  console.error("WebSocket: Error parsing individual line:", parseError, "Line:", line);
+                }
+              });
+              return;
+            }
+
+            // Try to find and handle cases where JSON objects are concatenated without separators
+            if (messageData.includes('}{')) {
+              // Split on }{ pattern and reconstruct valid JSON
+              const parts = messageData.split('}{');
+              for (let i = 0; i < parts.length; i++) {
+                let jsonStr = parts[i];
+                if (i > 0) jsonStr = '{' + jsonStr;
+                if (i < parts.length - 1) jsonStr = jsonStr + '}';
+
+                try {
+                  const data = JSON.parse(jsonStr);
+                  this.processMessage(data);
+                } catch (parseError) {
+                  console.error("WebSocket: Error parsing split JSON:", parseError, "Part:", jsonStr);
+                }
+              }
+              return;
+            }
           }
+
+          // Standard single JSON message processing
+          const data = JSON.parse(messageData);
+          this.processMessage(data);
+
         } catch (error) {
           console.error("WebSocket: Error parsing message:", error);
+          // Only log raw data in development for debugging
+          if (process.env.NODE_ENV === 'development') {
+            console.error("WebSocket: Raw message data:", event.data);
+            console.error("WebSocket: Message type:", typeof event.data);
+            console.error("WebSocket: Message length:", event.data?.length);
+          }
         }
       };
 
@@ -102,7 +139,6 @@ class WebSocketManager {
       };
 
       this.ws.onclose = (event) => {
-
         state.isConnected = false;
         state.isConnecting = false;
         state.isDisconnecting = false;
@@ -145,7 +181,21 @@ class WebSocketManager {
     }
   }
 
-  // CORRECTED: Handle backend notifications with EXACT format matching
+  // Process individual WebSocket messages
+  processMessage(data) {
+    // Handle backend notifications with EXACT format matching
+    if (data.type === "notification") {
+      this.handleBackendNotification(data);
+    } else if (data.type === "error") {
+      // Backend sends errors with exact format: { "type": "error", "message": "..." }
+      console.error('WebSocket error received:', data.message);
+      this.notifyListeners("error", { message: data.message });
+    } else {
+      this.notifyListeners(data.type, data.data || data);
+    }
+  }
+
+  // Handle backend notifications with EXACT format matching
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
 
@@ -166,9 +216,32 @@ class WebSocketManager {
         case "private_message":
           this.notifyListeners("notification", message);
           break;
+        case "group_message":
+          this.handleGroupMessage(data);
+          break;
         default:
+          break;
       }
     }
+  }
+
+  handlePrivateMessage(data) {
+    this.notifyListeners(EVENT_TYPES.PRIVATE_MESSAGE, data);
+  }
+
+  handleGroupMessage(data) {
+    // Decode base64 data if it's a string
+    let decodedData = data;
+    if (typeof data === 'string') {
+      try {
+        const decoded = atob(data);
+        decodedData = JSON.parse(decoded);
+      } catch (error) {
+        console.error("Failed to decode group message data:", error);
+      }
+    }
+
+    this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, decodedData);
   }
 
   // Handle join request notifications matching backend format
@@ -208,40 +281,51 @@ class WebSocketManager {
     });
   }
 
-  // Handle join accept/decline notifications
+  // Handle join accept notifications
   handleJoinAcceptNotification(data) {
-    const { group_id, status } = data;
+    const { group_id } = data;
 
     // Dispatch event for components to handle
     this.dispatchNotificationEvent("group_join_response", {
-      title: status === "accepted" ? "Request Accepted!" : "Request Declined",
-      description:
-        status === "accepted"
-          ? "Your request to join the group was accepted"
-          : "Your request to join the group was declined",
-      variant: status === "accepted" ? "default" : "destructive",
-      action:
-        status === "accepted"
-          ? {
-            text: "Visit Group",
-            callback: () =>
-              (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
-          }
-          : undefined,
+      title: "Request Accepted!",
+      description: "Your request to join the group was accepted",
+      variant: "default",
+      action: {
+        text: "Visit Group",
+        callback: () =>
+          (window.location.href = `/groups/${this.createSlug("group-" + group_id)}`),
+      },
       data: data,
     });
 
     // Update group page if user is currently viewing it
     this.triggerGroupPageUpdate(group_id, {
       type: "membership_changed",
-      data: { status: status, group_id },
+      data: { status: "accepted", group_id },
+    });
+  }
+
+  // Handle join decline notifications
+  handleJoinDeclineNotification(data) {
+    const { group_id } = data;
+
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent("group_join_response", {
+      title: "Request Declined",
+      description: "Your request to join the group was declined",
+      variant: "destructive",
+      data: data,
+    });
+
+    // Update group page if user is currently viewing it
+    this.triggerGroupPageUpdate(group_id, {
+      type: "membership_changed",
+      data: { status: "declined", group_id },
     });
   }
 
   // Handle group invitation notifications
   handleGroupInvitationNotification(data) {
-    const { group_id } = data;
-
     // Dispatch event for components to handle
     this.dispatchNotificationEvent("group_invitation", {
       title: "Group Invitation",
@@ -265,7 +349,6 @@ class WebSocketManager {
 
   // Perfect disconnect with proper sequencing
   disconnect() {
-
     const state = this.connectionState;
 
     if (state.isDisconnecting) {
@@ -401,7 +484,7 @@ class WebSocketManager {
     }
   }
 
-  // CORRECTED: Handle backend's silent operations properly
+  // Handle backend's silent operations properly
   async sendAndWait(type, data, timeout = 8000) {
     if (!this.isAuthenticated) {
       throw new Error("User not authenticated");
@@ -632,6 +715,7 @@ export const EVENT_TYPES = {
   PRIVATE_MESSAGE: "private_message",
   LOAD_PRIVATE_MESSAGES: "load_private_messages",
   GROUP_MESSAGE: "group_message",
+  LOAD_GROUP_MESSAGES: "load_group_messages",
   FOLLOW_REQUEST: "follow_request",
   RESPOND_FOLLOW_REQUEST: "respond_follow_request",
   UNFOLLOW: "unfollow",
@@ -648,7 +732,7 @@ export const EVENT_TYPES = {
   MEMBER_GROUP_INVITATION_PROPOSAL: "member_group_invitation_proposal",
 };
 
-// CORRECTED: WebSocket operations with exact backend payload format
+// WebSocket operations with exact backend payload format
 export const webSocketOperations = {
   async joinGroup(groupId) {
     try {
@@ -791,7 +875,7 @@ export const webSocketOperations = {
         {
           group_id: groupId,
           recipient_Id: userId, // Note: Backend expects recipient_Id (capital I)
-        }
+        },
       );
       return result;
     } catch (error) {
@@ -805,7 +889,7 @@ export const webSocketOperations = {
         throw new Error("Please log in to send invitation proposals.");
       } else if (message === "Connection not available") {
         throw new Error(
-          "Connection lost. Please refresh the page and try again."
+          "Connection lost. Please refresh the page and try again.",
         );
       }
       throw error;
@@ -858,7 +942,9 @@ export const webSocketOperations = {
       wsManager.addListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
 
       try {
-        wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, { recipient_Id: userID });
+        wsManager.send(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, {
+          recipient_Id: userID,
+        });
       } catch (err) {
         wsManager.removeListener(EVENT_TYPES.LOAD_PRIVATE_MESSAGES, listener);
         reject(err);
@@ -873,6 +959,34 @@ export const webSocketOperations = {
   cancelFollowRequest(followerId) {
     wsManager.send(EVENT_TYPES.CANCEL_FOLLOW_REQUEST, {
       recipient_Id: followerId,
+    });
+  },
+
+  // Load group messages
+  loadGroupMessages(groupId) {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+        reject(new Error('Load group messages request timed out'));
+      }, 10000); // 10 second timeout
+
+      const listener = (data) => {
+        clearTimeout(timeoutId);
+        wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+        resolve(data);
+      };
+
+      wsManager.addListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+
+      try {
+        wsManager.send(EVENT_TYPES.LOAD_GROUP_MESSAGES, {
+          group_id: groupId,
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
+        reject(err);
+      }
     });
   },
 };

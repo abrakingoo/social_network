@@ -60,8 +60,9 @@ func (c *Client) GroupMessage(msg map[string]any, q *repository.Query, h *Hub) {
 	user.ID = c.UserID
 
 	raw := map[string]any{
-		"sender":  user,
-		"message": message.Message,
+		"sender":   user,
+		"message":  message.Message,
+		"group_id": message.GroupId,
 	}
 
 	userData, err := json.Marshal(raw)
