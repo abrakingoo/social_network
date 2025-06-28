@@ -64,6 +64,12 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		return
 	}
 
+	for _, id := range memberIds {
+		if id == c.UserID {
+			continue
+		}
+	}
+
 	// add notification
 	eventStr := fmt.Sprintf(" created event - %s", event.Title)
 	err = q.InsertData("notifications", []string{
