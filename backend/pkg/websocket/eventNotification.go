@@ -68,33 +68,34 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		if id == c.UserID {
 			continue
 		}
+
+		// add notification
+		eventStr := fmt.Sprintf(" created event - %s", event.Title)
+		err = q.InsertData("notifications", []string{
+			"id",
+			"actor_id",
+			"recipient_id",
+			"recipient_group_id",
+			"type",
+			"message",
+			"entity_id",
+			"entity_type",
+		}, []any{
+			util.UUIDGen(),
+			c.UserID,
+			id,
+			groupId,
+			"group_event",
+			eventStr,
+			eventID,
+			"group-event",
+		})
+		if err != nil {
+			c.SendError("failed to add notification")
+			return
+		}
 	}
 
-	// add notification
-	eventStr := fmt.Sprintf(" created event - %s", event.Title)
-	err = q.InsertData("notifications", []string{
-		"id",
-		"actor_id",
-		"recipient_id",
-		"recipient_group_id",
-		"type",
-		"message",
-		"entity_id",
-		"entity_type",
-	}, []any{
-		util.UUIDGen(),
-		c.UserID,
-		"",
-		groupId,
-		"group_event",
-		eventStr,
-		eventID,
-		"group-event",
-	})
-	if err != nil {
-		c.SendError("failed to add notification")
-		return
-	}
 	payload := map[string]any{
 		"type": "notification",
 		"case": "group_event",
