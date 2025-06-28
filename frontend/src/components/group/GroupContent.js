@@ -185,6 +185,11 @@ const GroupContent = ({
         return false;
       }
 
+      if (!commentText.trim()) {
+        toast.error("Comment text is required");
+        return false;
+      }
+
       // Find the post in group data
       const postIndex = groupData.group_post?.findIndex(
         (post) => post.id === postId,
