@@ -26,3 +26,26 @@ func (q *Query) GetUserGroupIDs(userID string) ([]string, error) {
 
 	return groupIDs, nil
 }
+
+func (q *Query) FetchAllGroupMembersId(groupID string) ([]string, error) {
+	rows, err := q.Db.Query(`
+		SELECT user_id
+		FROM group_members
+		WHERE group_id = ?`, groupID)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userID []string
+	for rows.Next() {
+		var user string
+		if err := rows.Scan(&user); err != nil {
+			return nil, err
+		}
+		userID = append(userID, user)
+	}
+
+	return userID, nil
+}
