@@ -179,9 +179,14 @@ const GroupContent = ({
 
   // Group-specific add comment handler
   const handleGroupAddComment = useCallback(
-    async (postId, commentText) => {
+    async (postId, commentText, commentImages = []) => {
       if (!currentUser) {
         toast.error("You must be logged in to add a comment.");
+        return false;
+      }
+
+      if (!commentText.trim()) {
+        toast.error("Comment text is required");
         return false;
       }
 
@@ -197,6 +202,7 @@ const GroupContent = ({
       const newComment = {
         id: `temp-${Date.now()}`,
         content: commentText.trim(),
+        media: commentImages.map(img => URL.createObjectURL(img)), // Create preview URLs for optimistic update
         author: {
           id: currentUser.id,
           first_name: currentUser.firstName,
@@ -226,17 +232,23 @@ const GroupContent = ({
       }
 
       try {
+        // Send comment to backend using FormData (backend expects multipart form data)
+        const formData = new FormData();
+        formData.append('post_id', postId);
+        formData.append('content', commentText.trim());
+        formData.append('comment_id', newComment.id);
+
+        // Add images to FormData
+        if (commentImages && commentImages.length > 0) {
+          commentImages.forEach((image) => {
+            formData.append('media', image);
+          });
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/addComment`, {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            post_id: postId,
-            content: commentText.trim(),
-            comment_id: newComment.id,
-          }),
+          body: formData
         });
 
         if (!response.ok) {

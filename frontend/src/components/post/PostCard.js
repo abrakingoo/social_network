@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { MessageSquare, Heart, Share2, MoreHorizontal, Send } from 'lucide-react';
+import { MessageSquare, Heart, Share2, MoreHorizontal, Send, Image, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [commentImages, setCommentImages] = useState([]);
+  const [commentImageFiles, setCommentImageFiles] = useState([]);
   const textareaRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   // Get the current user from context
@@ -98,15 +100,34 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
     }
   };
 
+  // Handle comment image upload
+  const handleCommentImageChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files).slice(0, 2 - commentImageFiles.length); // Limit to 2 images for comments
+      setCommentImageFiles((prev) => [...prev, ...files].slice(0, 2));
+
+      // Create preview URLs for display
+      const newImages = files.map((file) => URL.createObjectURL(file));
+      setCommentImages((prev) => [...prev, ...newImages].slice(0, 2));
+    }
+  };
+
+  const removeCommentImage = (indexToRemove) => {
+    setCommentImages(commentImages.filter((_, index) => index !== indexToRemove));
+    setCommentImageFiles(commentImageFiles.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleCommentSubmit = async (e) => {
     e.preventDefault();
     if (commentText.trim()) {
       // Use onAddComment prop if provided (for group posts), otherwise use context method
       const commentHandler = onAddComment || addComment;
       if (typeof commentHandler === 'function') {
-        const success = await commentHandler(normalizedPost.id, commentText);
+        const success = await commentHandler(normalizedPost.id, commentText, commentImageFiles);
         if (success !== false) { // Success or undefined (context method doesn't return value)
           setCommentText('');
+          setCommentImages([]);
+          setCommentImageFiles([]);
           // Reset textarea height
           if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -165,7 +186,33 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{commentAuthorName}</div>
                 <div className="bg-gray-100 rounded-2xl px-4 py-2 max-w-full overflow-hidden">
-                  <p className="text-sm break-words whitespace-normal">{escapeHtml(comment.content)}</p>
+                  {comment.content && (
+                    <p className="text-sm break-words whitespace-normal">{escapeHtml(comment.content)}</p>
+                  )}
+                  {comment.media && comment.media.length > 0 && (
+                    <div className={`${comment.content ? 'mt-2' : ''} grid gap-1 ${comment.media.length === 1 ? '' : 'grid-cols-2'}`}>
+                      {comment.media.map((image, index) => {
+                        // Handle different image formats: string URLs, blob URLs, or objects with url property
+                        let imageSrc = '';
+                        if (typeof image === 'string') {
+                          imageSrc = image.startsWith('blob:') ? image : `${API_BASE_URL}/${image}`;
+                        } else if (image && typeof image === 'object') {
+                          imageSrc = image.url ? `${API_BASE_URL}/${image.url}` : '';
+                        }
+
+                        return (
+                          <div key={index} className="relative rounded-lg overflow-hidden">
+                            <img
+                              src={imageSrc}
+                              alt={`Comment image ${index + 1}`}
+                              className="w-full h-auto max-h-48 object-cover rounded-lg"
+                              loading="lazy"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   {formatDistanceToNow(new Date(comment.createdAt || comment.created_at), { addSuffix: true })}
@@ -356,27 +403,79 @@ const PostCard = ({ post, onToggleLike, onToggleCommentLike, onAddComment }) => 
             </div>
 
             {currentUser && (
-              <form onSubmit={handleCommentSubmit} className="flex items-center p-4 space-x-2 w-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={currentUser.firstName} />
-                  <AvatarFallback>{currentUser.firstName?.[0] || ''}{currentUser.lastName?.[0] || ''}</AvatarFallback>
-                </Avatar>
-                <Textarea
-                  placeholder="Write a comment..."
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  className="resize-none bg-gray-100 rounded-lg min-h-[40px] max-h-[120px] overflow-hidden"
-                  rows={1}
-                  ref={textareaRef}
-                  onInput={(e) => {
-                    e.target.style.height = "auto";
-                    e.target.style.height = e.target.scrollHeight + "px";
-                  }}
-                />
-                <Button type="submit" size="icon" className="rounded-full">
-                  <Send className="h-5 w-5" />
-                </Button>
-              </form>
+              <div className="p-4 w-full">
+                <form onSubmit={handleCommentSubmit} className="w-full">
+                  <div className="flex items-start space-x-2 w-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={formatAvatarUrl(currentUser.avatar)} alt={currentUser.firstName} />
+                      <AvatarFallback>{currentUser.firstName?.[0] || ''}{currentUser.lastName?.[0] || ''}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <Textarea
+                        placeholder="Write a comment..."
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        className="resize-none bg-gray-100 rounded-lg min-h-[40px] max-h-[120px] overflow-hidden"
+                        rows={1}
+                        ref={textareaRef}
+                        onInput={(e) => {
+                          e.target.style.height = "auto";
+                          e.target.style.height = e.target.scrollHeight + "px";
+                        }}
+                      />
+
+                      {/* Comment image preview */}
+                      {commentImages.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {commentImages.map((img, index) => (
+                            <div key={index} className="relative rounded-md overflow-hidden">
+                              <img
+                                src={img}
+                                alt={`Comment preview ${index + 1}`}
+                                className="w-full h-20 object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeCommentImage(index)}
+                                className="absolute top-1 right-1 bg-black bg-opacity-60 rounded-full p-1 text-white"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Comment form actions */}
+                      <div className="flex items-center justify-between mt-2">
+                        <label htmlFor="comment-image-upload" className="cursor-pointer">
+                          <div className="flex items-center text-gray-500 hover:text-gray-700">
+                            <Image className="h-4 w-4 mr-1" />
+                            <span className="text-xs">Photo</span>
+                          </div>
+                          <input
+                            type="file"
+                            id="comment-image-upload"
+                            multiple
+                            accept="image/*"
+                            onChange={handleCommentImageChange}
+                            className="hidden"
+                            disabled={commentImages.length >= 2}
+                          />
+                        </label>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          className="rounded-full"
+                          disabled={!commentText.trim()}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              </div>
             )}
           </CardFooter>
         )}
