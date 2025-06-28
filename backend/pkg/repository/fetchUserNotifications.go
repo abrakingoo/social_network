@@ -16,6 +16,7 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 			un.is_read,
 			un.message,
 			un.created_at,
+			un.recipient_group_id,
 			u.id,
 			u.email,
 			u.first_name,
@@ -29,9 +30,18 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 		FROM notifications un
 		JOIN users u ON u.id = un.actor_id
 		WHERE un.recipient_id = ?
+		or (
+			un.recipient_group_id IS NOT NULL
+       		AND EXISTS (
+           		SELECT 1 FROM group_members gm
+             	WHERE gm.group_id = un.recipient_group_id
+              	AND gm.user_id = ?
+               )
+            )
+        AND un.is_read = 0;
 	`
 
-	rows, err := q.Db.Query(query, userID)
+	rows, err := q.Db.Query(query, userID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user notifications: %w", err)
 	}
@@ -51,6 +61,7 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 			&notification.IsRead,
 			&notification.Message,
 			&notification.CreatedAt,
+			&notification.GroupID,
 			&actor.ID,
 			&actor.Email,
 			&actor.FirstName,
