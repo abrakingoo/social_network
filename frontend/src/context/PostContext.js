@@ -277,19 +277,16 @@ export const PostProvider = ({ children }) => {
     );
 
     try {
-      // Send comment to backend
+      // Send comment to backend using FormData (backend expects multipart form data)
+      const formData = new FormData();
+      formData.append('post_id', postId);
+      formData.append('content', commentText);
+      formData.append('comment_id', newComment.id);
+
       const response = await fetch(`${API_BASE_URL}/api/addComment`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          post_id: postId,
-          content: commentText,
-          comment_id: newComment.id
-        })
+        body: formData
       });
 
       if (!response.ok) {
