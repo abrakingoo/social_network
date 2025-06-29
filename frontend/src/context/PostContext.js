@@ -371,7 +371,14 @@ export const PostProvider = ({ children }) => {
   // Get posts by user ID (simplified)
   const getUserPosts = useCallback((userId) => {
     if (!userId || !posts.length) return [];
-    return posts.filter(post => post.author && post.author.id === userId);
+    const userPosts = posts.filter(post => post.author && post.author.id === userId);
+    
+    // Sort posts by creation date (newest first)
+    return [...userPosts].sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.created_at || 0);
+      const dateB = new Date(b.createdAt || b.created_at || 0);
+      return dateB - dateA;
+    });
   }, [posts]);
 
   const toggleLike = useCallback(async (postId) => {
