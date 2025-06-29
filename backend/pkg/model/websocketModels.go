@@ -37,3 +37,11 @@ type GroupMessage struct {
 type Notification struct {
 	NotificationId string `json:"notification_id"`
 }
+
+type AddEventData struct {
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	EventTime   time.Time `json:"event_time"`
+	GroupTitle  string    `json:"group_title"`
+	Location    string    `json:"location"`
+}

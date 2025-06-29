@@ -56,22 +56,23 @@ func (q *Query) FetchAllUsers(userID string) (model.AllUsers, error) {
 func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 	var users []model.Follower
 	query := `
-		SELECT 
-			u.id, u.first_name, u.last_name, u.avatar,  
+		SELECT
+			u.id, u.first_name, u.last_name, u.avatar,
 			u.is_public
 		FROM users u
-		WHERE u.id != ? 
+		WHERE u.id != ?
 		AND NOT EXISTS (
       		SELECT 1
      			FROM user_follows uf
-      			WHERE 
+      			WHERE
         		(uf.follower_id = u.id AND uf.following_id = ?) OR
-        		(uf.follower_id = ? AND uf.following_id = u.id)
+        		(uf.follower_id = ? AND uf.following_id = u.id) OR
+          		(uf.follower_id = u.id AND uf.following_id = ? AND uf.status = 'declined')
  		)
 		ORDER BY u.created_at ASC
         LIMIT 100
 	`
-	rows, err := q.Db.Query(query, userID, userID, userID)
+	rows, err := q.Db.Query(query, userID, userID, userID, userID)
 	if err != nil {
 		log.Printf("FetchAllUsers: db error: %v", err)
 		return nil, fmt.Errorf("failed to fetch non mutuL users: %w", err)
@@ -101,7 +102,7 @@ func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 // with a 'pending' status. These are the users the given user wants to follow.
 func (q *Query) FetchSentFollowRequests(userID string) ([]model.Follower, error) {
 	query := `
-        SELECT 
+        SELECT
             u.id,
             u.first_name,
             u.last_name,
@@ -137,7 +138,7 @@ func (q *Query) FetchSentFollowRequests(userID string) ([]model.Follower, error)
 // to the given user. These are users who want to follow the given user and are waiting for approval.
 func (q *Query) FetchReceivedFollowRequests(userID string) ([]model.Follower, error) {
 	query := `
-        SELECT 
+        SELECT
             u.id,
             u.first_name,
             u.last_name,
@@ -171,11 +172,11 @@ func (q *Query) FetchReceivedFollowRequests(userID string) ([]model.Follower, er
 
 func (q *Query) GetFollowersNotFollowedBack(userID string) ([]model.Follower, error) {
 	query := `
-        SELECT 
+        SELECT
             u.id, u.first_name, u.last_name, u.avatar, u.is_public
         FROM user_follows uf
         JOIN users u ON uf.follower_id = u.id
-        WHERE uf.following_id = ? 
+        WHERE uf.following_id = ?
         AND uf.status = 'accepted'
         AND NOT EXISTS (
           SELECT 1
@@ -183,7 +184,7 @@ func (q *Query) GetFollowersNotFollowedBack(userID string) ([]model.Follower, er
           WHERE uf2.follower_id = ?
             AND uf2.following_id = uf.follower_id
             AND uf2.status = 'accepted'
-        ) 
+        )
 		ORDER BY uf.created_at ASC
         LIMIT 100
     `
