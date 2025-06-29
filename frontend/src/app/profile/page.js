@@ -121,10 +121,13 @@ const Profile = () => {
     is_public: profileUser.is_public,
     isOwnProfile,
   });
-  const userPosts =
-    isOwnProfile && currentUser && currentUser.userposts
-      ? currentUser.userposts
-      : getUserPosts(profileUser.id);
+  // Get posts from PostContext to ensure real-time updates for likes/comments
+  const contextPosts = getUserPosts(profileUser.id);
+  const userPosts = contextPosts.length > 0 
+    ? contextPosts 
+    : (isOwnProfile && currentUser && currentUser.userposts 
+        ? currentUser.userposts 
+        : []);
   const userFirstName = profileUser.first_name || profileUser.firstName;
   const userLastName = profileUser.last_name || profileUser.lastName;
   const userNickname = profileUser.nickname;
