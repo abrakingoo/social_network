@@ -497,12 +497,6 @@ const Profile = () => {
                       </div>
                     </dl>
                   </div>
-
-                  {isOwnProfile && (
-                    <div className="pt-4 mt-4 border-t">
-                      <Button variant="outline">Edit Details</Button>
-                    </div>
-                  )}
                 </div>
               </div>
             </TabsContent>
