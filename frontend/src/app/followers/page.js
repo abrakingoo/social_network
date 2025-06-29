@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, Search, UserPlus, UserCheck, UserX } from "lucide-react";
 import { FadeLoader } from "react-spinners";
 import { webSocketOperations } from "@/utils/websocket";
+import UserProfileModal from "@/components/profile/UserProfileModal";
 
 const Followers = () => {
   const router = useRouter();
@@ -25,6 +26,8 @@ const Followers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Redirect to login if not authenticated
   const fetchUsers = async () => {
@@ -131,6 +134,7 @@ const Followers = () => {
 
   };
 
+  // Handle canceling a follow request
   const handleCancelFollowRequest = (followerId) => {
     const result = webSocketOperations.cancelFollowRequest(followerId);
     setUsers([]);
@@ -139,6 +143,18 @@ const Followers = () => {
       title: "Success",
       description: "The follow request has been cancelled sucessfully.",
     });
+  };
+
+  // Handle user profile click
+  const handleUserClick = (user) => {
+    setSelectedUser(user);
+    setIsProfileModalOpen(true);
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setIsProfileModalOpen(false);
+    setSelectedUser(null);
   };
 
   // Filter friends based on the active tab
@@ -196,7 +212,8 @@ const Followers = () => {
                 filteredFriends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(friend)}
                   >
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
@@ -218,7 +235,7 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                       {friend.status === "pending" ? (
                         <>
                           <Button
@@ -270,7 +287,8 @@ const Followers = () => {
                 users.following.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(friend)}
                   >
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
@@ -292,7 +310,7 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                       {friend.status === "pending" ? (
                         <>
                           <Button
@@ -347,7 +365,8 @@ const Followers = () => {
                 users.received_request.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(friend)}
                   >
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
@@ -364,7 +383,7 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         onClick={() => handleAcceptFriend(friend.id)}
                         className="bg-social hover:bg-social-dark"
@@ -400,7 +419,8 @@ const Followers = () => {
                 users["non_mutual"].map((user) => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(user)}
                   >
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
@@ -417,14 +437,16 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <Button
-                      onClick={() => handleAddFriend(user.id)}
-                      className="bg-social hover:bg-social-dark"
-                      size="sm"
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Add Friend
-                    </Button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        onClick={() => handleAddFriend(user.id)}
+                        className="bg-social hover:bg-social-dark"
+                        size="sm"
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add Friend
+                      </Button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -445,7 +467,8 @@ const Followers = () => {
                 users.sent_request.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(friend)}
                   >
                     <div className="flex items-center">
                       <Avatar className="h-12 w-12 mr-4">
@@ -463,13 +486,15 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCancelFollowRequest(friend.id)}
-                    >
-                      Cancel Request
-                    </Button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancelFollowRequest(friend.id)}
+                      >
+                        Cancel Request
+                      </Button>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -485,6 +510,13 @@ const Followers = () => {
           </Tabs>
         </CardContent>
       </Card>
+      
+      {/* User Profile Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={handleModalClose}
+        user={selectedUser}
+      />
     </div>
   );
 };
