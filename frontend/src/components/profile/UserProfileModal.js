@@ -69,11 +69,6 @@ const UserProfileModal = ({ isOpen, onClose, user }) => {
         setProfileAccessible(false);
         setAccessError("This profile is private. You need to follow this user to view their profile.");
         setCompleteUserData(null);
-        toast({
-          title: "Profile Not Accessible",
-          description: "This profile is private. You need to follow this user to view their profile.",
-          variant: "destructive",
-        });
         return;
       }
 
