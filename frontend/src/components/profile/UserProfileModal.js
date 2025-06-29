@@ -155,7 +155,9 @@ const UserProfileModal = ({ isOpen, onClose, user }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`max-h-[90vh] overflow-y-auto ${
+        !profileAccessible ? 'max-w-md' : 'max-w-4xl'
+      }`}>
         <DialogHeader>
           <DialogTitle className="text-xl">Profile</DialogTitle>
         </DialogHeader>
@@ -166,12 +168,12 @@ const UserProfileModal = ({ isOpen, onClose, user }) => {
             <p className="text-gray-500 mt-4">Loading profile...</p>
           </div>
         ) : !profileAccessible ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Profile Not Accessible</h3>
-            <p className="text-gray-500 text-center max-w-md">{accessError}</p>
-            <div className="mt-6">
-              <Button onClick={onClose} variant="outline">
+          <div className="flex flex-col items-center justify-center py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-sm w-full text-center">
+              <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Profile Not Accessible</h3>
+              <p className="text-sm text-gray-600 mb-4">{accessError}</p>
+              <Button onClick={onClose} variant="outline" size="sm" className="w-full">
                 Close
               </Button>
             </div>
