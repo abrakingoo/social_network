@@ -173,8 +173,8 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 
 		if err := rows.Scan(
 			&post.ID, &groupID, &post.Content,
-			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt, &post.IsLiked,
-			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
+			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
+			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar, &post.IsLiked,
 		); err != nil {
 			return fmt.Errorf("failed to scan user post: %w", err)
 		}
