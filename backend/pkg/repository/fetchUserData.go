@@ -137,7 +137,12 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 		SELECT
 			p.id, p.group_id, p.content,
 			p.likes_count, p.dislikes_count, p.comments_count, p.privacy, p.created_at,
-			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar
+			m.id, m.url, u.id, u.first_name, u.last_name, u.nickname, u.avatar,
+			EXISTS (
+				SELECT 1 from post_likes pl
+				WHERE pl.post_id = p.id
+				AND pl.user_id = ?
+			) AS liked
 		FROM posts p
 		LEFT JOIN media m ON m.parent_id = p.id
 		LEFT JOIN users u ON u.id = p.user_id
@@ -145,7 +150,7 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 		ORDER BY p.created_at DESC
 	`
 
-	rows, err := q.Db.Query(query, userID)
+	rows, err := q.Db.Query(query, userID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch user posts: %w", err)
 	}
@@ -168,7 +173,7 @@ func (q *Query) fetchUserPost(userID string, user *model.UserData) error {
 
 		if err := rows.Scan(
 			&post.ID, &groupID, &post.Content,
-			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt,
+			&post.LikesCount, &post.DislikesCount, &post.CommentsCount, &post.Privacy, &post.CreatedAt, &post.IsLiked,
 			&mediaID, &mediaURL, &userID, &firstname, &lastname, &nickname, &avatar,
 		); err != nil {
 			return fmt.Errorf("failed to scan user post: %w", err)
