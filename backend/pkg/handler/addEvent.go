@@ -59,3 +59,4 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 	app.JSONResponse(w, r, http.StatusCreated, "event added successfully", Success)
 }
 
+
