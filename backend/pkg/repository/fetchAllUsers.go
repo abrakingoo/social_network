@@ -183,7 +183,7 @@ func (q *Query) GetFollowersNotFollowedBack(userID string) ([]model.Follower, er
           FROM user_follows uf2
           WHERE uf2.follower_id = ?
             AND uf2.following_id = uf.follower_id
-            AND uf2.status = 'accepted'
+            AND uf2.status IN ('accepted', 'pending')
         )
 		ORDER BY uf.created_at ASC
         LIMIT 100
