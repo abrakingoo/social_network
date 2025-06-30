@@ -164,8 +164,8 @@ const RightSidebar = () => {
   // Default sidebar content for other pages
   if (!currentUser) return null;
 
-  const handleNavigateToSuggestions = () => {
-    router.push("/followers?tab=suggestions");
+  const handleUserClick = (userId) => {
+    router.push(`/followers?tab=suggestions&highlight=${userId}`);
   };
 
   return (
@@ -181,7 +181,7 @@ const RightSidebar = () => {
               <div
                 key={user.id}
                 className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-2 rounded-md"
-                onClick={handleNavigateToSuggestions}
+                onClick={() => handleUserClick(user.id)}
               >
                 <div className="flex items-center space-x-2">
                   <Avatar>
