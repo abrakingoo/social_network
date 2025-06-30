@@ -65,10 +65,10 @@ const AuthenticatedLayout = ({ children }) => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <div className="flex flex-1 bg-gray-100 pt-4">
+      <div className="flex flex-1 bg-gray-100">
         <div className="container mx-auto flex max-w-7xl">
           {showSidebars && !isMessagesPage && <LeftSidebar />}
-          <main className={`flex-1 ${isMobile ? 'px-0' : 'px-4'}`}>
+          <main className={`flex-1 ${isMobile ? 'px-0' : 'px-4'} pt-4`}>
             {children}
           </main>
           {showSidebars && <RightSidebar />}

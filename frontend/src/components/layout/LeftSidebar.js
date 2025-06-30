@@ -43,8 +43,8 @@ const LeftSidebar = () => {
       : "??";
 
   return (
-    <div className="hidden md:block w-56 pr-2 flex-shrink-0">
-      <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
+    <div className="hidden md:block w-56 pr-2 flex-shrink-0 sticky top-16 h-fit pt-4">
+      <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <Link
           href="/profile"
           className="flex items-center space-x-3 p-2 rounded-lg hover:bg-social-light transition-colors"

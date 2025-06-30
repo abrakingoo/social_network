@@ -58,7 +58,7 @@ const RightSidebar = () => {
     };
 
     return (
-      <div className="hidden lg:block w-64 pl-2 flex-shrink-0 space-y-3">
+      <div className="hidden lg:block w-64 pl-2 flex-shrink-0 sticky top-16 h-fit pt-4">
         {/* Members */}
         <Card>
           <CardHeader>
@@ -121,7 +121,7 @@ const RightSidebar = () => {
   };
 
   return (
-    <div className="hidden lg:block w-64 pl-2 flex-shrink-0 space-y-3">
+    <div className="hidden lg:block w-64 pl-2 flex-shrink-0 sticky top-16 h-fit pt-4">
       {/* Friend Suggestions */}
       <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <h3 className="font-medium mb-3">People You May Know</h3>
