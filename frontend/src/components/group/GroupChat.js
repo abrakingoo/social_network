@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import EmojiPicker from '@/components/ui/emoji-picker';
+import { decode } from 'he';
 
 const GroupChat = ({ groupId, groupData }) => {
   const { currentUser } = useAuth();
@@ -37,7 +39,7 @@ const GroupChat = ({ groupId, groupData }) => {
         id: Date.now().toString(),
         group_id: groupIdRef.current,
         sender_id: messageData.sender?.id || messageData.sender?.ID,
-        content: messageData.message,
+        content: messageData.message || '',
         created_at: new Date().toISOString(),
         sender: {
           id: messageData.sender?.id || messageData.sender?.ID,
@@ -71,7 +73,7 @@ const GroupChat = ({ groupId, groupData }) => {
         id: msg.id,
         group_id: msg.group_id,
         sender_id: msg.sender_id,
-        content: msg.content,
+        content: decode(msg.content || ''),
         created_at: msg.created_at,
         sender: {
           id: msg.sender?.id || msg.sender_id,
@@ -150,6 +152,10 @@ const GroupChat = ({ groupId, groupData }) => {
 
   const handleInputChange = useCallback((e) => {
     setMessage(e.target.value);
+  }, []);
+
+  const handleEmojiSelect = useCallback((emoji) => {
+    setMessage(prev => prev + emoji);
   }, []);
 
   // Date formatter
@@ -279,6 +285,7 @@ const GroupChat = ({ groupId, groupData }) => {
             className="flex-1"
             disabled={isSending}
           />
+          <EmojiPicker onEmojiSelect={handleEmojiSelect} />
           <Button
             onClick={handleSend}
             className="bg-blue-600 hover:bg-blue-700"

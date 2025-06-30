@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Search, ArrowLeft } from 'lucide-react';
 import { webSocketOperations, wsManager } from '@/utils/websocket';
+import EmojiPicker from '@/components/ui/emoji-picker';
+import { decode } from 'he';
 
 const Messages = () => {
   const router = useRouter();
@@ -59,7 +61,12 @@ const Messages = () => {
   const prevMsg = async (userid, idx) => {
     const data = await webSocketOperations.loadPreviousMessages(userid);
     if (data.messages != null) {
-      setPreviousMessages(data.messages);
+      // Decode HTML entities in message content
+      const decodedMessages = data.messages.map(msg => ({
+        ...msg,
+        content: decode(msg.content || '')
+      }));
+      setPreviousMessages(decodedMessages);
     }
     setUuid(userid);
     setSelectedChat(idx);
@@ -110,14 +117,14 @@ const Messages = () => {
           {
             id: data.id,
             sender_id: senderId,
-            content: data.message,
+            content: data.message || '',
             created_at: new Date().toISOString(),
           }
         ]);
       } else {
         toast({
           title: `New message from ${data.sender.firstname || 'Someone'}`,
-          description: data.message,
+          description: data.message || '',
         });
       }
     };
@@ -190,6 +197,10 @@ const Messages = () => {
       },
     ]);
     setMessage('');
+  };
+
+  const handleEmojiSelect = (emoji) => {
+    setMessage(prev => prev + emoji);
   };
 
   // Filter chats based on search query
@@ -322,6 +333,7 @@ const Messages = () => {
                     placeholder="Type a message..."
                     className="flex-1 rounded-full"
                   />
+                  <EmojiPicker onEmojiSelect={handleEmojiSelect} />
                   <Button
                     type="submit"
                     className="bg-social hover:bg-social-dark rounded-full h-10 w-10 p-0 flex items-center justify-center"
