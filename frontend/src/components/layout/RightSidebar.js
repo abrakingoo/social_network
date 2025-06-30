@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { usePathname } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +9,42 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Calendar } from "lucide-react";
 import { formatAvatarUrl } from "@/lib/utils";
 import { useGroup } from "@/context/GroupContext";
+import { useAuth, API_BASE_URL } from "@/context/AuthContext";
 
 const RightSidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { groupData } = useGroup();
+  const { currentUser } = useAuth();
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(true);
+
   const isGroupDetailPage =
     pathname.startsWith("/groups/") && pathname.split("/").length === 3;
+  
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (!currentUser) return;
+      setLoadingSuggestions(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users`, {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.message && data.message.non_mutual) {
+            setSuggestions(data.message.non_mutual);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch suggestions:", error);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [currentUser]);
 
   // Group sidebar content
   if (isGroupDetailPage && groupData) {
@@ -132,46 +162,10 @@ const RightSidebar = () => {
   }
 
   // Default sidebar content for other pages
-  const currentUser = {
-    id: "1",
-    firstName: "Demo",
-    lastName: "User",
-  };
-
-  const getAllUsers = () => [
-    { id: "2", firstName: "Jane", lastName: "Doe", avatar: "" },
-    { id: "3", firstName: "John", lastName: "Smith", avatar: "" },
-  ];
-
   if (!currentUser) return null;
 
-  const otherUsers = getAllUsers().filter((user) => user.id !== currentUser.id);
-  const onlineUsers = otherUsers.slice(0, 3);
-  const friendSuggestions = otherUsers.slice(3, 6);
-
-  const upcomingEvents = [
-    {
-      id: "1",
-      title: "Tech Conference 2023",
-      date: "2023-10-15T09:00:00Z",
-      attendees: 156,
-    },
-    {
-      id: "2",
-      title: "Design Workshop",
-      date: "2023-10-20T14:00:00Z",
-      attendees: 42,
-    },
-  ];
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const handleNavigateToSuggestions = () => {
+    router.push("/followers?tab=suggestions");
   };
 
   return (
@@ -180,67 +174,55 @@ const RightSidebar = () => {
       <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
         <h3 className="font-medium mb-3">People You May Know</h3>
         <div className="space-y-3">
-          {friendSuggestions.map((user) => (
-            <div key={user.id} className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Avatar>
-                  <AvatarImage
-                    src={formatAvatarUrl(user.avatar)}
-                    alt={user.firstName}
-                  />
-                  <AvatarFallback>
-                    {user.firstName[0]}
-                    {user.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="text-sm font-medium">
-                    {user.firstName} {user.lastName}
+          {loadingSuggestions ? (
+            <p className="text-sm text-gray-500">Loading...</p>
+          ) : suggestions.length > 0 ? (
+            suggestions.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+                onClick={handleNavigateToSuggestions}
+              >
+                <div className="flex items-center space-x-2">
+                  <Avatar>
+                    <AvatarImage
+                      src={formatAvatarUrl(user.avatar)}
+                      alt={user.firstname}
+                    />
+                    <AvatarFallback>
+                      {user.firstname?.[0]}
+                      {user.lastname?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="text-sm font-medium">
+                      {user.firstname} {user.lastname}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Suggested for you
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">5 mutual friends</div>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="h-7 text-xs">
-                Add
-              </Button>
-            </div>
-          ))}
-
-          {friendSuggestions.length === 0 && (
-            <p className="text-sm text-gray-500">No suggestions available.</p>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">No new suggestions.</p>
           )}
         </div>
       </div>
 
       {/* Upcoming Events */}
-      <div className="bg-white rounded-lg shadow-sm p-3 border border-gray-200">
-        <h3 className="font-medium mb-3">Upcoming Events</h3>
-        <div className="space-y-3">
-          {upcomingEvents.map((event) => (
-            <div
-              key={event.id}
-              className="border border-gray-100 rounded-lg p-2"
-            >
-              <h4 className="font-medium text-sm">{event.title}</h4>
-              <p className="text-xs text-gray-500 mt-1">
-                {formatDate(event.date)}
-              </p>
-              <div className="flex items-center justify-between mt-2">
-                <div className="text-xs text-gray-500">
-                  {event.attendees} going
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-social"
-                >
-                  Interested
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <Calendar className="h-5 w-5 mr-2" />
+            Upcoming Events
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500">No upcoming events.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
