@@ -34,6 +34,28 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		return
 	}
 
+	// Check for duplicate event creation (idempotency)
+	// Check if an event with the same title, creator, group, and time already exists
+	existingEvent, err := q.CheckRow("events", []string{
+		"title",
+		"creator_id",
+		"group_id",
+		"event_time",
+	}, []any{
+		event.Title,
+		c.UserID,
+		groupId,
+		event.EventTime,
+	})
+	if err != nil {
+		c.SendError("failed to check for duplicate event")
+		return
+	}
+	if existingEvent {
+		c.SendError("Event with the same details already exists")
+		return
+	}
+
 	eventID := util.UUIDGen()
 
 	err = q.InsertData("events", []string{
@@ -66,6 +88,27 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 
 	for _, id := range memberIds {
 		if id == c.UserID {
+			continue
+		}
+
+		// Check for duplicate notification (idempotency)
+		existingNotification, err := q.CheckRow("notifications", []string{
+			"actor_id",
+			"recipient_id",
+			"type",
+			"entity_id",
+		}, []any{
+			c.UserID,
+			id,
+			"group_event",
+			eventID,
+		})
+		if err != nil {
+			c.SendError("failed to check for duplicate notification")
+			return
+		}
+		if existingNotification {
+			// Notification already exists, skip creating duplicate
 			continue
 		}
 
