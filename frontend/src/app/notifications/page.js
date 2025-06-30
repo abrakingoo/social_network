@@ -231,11 +231,69 @@ const Notifications = () => {
 
               {notification.type === 'follow_request' && (
                 <>
-                  <Button size="sm" className="bg-social hover:bg-social-dark">
+                  <Button
+                    size="sm"
+                    className="bg-social hover:bg-social-dark"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const userId = notification.data?.actor_id || notification.actor?.id;
+                      if (!userId) {
+                        toast({
+                          title: 'Error',
+                          description: 'User ID missing from notification.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      const success = await import('@/services/notificationService').then(s => s.default.respondToFollowRequest(userId, 'accepted'));
+                      if (success) {
+                        markAsRead(notification.id);
+                        toast({
+                          title: 'Request accepted',
+                          description: 'You are now friends!',
+                        });
+                      } else {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to accept friend request.',
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                  >
                     <Check className="h-4 w-4 mr-1" />
                     Accept
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const userId = notification.data?.actor_id || notification.actor?.id;
+                      if (!userId) {
+                        toast({
+                          title: 'Error',
+                          description: 'User ID missing from notification.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+                      const success = await import('@/services/notificationService').then(s => s.default.respondToFollowRequest(userId, 'declined'));
+                      if (success) {
+                        markAsRead(notification.id);
+                        toast({
+                          title: 'Request declined',
+                          description: 'The follow request has been declined.',
+                        });
+                      } else {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to decline friend request.',
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                  >
                     <X className="h-4 w-4 mr-1" />
                     Decline
                   </Button>
