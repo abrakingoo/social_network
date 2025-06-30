@@ -75,19 +75,14 @@ const Followers = () => {
   }
 
   // Handle accepting a friend request
-  const handleAcceptFriend = async (friendId) => {
-    const res = await webSocketOperations.respondToFollowRequest(
-      friendId,
-      "accepted",
-    );
-    if (res.success) {
-      setUsers([]);
-      fetchUsers();
-      toast({
-        title: "Request accepted",
-        description: "You are now friends!",
-      });
-    }
+  const handleAcceptFriend = (friendId) => {
+    webSocketOperations.respondToFollowRequest(friendId, "accepted");
+    setUsers([]);
+    fetchUsers();
+    toast({
+      title: "Request accepted",
+      description: "You are now friends!",
+    });
   };
 
   // Navigate to messages
@@ -95,37 +90,30 @@ const Followers = () => {
     router.push(`/messages`);
   };
 
-  const handleUnfollowAUser = async (userID) => {
-    const res = await webSocketOperations.unfollowUser(userID);
-    if (res.success) {
-      setUsers([]);
-      fetchUsers();
-      toast({
-        title: "Follow request rejected",
-        description: "The follow request has been rejected.",
-      });
-    }
+  const handleUnfollowAUser = (userID) => {
+    webSocketOperations.unfollowUser(userID);
+    setUsers([]);
+    fetchUsers();
+    toast({
+      title: "Unfollow request rejecte",
+      description: "you have unfollowed a user",
+    });
   };
 
   // Handle rejecting a friend request
-  const handleRejectFriend = async (friendId) => {
-    const res = await webSocketOperations.respondToFollowRequest(
-      friendId,
-      "declined",
-    );
-    if (res.success) {
-      setUsers([]);
-      fetchUsers();
-      toast({
-        title: "Follow request rejected",
-        description: "The follow request has been rejected.",
-      });
-    }
+  const handleRejectFriend = (friendId) => {
+    webSocketOperations.respondToFollowRequest(friendId, "declined");
+    setUsers([]);
+    fetchUsers();
+    toast({
+      title: "Follow request rejected",
+      description: "The follow request has been rejected.",
+    });
   };
 
   // Handle sending a friend request
   const handleAddFriend = (friendId) => {
-    const result = webSocketOperations.sendFollowRequest(friendId);
+    webSocketOperations.sendFollowRequest(friendId);
     setUsers([]);
     fetchUsers();
     toast({
@@ -136,7 +124,7 @@ const Followers = () => {
 
   // Handle canceling a follow request
   const handleCancelFollowRequest = (followerId) => {
-    const result = webSocketOperations.cancelFollowRequest(followerId);
+    webSocketOperations.cancelFollowRequest(followerId);
     setUsers([]);
     fetchUsers([]);
     toast({
