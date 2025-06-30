@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Calendar } from "lucide-react";
+import { Users } from "lucide-react";
 import { formatAvatarUrl } from "@/lib/utils";
 import { useGroup } from "@/context/GroupContext";
 import { useAuth, API_BASE_URL } from "@/context/AuthContext";
@@ -109,54 +109,6 @@ const RightSidebar = () => {
             )}
           </CardContent>
         </Card>
-
-        {/* Upcoming Events */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Upcoming Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {groupData.Events && groupData.Events.length > 0 ? (
-              <div className="space-y-4">
-                {groupData.Events.slice(0, 2).map((event) => (
-                  <div key={event.id} className="border-b pb-3 last:border-0">
-                    <h4 className="font-medium">{event.title}</h4>
-                    <p className="text-sm text-gray-500 mb-1">
-                      {formatEventDate(event.event_time)}
-                    </p>
-                    <div className="flex items-center">
-                      <p className="text-xs text-gray-500 mr-2">
-                        {event.attendees ? event.attendees.length : 0} going
-                      </p>
-                      {event.user_rsvp_status === "going" && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-green-50"
-                        >
-                          You're going
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                <Button
-                  variant="ghost"
-                  className="w-full text-sm"
-                  onClick={() => (window.location.href = `/events`)}
-                >
-                  See all events
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500">
-                No upcoming events scheduled
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -210,19 +162,6 @@ const RightSidebar = () => {
           )}
         </div>
       </div>
-
-      {/* Upcoming Events */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center">
-            <Calendar className="h-5 w-5 mr-2" />
-            Upcoming Events
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-500">No upcoming events.</p>
-        </CardContent>
-      </Card>
     </div>
   );
 };
