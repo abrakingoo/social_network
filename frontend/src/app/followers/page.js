@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL, useAuth } from "@/context/AuthContext";
@@ -22,12 +22,14 @@ const Followers = () => {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "followers";
+  const highlightedUserId = searchParams.get("highlight");
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const highlightedUserRef = useRef(null);
 
   // Redirect to login if not authenticated
   const fetchUsers = async () => {
@@ -59,6 +61,15 @@ const Followers = () => {
 
     fetchUsers();
   }, [currentUser, router, getAllUsers]);
+
+  useEffect(() => {
+    if (highlightedUserId && highlightedUserRef.current) {
+      highlightedUserRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [users, highlightedUserId]);
 
   if (loading) {
     <div className="flex justify-center items-center">
@@ -416,10 +427,13 @@ const Followers = () => {
 
             <TabsContent value="suggestions" className="space-y-4">
               {users.non_mutual != null ? (
-                users["non_mutual"].map((user) => (
+                users["non_mutual"].map((user) => {
+                  const isHighlighted = user.id === highlightedUserId;
+                  return (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    ref={isHighlighted ? highlightedUserRef : null}
+                    className={`flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer ${isHighlighted ? "bg-blue-100 border-2 border-blue-400" : ""}`}
                     onClick={() => handleUserClick(user)}
                   >
                     <div className="flex items-center">
@@ -448,7 +462,7 @@ const Followers = () => {
                       </Button>
                     </div>
                   </div>
-                ))
+                )})
               ) : (
                 <div className="text-center py-10">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
