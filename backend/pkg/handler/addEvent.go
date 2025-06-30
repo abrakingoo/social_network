@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"social/pkg/model"
@@ -55,31 +54,7 @@ func (app *App) AddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventStr := fmt.Sprintf("created event - %s ", event.Title)
-	err = app.Queries.InsertData("notifications", []string{
-		"id",
-		"actor_id",
-		"recipient_id",
-		"recipient_group_id",
-		"type",
-		"message",
-		"entity_id",
-		"entity_type",
-	}, []any{
-		util.UUIDGen(),
-		userID,
-		"",
-		groupId,
-		"group_event",
-		eventStr,
-		eventID,
-		"group-event",
-	})
-
-	if err != nil {
-		app.JSONResponse(w, r, http.StatusConflict, "failed to add event notification", Error)
-		return
-	}
+	// NOTE: Notification creation removed - now handled by WebSocket for real-time delivery
 
 	app.JSONResponse(w, r, http.StatusCreated, "event added successfully", Success)
 }
