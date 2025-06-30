@@ -108,7 +108,6 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 			return
 		}
 		if existingNotification {
-			// Notification already exists, skip creating duplicate
 			continue
 		}
 
@@ -143,10 +142,13 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		"type": "notification",
 		"case": "group_event",
 		"data": map[string]any{
-			"title":       event.Title,
-			"event_time":  event.EventTime.Format("2006-01-02 15:04:05"),
-			"location":    event.Location,
-			"description": event.Description,
+			"type":       "group_event",
+			"title":      event.Title,
+			"event_time": event.EventTime.Format("2006-01-02 15:04:05"),
+			"location":   event.Location,
+			"message":    event.Description,
+			"group_id":   groupId,
+			"actor":      c.UserID,
 		},
 	}
 
