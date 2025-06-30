@@ -127,7 +127,7 @@ const Followers = () => {
   const handleAddFriend = (friendId) => {
     const result = webSocketOperations.sendFollowRequest(friendId);
     setUsers([]);
-    fetchUsers([]);
+    fetchUsers();
     toast({
       title: "Friend request sent",
       description: "Your friend request has been sent.",
