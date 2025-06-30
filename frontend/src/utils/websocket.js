@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { decode } from 'he';
 
 // Enhanced WebSocket manager with EXACT backend integration
 class WebSocketManager {
@@ -225,21 +226,34 @@ class WebSocketManager {
   }
 
   handlePrivateMessage(data) {
+    // Decode HTML entities in the message content
+    if (data && data.message) {
+      data.message = decode(data.message || '');
+    }
     this.notifyListeners(EVENT_TYPES.PRIVATE_MESSAGE, data);
   }
 
   handleGroupMessage(data) {
-    // Decode base64 data if it's a string
+    // Decode base64 data if it's a string, then parse JSON
     let decodedData = data;
     if (typeof data === 'string') {
       try {
-        const decoded = atob(data);
+        // First decode base64 with proper UTF-8 handling
+        const binaryString = atob(data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoded = new TextDecoder('utf-8').decode(bytes);
         decodedData = JSON.parse(decoded);
       } catch (error) {
         console.error("Failed to decode group message data:", error);
+        return;
       }
     }
 
+    // Note: Real-time group messages are sent unescaped from backend
+    // Only historical messages from database need HTML entity decoding
     this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, decodedData);
   }
 
