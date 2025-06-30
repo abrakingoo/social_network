@@ -332,6 +332,17 @@ export const NotificationProvider = ({ children }) => {
     });
   }, [addNotification]);
 
+  // Handle group event notifications
+  const handleGroupEventNotification = useCallback((data) => {
+    addNotification({
+      type: 'group_event',
+      title: 'New Event Created',
+      content: `Event "${data.title}" has been created`,
+      actionable: false,
+      data: data
+    });
+  }, [addNotification]);
+
   // Listen for WebSocket notification events
   useEffect(() => {
     if (!isUserAuthenticated()) return;
@@ -345,6 +356,9 @@ export const NotificationProvider = ({ children }) => {
           break;
         case 'group_view_invitation': // NEW case
           handleGroupViewInvitation(notification.data);
+          break;
+        case 'group_event':
+          handleGroupEventNotification(notification.data);
           break;
         case 'follow_request':
           handleFollowRequest(notification.data);
