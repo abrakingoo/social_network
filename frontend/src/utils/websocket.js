@@ -201,32 +201,31 @@ class WebSocketManager {
   // Handle backend notifications with EXACT format matching
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
-    console.log("this is the message ...", message)
     if (notificationCase === "action_based") {
       switch (action_type) {
         case "group_join_request":
-          this.handleJoinRequestNotification(data);
+          this.handleJoinRequestNotification(message);
           break;
         case "group_join_accept":
-          this.handleJoinAcceptNotification(data);
+          this.handleJoinAcceptNotification(message);
           break;
         case "group_join_decline":
-          this.handleJoinDeclineNotification(data);
+          this.handleJoinDeclineNotification(message);
           break;
         case "group_invitation":
-          this.handleGroupInvitationNotification(data);
+          this.handleGroupInvitationNotification(message);
           break;
         case "private_message":
           this.notifyListeners("notification", message);
           break;
         case "group_message":
-          this.handleGroupMessage(data);
+          this.handleGroupMessage(message);
           break;
         case "follow_request":
           this.dispatchNotificationEvent("follow_request", {
             title: "follow request",
             description: "new follow_request",
-            data: data,
+            data: message,
           });
           break;
         
