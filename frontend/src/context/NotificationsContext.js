@@ -258,10 +258,10 @@ export const NotificationProvider = ({ children }) => {
       addNotification({
         type: 'group_invitation',
         title: 'Group Invitation',
-        content: `${inviterName} invited you to join a group`,
+        content: `${inviterName} invited you to join`,
         actor: inviter || null,
-        groupId: data.group_id,
-        groupName: data.group_name || 'a group',
+        groupId: data.data.group_id,
+        groupName: data.data.group_name || 'a group',
         actionable: true,
         data: data
       });
