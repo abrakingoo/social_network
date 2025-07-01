@@ -188,7 +188,6 @@ class WebSocketManager {
       this.handleBackendNotification(data);
     } else if (data.type === "error") {
       // Backend sends errors with exact format: { "type": "error", "message": "..." }
-      console.error('WebSocket error received:', data.message);
       this.notifyListeners("error", { message: data.message });
     } else if (data.type === "success") {
       // Backend sends success responses with exact format: { "type": "success", "message": "..." }
@@ -352,6 +351,7 @@ class WebSocketManager {
 
   // Handle group invitation notifications
   handleGroupInvitationNotification(data) {
+    console.log(data)
     // Dispatch event for components to handle
     this.dispatchNotificationEvent("group_invitation", {
       title: "Group Invitation",
