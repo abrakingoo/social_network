@@ -299,11 +299,11 @@ export const NotificationProvider = ({ children }) => {
   }, [addNotification]);
 
   const handleFollowRequest = useCallback((data) => {
+    type: 'follow_request',
     addNotification({
-      type: 'follow_request',
       title: 'Follow Request',
       content: 'wants to follow you',
-      actor: data.requester || null,
+      actor: data.actor || null,
       actionable: true,
       data: data
     });
