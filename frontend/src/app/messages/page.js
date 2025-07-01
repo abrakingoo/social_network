@@ -147,8 +147,6 @@ const Messages = () => {
     usersToMessage = [...usersToMessage, ...users.following]
   }
 
-  console.log(usersToMessage)
-
   // Don't render if user is not authenticated
   if (!currentUser) {
     return null;
