@@ -416,16 +416,13 @@ const Groups = () => {
             : group,
         ),
       );
+      toast({
+        title: "Request Sent",
+        description:
+          "Your request to join has been sent to the group admin for approval!",
+      });
 
       const result = await webSocketOperations.joinGroup(groupId);
-
-      if (result.success) {
-        toast({
-          title: "Request Sent",
-          description:
-            "Your request to join has been sent to the group admin for approval!",
-        });
-      }
     } catch (error) {
       // Revert optimistic update on error
       setRequestStates((prev) => ({

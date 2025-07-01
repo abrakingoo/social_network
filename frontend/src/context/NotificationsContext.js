@@ -252,18 +252,30 @@ export const NotificationProvider = ({ children }) => {
   // WebSocket notification handlers
   const handleGroupInvitation = useCallback((data) => {
     if (data && data.id) {
+      const inviter = data.inviter;
+      const inviterName = inviter?.nickname || inviter?.firstname || inviter?.first_name || inviter?.email || 'Someone';
       addNotification({
         type: 'group_invitation',
         title: 'Group Invitation',
-        content: 'invited you to join a group',
-        actor: data.inviter || null,
+        content: `${inviterName} invited you to join a group`,
+        actor: inviter || null,
         groupId: data.group_id,
         groupName: data.group_name || 'a group',
         actionable: true,
         data: data
       });
     } else {
-      // Skip notifications without backend ID
+      // Fallback: still add a notification for robustness
+      addNotification({
+        type: 'group_invitation',
+        title: 'Group Invitation',
+        content: 'You have been invited to join a group',
+        actor: null,
+        groupId: data?.group_id,
+        groupName: data?.group_name || 'a group',
+        actionable: true,
+        data: data
+      });
     }
   }, [addNotification]);
 
@@ -365,6 +377,22 @@ export const NotificationProvider = ({ children }) => {
           break;
         case 'group_join_response':
           handleJoinResponse(notification.data);
+          break;
+        case 'group_join_request':
+          // Add a notification for group join requests (for admins)
+          if (notification.data && notification.data.request && notification.data.request.id) {
+            const user = notification.data.request.user;
+            const displayName = user?.nickname || ((user?.firstname || user?.first_name || '') + ' ' + (user?.lastname || user?.last_name || '')).trim() || 'Someone';
+            addNotification({
+              type: 'group_join_request',
+              title: 'New Join Request',
+              content: `${displayName} requested to join your group`,
+              actor: user || null,
+              groupId: notification.data.group_id,
+              actionable: true,
+              data: notification.data
+            });
+          }
           break;
         case 'like':
         case 'comment':

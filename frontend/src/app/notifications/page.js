@@ -192,7 +192,7 @@ const Notifications = () => {
       notification.actor &&
       (notification.actor.firstName || notification.actor.lastName)
         ? `${notification.actor.firstName || ""} ${notification.actor.lastName || ""}`.trim()
-        : "System";
+        : "";
 
     return (
       <div
