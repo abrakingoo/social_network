@@ -277,34 +277,39 @@ export default function GroupManagementDialog({ isOpen, onClose, groupData, onGr
   };
 
   // Handle user invitations using exact backend format
-  const handleInviteUser = async (userId) => {
+  const handleInviteUser = (userId) => {
     setInvitingUsers(prev => new Set([...prev, userId]));
-
-    try {
-      await webSocketOperations.inviteToGroup(groupData.id, userId);
-
-      // Remove user from available list
-      setAvailableUsers(prev => prev.filter(user => user.id !== userId));
-
-      toast({
-        title: "Invitation Sent",
-        description: "User has been invited to join the group"
+    // Find the user object for optimistic UI and possible revert
+    let invitedUser;
+    setAvailableUsers(prev => {
+      const filtered = prev.filter(user => {
+        if (user.id === userId) invitedUser = user;
+        return user.id !== userId;
       });
+      return filtered;
+    });
+    toast({
+      title: "Invitation Sent",
+      description: "User has been invited to join the group"
+    });
 
-    } catch (error) {
-      // Show appropriate error message
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send invitation",
-        variant: "destructive"
+    webSocketOperations.inviteToGroup(groupData.id, userId)
+      .catch((error) => {
+        // Revert UI if error
+        setAvailableUsers(prev => invitedUser ? [invitedUser, ...prev] : prev);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send invitation",
+          variant: "destructive"
+        });
+      })
+      .finally(() => {
+        setInvitingUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
       });
-    } finally {
-      setInvitingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
-    }
   };
 
   // Filter users based on search
