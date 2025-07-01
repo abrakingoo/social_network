@@ -88,13 +88,20 @@ func (c *Client) PrivateMessage(msg map[string]any, q *repository.Query, h *Hub)
 		return
 	}
 
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		c.SendError("failed to fetch user data")
+		return
+	}
+
 	h.ActionBasedNotification([]string{
 		private.RecipientID,
 	}, "private_message", map[string]any{
 		"id":      notId,
 		"sender":  user,
 		"message": html.EscapeString(private.Message),
-	})
+	}, userData)
 }
 
 func (c *Client) ReadPrivateMessage(msg map[string]any, q *repository.Query) {
