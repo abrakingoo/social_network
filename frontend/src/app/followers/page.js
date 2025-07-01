@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL, useAuth } from "@/context/AuthContext";
@@ -14,6 +14,7 @@ import { Users, Search, UserPlus, UserCheck, UserX } from "lucide-react";
 import { FadeLoader } from "react-spinners";
 import { webSocketOperations } from "@/utils/websocket";
 import UserProfileModal from "@/components/profile/UserProfileModal";
+import Loading from "@/components/ui/loading";
 
 const Followers = () => {
   const router = useRouter();
@@ -74,69 +75,56 @@ const Followers = () => {
   }
 
   // Handle accepting a friend request
-  const handleAcceptFriend = async (friendId) => {
-    const res = await webSocketOperations.respondToFollowRequest(
-      friendId,
-      "accepted",
-    );
-    if (res.success) {
-      setUsers([]);
-      fetchUsers();
-      toast({
-        title: "Request accepted",
-        description: "You are now friends!",
-      });
-    }
+  const handleAcceptFriend = (friendId) => {
+    webSocketOperations.respondToFollowRequest(friendId, "accepted");
+    setUsers([]);
+    fetchUsers();
+    toast({
+      title: "Request accepted",
+      description: "You are now friends!",
+    });
   };
 
   // Navigate to messages
   const navigateToMsg = () => {
-    router.push(`/messages`)
-  }
+    router.push(`/messages`);
+  };
 
-  const handleUnfollowAUser = async (userID) => {
-    const res = await webSocketOperations.unfollowUser(userID);
-    if (res.success) {
-      setUsers([]);
-      fetchUsers();
-      toast({
-        title: "Follow request rejected",
-        description: "The follow request has been rejected.",
-      });
-    }
-  }
+  const handleUnfollowAUser = (userID) => {
+    webSocketOperations.unfollowUser(userID);
+    setUsers([]);
+    fetchUsers();
+    toast({
+      title: "Unfollow request rejecte",
+      description: "you have unfollowed a user",
+    });
+  };
 
   // Handle rejecting a friend request
-  const handleRejectFriend = async (friendId) => {
-    const res = await webSocketOperations.respondToFollowRequest(
-      friendId,
-      "declined",
-    );
-    if (res.success) {
-      setUsers([]);
-      fetchUsers();
-      toast({
-        title: "Follow request rejected",
-        description: "The follow request has been rejected.",
-      });
-    }
+  const handleRejectFriend = (friendId) => {
+    webSocketOperations.respondToFollowRequest(friendId, "declined");
+    setUsers([]);
+    fetchUsers();
+    toast({
+      title: "Follow request rejected",
+      description: "The follow request has been rejected.",
+    });
   };
 
   // Handle sending a friend request
   const handleAddFriend = (friendId) => {
-    const result = webSocketOperations.sendFollowRequest(friendId);
+    webSocketOperations.sendFollowRequest(friendId);
     setUsers([]);
-    fetchUsers([]);
+    fetchUsers();
     toast({
       title: "Friend request sent",
       description: "Your friend request has been sent.",
     });
-
   };
 
   // Handle canceling a follow request
   const handleCancelFollowRequest = (followerId) => {
-    const result = webSocketOperations.cancelFollowRequest(followerId);
+    webSocketOperations.cancelFollowRequest(followerId);
     setUsers([]);
     fetchUsers([]);
     toast({
@@ -160,21 +148,21 @@ const Followers = () => {
   // Filter friends based on the active tab
   const filteredFriends = users.followers
     ? users.followers.filter((user) => {
-      // Example: Assuming each user has firstName and lastName
-      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+        // Example: Assuming each user has firstName and lastName
+        const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
 
-      // Check search query
-      if (searchQuery) {
-        if (!fullName.includes(searchQuery.toLowerCase())) return false;
-      }
+        // Check search query
+        if (searchQuery) {
+          if (!fullName.includes(searchQuery.toLowerCase())) return false;
+        }
 
-      // Apply tab-based filtering
-      if (activeTab === "followers") return true;
-      if (activeTab === "following") return true;
-      if (activeTab === "requests" && user.status === "pending") return true;
-      if (activeTab === "suggestions") return false; // or customize as needed
-      return user.status === "accepted"; // default condition
-    })
+        // Apply tab-based filtering
+        if (activeTab === "followers") return true;
+        if (activeTab === "following") return true;
+        if (activeTab === "requests" && user.status === "pending") return true;
+        if (activeTab === "suggestions") return false; // or customize as needed
+        return user.status === "accepted"; // default condition
+      })
     : [];
 
   return (
@@ -235,7 +223,10 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {friend.status === "pending" ? (
                         <>
                           <Button
@@ -260,7 +251,11 @@ const Followers = () => {
                           Requested
                         </Button>
                       ) : (
-                        <Button variant="outline" size="sm" onClick={() => navigateToMsg()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigateToMsg()}
+                        >
                           Message
                         </Button>
                       )}
@@ -279,7 +274,6 @@ const Followers = () => {
                 </div>
               )}
             </TabsContent>
-
 
             {/* Following */}
             <TabsContent value="following" className="space-y-4">
@@ -310,7 +304,10 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {friend.status === "pending" ? (
                         <>
                           <Button
@@ -336,10 +333,18 @@ const Followers = () => {
                         </Button>
                       ) : (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => navigateToMsg()}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigateToMsg()}
+                          >
                             Message
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleUnfollowAUser(friend.id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUnfollowAUser(friend.id)}
+                          >
                             Unfollow
                           </Button>
                         </>
@@ -383,7 +388,10 @@ const Followers = () => {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="flex space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Button
                         onClick={() => handleAcceptFriend(friend.id)}
                         className="bg-social hover:bg-social-dark"
@@ -510,7 +518,7 @@ const Followers = () => {
           </Tabs>
         </CardContent>
       </Card>
-      
+
       {/* User Profile Modal */}
       <UserProfileModal
         isOpen={isProfileModalOpen}
@@ -521,4 +529,10 @@ const Followers = () => {
   );
 };
 
-export default Followers;
+export default function FollowersContent() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <Followers />
+    </Suspense>
+  );
+}
