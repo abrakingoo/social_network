@@ -7,11 +7,12 @@ import (
 	"social/pkg/repository"
 )
 
-func (h *Hub) ActionBasedNotification(recipients []string, action string, data any) {
+func (h *Hub) ActionBasedNotification(recipients []string, action string, data any, actor any) {
 	payload := map[string]any{
 		"type":        "notification",
 		"case":        "action_based",
 		"action_type": action,
+		"actor":       actor,
 		"data":        data,
 	}
 
