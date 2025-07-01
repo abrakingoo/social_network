@@ -201,7 +201,7 @@ class WebSocketManager {
   // Handle backend notifications with EXACT format matching
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
-
+    console.log("this is the message ...", message)
     if (notificationCase === "action_based") {
       switch (action_type) {
         case "group_join_request":
@@ -222,13 +222,21 @@ class WebSocketManager {
         case "group_message":
           this.handleGroupMessage(data);
           break;
+        case "follow_request":
+          this.dispatchNotificationEvent("follow_request", {
+            title: "follow request",
+            description: "new follow_request",
+            data: data,
+          });
+          break;
+        
         default:
           break;
       }
-    } else if (notificationCase === "group_event") {
-      // Handle group event notifications
-      this.handleGroupEventNotification(data);
-    }
+     } else if (notificationCase === "group_event") {
+       //Handle group event notifications
+       this.handleGroupEventNotification(data);
+     }
   }
 
   handlePrivateMessage(data) {
@@ -978,20 +986,20 @@ export const webSocketOperations = {
     }
   },
 
-  async sendFollowRequest(userId) {
+ sendFollowRequest(userId) {
     return wsManager.sendAndWait(EVENT_TYPES.FOLLOW_REQUEST, {
       recipient_Id: userId,
     });
   },
 
-  async respondToFollowRequest(userId, status) {
+ respondToFollowRequest(userId, status) {
     return wsManager.sendAndWait(EVENT_TYPES.RESPOND_FOLLOW_REQUEST, {
       recipient_Id: userId,
       status,
     });
   },
 
-  async unfollowUser(userId) {
+ unfollowUser(userId) {
     return wsManager.sendAndWait(EVENT_TYPES.UNFOLLOW, {
       recipient_Id: userId,
     });
