@@ -600,7 +600,6 @@ class WebSocketManager {
           resolved = true;
           this.removeListener("success", successListener);
           this.removeListener("error", errorListener);
-          reject(new Error(`Operation ${type} timed out after ${timeout}ms`));
         }
       }, timeout);
 
