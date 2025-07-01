@@ -1,51 +1,56 @@
 // frontend/src/services/groupService.js - CORRECTED: Perfect backend integration
-import { webSocketOperations } from '@/utils/websocket';
+import { webSocketOperations } from "@/utils/websocket";
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Error types for better error handling
 const GroupErrorTypes = {
-  NOT_FOUND: 'GROUP_NOT_FOUND',
-  ALREADY_EXISTS: 'DUPLICATE_GROUP_TITLE',
-  PERMISSION_DENIED: 'DELETE_PERMISSION_DENIED',
-  INVALID_INPUT: 'VALIDATION_ERROR',
-  NETWORK_ERROR: 'NETWORK_ERROR',
-  WEBSOCKET_ERROR: 'WEBSOCKET_ERROR',
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+  NOT_FOUND: "GROUP_NOT_FOUND",
+  ALREADY_EXISTS: "DUPLICATE_GROUP_TITLE",
+  PERMISSION_DENIED: "DELETE_PERMISSION_DENIED",
+  INVALID_INPUT: "VALIDATION_ERROR",
+  NETWORK_ERROR: "NETWORK_ERROR",
+  WEBSOCKET_ERROR: "WEBSOCKET_ERROR",
+  UNKNOWN_ERROR: "UNKNOWN_ERROR",
 };
 
 // Helper function to handle API responses
-const handleApiResponse = async (response, errorContext, preReadData = null) => {
-  const data = preReadData || await response.json();
+const handleApiResponse = async (
+  response,
+  errorContext,
+  preReadData = null,
+) => {
+  const data = preReadData || (await response.json());
 
   if (!response.ok) {
     console.error(`[groupService.${errorContext}] Error response:`, {
       status: response.status,
       statusText: response.statusText,
-      data
+      data,
     });
 
     let errorType = GroupErrorTypes.UNKNOWN_ERROR;
-    let errorMessage = data.error || 'An unexpected error occurred';
+    let errorMessage = data.error || "An unexpected error occurred";
 
     // Map HTTP status codes to error types
     switch (response.status) {
       case 404:
         errorType = GroupErrorTypes.NOT_FOUND;
-        errorMessage = data.error || 'Group not found';
+        errorMessage = data.error || "Group not found";
         break;
       case 409:
         errorType = GroupErrorTypes.ALREADY_EXISTS;
-        errorMessage = data.error || 'Group with this title already exists';
+        errorMessage = data.error || "Group with this title already exists";
         break;
       case 403:
         errorType = GroupErrorTypes.PERMISSION_DENIED;
-        errorMessage = data.error || 'You do not have permission to perform this action';
+        errorMessage =
+          data.error || "You do not have permission to perform this action";
         break;
       case 400:
         errorType = GroupErrorTypes.INVALID_INPUT;
-        errorMessage = data.error || 'Invalid input provided';
+        errorMessage = data.error || "Invalid input provided";
         break;
     }
 
@@ -62,11 +67,11 @@ const handleApiResponse = async (response, errorContext, preReadData = null) => 
 // Helper function to get common headers
 const getHeaders = (includeContentType = false) => {
   const headers = {
-    'Accept': 'application/json'
+    Accept: "application/json",
   };
 
   if (includeContentType) {
-    headers['Content-Type'] = 'application/json';
+    headers["Content-Type"] = "application/json";
   }
 
   return headers;
@@ -85,30 +90,35 @@ export const groupService = {
   // ==================== REST API OPERATIONS ====================
 
   // Fetch all groups - CORRECTED: Handle exact backend response format
-  async getAllGroups({ search = '', filter = 'all' } = {}) {
+  async getAllGroups({ search = "", filter = "all" } = {}) {
     try {
       const queryParams = new URLSearchParams({
         ...(search && { search }),
-        ...(filter !== 'all' && { filter })
+        ...(filter !== "all" && { filter }),
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/groups?${queryParams}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: getHeaders(false)
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/groups?${queryParams}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: getHeaders(false),
+        },
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch groups');
+        throw new Error(data.error || "Failed to fetch groups");
       }
 
       let groupsArray = [];
 
       // Handle different response formats from backend
       if (data.message === null) {
-        console.warn('[groupService.getAllGroups] Backend returned message: null. Treating as empty array.');
+        console.warn(
+          "[groupService.getAllGroups] Backend returned message: null. Treating as empty array.",
+        );
         groupsArray = [];
       } else if (Array.isArray(data.message)) {
         groupsArray = data.message;
@@ -117,20 +127,23 @@ export const groupService = {
       } else if (Array.isArray(data)) {
         groupsArray = data;
       } else {
-        console.error('[groupService.getAllGroups] Unexpected response format:', { data });
-        throw new Error('Server returned an unexpected response format.');
+        console.error(
+          "[groupService.getAllGroups] Unexpected response format:",
+          { data },
+        );
+        throw new Error("Server returned an unexpected response format.");
       }
 
       return { groups: groupsArray };
     } catch (error) {
-      console.error('[groupService.getAllGroups] Error:', error);
+      console.error("[groupService.getAllGroups] Error:", error);
 
       if (error.status === 401) {
-        throw new Error('Session expired. Please log in again.');
+        throw new Error("Session expired. Please log in again.");
       }
 
       if (error.status === 403) {
-        throw new Error('You do not have permission to view groups.');
+        throw new Error("You do not have permission to view groups.");
       }
 
       throw error;
@@ -141,55 +154,58 @@ export const groupService = {
   async createGroup(groupData) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/addGroup`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
         headers: getHeaders(true),
         body: JSON.stringify({
           title: groupData.name,
-          description: groupData.description || ''
-        })
+          description: groupData.description || "",
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
         // Handle exact backend error responses
-        if (response.status === 400 && data.error === 'Title cannot be empty') {
-          throw new Error('Group title is required');
+        if (response.status === 400 && data.error === "Title cannot be empty") {
+          throw new Error("Group title is required");
         }
-        throw new Error(data.error || 'Failed to create group');
+        throw new Error(data.error || "Failed to create group");
       }
 
       return {
         success: true,
-        message: data.message || 'Group created successfully',
-        group_id: data.group_id
+        message: data.message || "Group created successfully",
+        group_id: data.group_id,
       };
     } catch (error) {
-      console.error('[groupService.createGroup] Error:', error);
+      console.error("[groupService.createGroup] Error:", error);
 
       if (error.type === GroupErrorTypes.ALREADY_EXISTS) {
         throw error; // Preserve the specific error for duplicate titles
       }
 
-      throw new Error('Failed to create group. Please try again.');
+      throw new Error("Failed to create group. Please try again.");
     }
   },
 
   // Get detailed group information - CORRECTED: Use exact backend endpoint
   async getGroupDetails(groupTitle) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/getGroupData?title=${encodeURIComponent(groupTitle)}`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: getHeaders(false)
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/getGroupData?title=${encodeURIComponent(groupTitle)}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: getHeaders(false),
+        },
+      );
 
-      const data = await handleApiResponse(response, 'getGroupDetails');
+      const data = await handleApiResponse(response, "getGroupDetails");
       return data.message || data;
     } catch (error) {
       if (error.type === GroupErrorTypes.NOT_FOUND) {
-        throw new Error('Group not found or you do not have access to it.');
+        throw new Error("Group not found or you do not have access to it.");
       }
       throw error;
     }
@@ -199,21 +215,21 @@ export const groupService = {
   async deleteGroup(groupTitle) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/deleteGroup`, {
-        method: 'DELETE',
-        credentials: 'include',
+        method: "DELETE",
+        credentials: "include",
         headers: getHeaders(true),
-        body: JSON.stringify({ title: groupTitle })
+        body: JSON.stringify({ title: groupTitle }),
       });
 
-      const data = await handleApiResponse(response, 'deleteGroup');
+      const data = await handleApiResponse(response, "deleteGroup");
       return {
         success: true,
         message: data.message,
-        deleted_group_title: groupTitle
+        deleted_group_title: groupTitle,
       };
     } catch (error) {
       if (error.type === GroupErrorTypes.PERMISSION_DENIED) {
-        throw new Error('You do not have permission to delete this group.');
+        throw new Error("You do not have permission to delete this group.");
       }
       throw error;
     }
@@ -225,10 +241,10 @@ export const groupService = {
       const result = await webSocketOperations.createEvent(eventData);
       return {
         success: true,
-        message: result.message || 'Event created successfully'
+        message: result.message || "Event created successfully",
       };
     } catch (error) {
-      handleWebSocketError(error, 'createEvent');
+      handleWebSocketError(error, "createEvent");
     }
   },
 
@@ -239,61 +255,64 @@ export const groupService = {
       const formattedStatus = status === "going" ? "going" : "not_going";
 
       const requestPayload = {
-        eventId: eventId,        //   Backend expects "eventId", not "event_id"
-        status: formattedStatus  //   Backend expects "status", not "response"
+        eventId: eventId, //   Backend expects "eventId", not "event_id"
+        status: formattedStatus, //   Backend expects "status", not "response"
       };
 
       const response = await fetch(`${API_BASE_URL}/api/rsvp`, {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
+        credentials: "include",
         headers: getHeaders(true),
-        body: JSON.stringify(requestPayload)
+        body: JSON.stringify(requestPayload),
       });
 
-      const data = await handleApiResponse(response, 'rsvpEvent');
+      const data = await handleApiResponse(response, "rsvpEvent");
 
       return {
         success: true,
-        message: data.message || 'RSVP updated successfully',
-        attendeeCount: data.message || 0 // Backend returns count as message
+        message: data.message || "RSVP updated successfully",
+        attendeeCount: data.message || 0, // Backend returns count as message
       };
     } catch (error) {
-      console.error('[groupService.rsvpEvent] Error details:', {
+      console.error("[groupService.rsvpEvent] Error details:", {
         error: error.message,
         eventId,
         status,
-        errorType: error.type
+        errorType: error.type,
       });
 
       if (error.type === GroupErrorTypes.NOT_FOUND) {
-        throw new Error('Event not found or you do not have access to it.');
+        throw new Error("Event not found or you do not have access to it.");
       }
 
       if (error.status === 400) {
-        throw new Error('Invalid RSVP data. Please try again.');
+        throw new Error("Invalid RSVP data. Please try again.");
       }
 
       if (error.status === 401) {
-        throw new Error('You must be logged in to RSVP to events.');
+        throw new Error("You must be logged in to RSVP to events.");
       }
 
-      throw new Error('Failed to update RSVP. Please try again.');
+      throw new Error("Failed to update RSVP. Please try again.");
     }
   },
 
   // Get event details - CORRECTED: Use exact backend endpoint
   async getEventDetails(eventId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/getEventData?event_id=${encodeURIComponent(eventId)}`, {
-        credentials: 'include',
-        headers: getHeaders(false)
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/api/getEventData?event_id=${encodeURIComponent(eventId)}`,
+        {
+          credentials: "include",
+          headers: getHeaders(false),
+        },
+      );
 
-      const data = await handleApiResponse(response, 'getEventDetails');
+      const data = await handleApiResponse(response, "getEventDetails");
       return data;
     } catch (error) {
       if (error.type === GroupErrorTypes.NOT_FOUND) {
-        throw new Error('Event not found or you do not have access to it.');
+        throw new Error("Event not found or you do not have access to it.");
       }
       throw error;
     }
@@ -303,14 +322,16 @@ export const groupService = {
   async getAllUsers() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/users`, {
-        credentials: 'include',
-        headers: getHeaders(false)
+        credentials: "include",
+        headers: getHeaders(false),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[groupService.getAllUsers] Error response:', errorText);
-        throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
+        console.error("[groupService.getAllUsers] Error response:", errorText);
+        throw new Error(
+          `Failed to fetch users: ${response.status} ${response.statusText}`,
+        );
       }
 
       // Handle 204 No Content response
@@ -324,7 +345,7 @@ export const groupService = {
       const userRelations = data.message || data;
 
       // Validate that userRelations is an object
-      if (!userRelations || typeof userRelations !== 'object') {
+      if (!userRelations || typeof userRelations !== "object") {
         return [];
       }
 
@@ -340,11 +361,11 @@ export const groupService = {
       };
 
       // Process each user category with exact field names from backend
-      addUsersFromCategory(userRelations.followers, 'followers');
-      addUsersFromCategory(userRelations.following, 'following');
-      addUsersFromCategory(userRelations.non_mutual, 'non_mutual');
-      addUsersFromCategory(userRelations.received_request, 'received_request');
-      addUsersFromCategory(userRelations.sent_request, 'sent_request');
+      addUsersFromCategory(userRelations.followers, "followers");
+      addUsersFromCategory(userRelations.following, "following");
+      addUsersFromCategory(userRelations.non_mutual, "non_mutual");
+      addUsersFromCategory(userRelations.received_request, "received_request");
+      addUsersFromCategory(userRelations.sent_request, "sent_request");
 
       if (allUsers.length > 0) {
         console.log(`[groupService.getAllUsers] Sample user:`, allUsers[0]);
@@ -361,17 +382,19 @@ export const groupService = {
             seenIds.add(user.id);
             uniqueUsers.push(user);
           } else {
-            console.warn('[groupService.getAllUsers] Skipping user with missing name fields:', user);
+            console.warn(
+              "[groupService.getAllUsers] Skipping user with missing name fields:",
+              user,
+            );
           }
         }
       }
 
       return uniqueUsers;
-
     } catch (error) {
-      console.error('[groupService.getAllUsers] Error:', error);
-      console.error('[groupService.getAllUsers] Error message:', error.message);
-      console.error('[groupService.getAllUsers] Error stack:', error.stack);
+      console.error("[groupService.getAllUsers] Error:", error);
+      console.error("[groupService.getAllUsers] Error message:", error.message);
+      console.error("[groupService.getAllUsers] Error stack:", error.stack);
 
       // Return empty array instead of throwing to prevent UI from breaking
       // The UI will show "No users available to invite" which is better than a broken state
@@ -382,87 +405,33 @@ export const groupService = {
   // ==================== WEBSOCKET OPERATIONS ====================
 
   // Join a group - Uses corrected WebSocket infrastructure
-  async joinGroup(groupId) {
-    try {
-      const result = await webSocketOperations.joinGroup(groupId);
-
-      return {
-        success: true,
-        message: result.message || 'Join request sent successfully'
-      };
-    } catch (error) {
-      handleWebSocketError(error, 'joinGroup');
-    }
+  joinGroup(groupId) {
+    webSocketOperations.joinGroup(groupId);
   },
 
   // Leave a group - Uses corrected WebSocket infrastructure
-  async leaveGroup(groupId) {
-    try {
-      const result = await webSocketOperations.leaveGroup(groupId);
-      return {
-        success: true,
-        message: result.message || 'Successfully left the group'
-      };
-    } catch (error) {
-      handleWebSocketError(error, 'leaveGroup');
-    }
+  leaveGroup(groupId) {
+    webSocketOperations.leaveGroup(groupId);
   },
 
   // Invite user to group - Uses corrected WebSocket infrastructure
-  async inviteToGroup(groupId, userId) {
-    try {
-      const result = await webSocketOperations.inviteToGroup(groupId, userId);
-
-      return {
-        success: true,
-        message: result.message || 'Invitation sent successfully'
-      };
-    } catch (error) {
-      handleWebSocketError(error, 'inviteToGroup');
-    }
+  inviteToGroup(groupId, userId) {
+    webSocketOperations.inviteToGroup(groupId, userId);
   },
 
   // Respond to group invitation - Uses corrected WebSocket infrastructure
   async respondToGroupInvitation(groupId, status) {
-    try {
-      const result = await webSocketOperations.respondToGroupInvitation(groupId, status);
-
-      return {
-        success: true,
-        message: result.message || `Group invitation ${status}`
-      };
-    } catch (error) {
-      handleWebSocketError(error, 'respondToGroupInvitation');
-    }
+    webSocketOperations.respondToGroupInvitation(groupId, status);
   },
 
   // Respond to join request - Uses corrected WebSocket infrastructure
   async respondToJoinRequest(groupId, userId, status) {
-    try {
-
-      const result = await webSocketOperations.respondToJoinRequest(groupId, userId, status);
-
-      return {
-        success: true,
-        message: result.message || `Join request ${status}`
-      };
-    } catch (error) {
-      handleWebSocketError(error, 'respondToJoinRequest');
-    }
+    webSocketOperations.respondToJoinRequest(groupId, userId, status);
   },
 
   // Propose member invitation - Uses WebSocket for member invitation proposals
-  async proposeMemberInvitation(groupId, userId) {
-    try {
-      const result = await webSocketOperations.proposeMemberInvitation(groupId, userId);
-
-      return {
-        success: true,
-        message: result.message || 'Invitation proposal sent successfully'
-      };
-    } catch (error) {
-      handleWebSocketError(error, 'proposeMemberInvitation');
-    }
+  proposeMemberInvitation(groupId, userId) {
+    webSocketOperations.proposeMemberInvitation(groupId, userId);
   },
 };
 
