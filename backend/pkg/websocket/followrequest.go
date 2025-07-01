@@ -151,7 +151,7 @@ func (svc *FollowService) handleNewFollow(c *Client, req model.FollowRequest, us
 			return
 		}
 
-		svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "new follower",
+		svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "follower_request",
 			map[string]any{"avatar": user.Avatar, "message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName)}, false,
 		)
 	} else {
