@@ -56,8 +56,13 @@ func (svc *FollowService) sendNotification(notifID, recipientID, actorID, ntype,
 		return
 	}
 
+	var userdata model.UserData
+	if err := svc.Query.FetchUserInfo(actorID, &userdata); err != nil {
+		return
+	}
+
 	if actionBased {
-		svc.Hub.ActionBasedNotification([]string{recipientID}, ntype, payload)
+		svc.Hub.ActionBasedNotification([]string{recipientID}, ntype, payload, userdata)
 	} else {
 		svc.Hub.InfoBasedNotification([]string{recipientID}, payload)
 	}
