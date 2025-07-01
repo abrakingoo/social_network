@@ -73,7 +73,7 @@ func (c *Client) ExitGroup(msg map[string]any, q *repository.Query, h *Hub) {
 	}
 
 	if h != nil {
-		h.ActionBasedNotification([]string{c.UserID, admin}, "group_left", map[string]any{
+		h.InfoBasedNotification([]string{c.UserID, admin}, map[string]any{
 			"group_id": request.GroupId,
 			"user_id":  c.UserID,
 		})
