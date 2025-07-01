@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+
 	"social/pkg/model"
 	"social/pkg/repository"
 	"social/pkg/util"
@@ -110,13 +111,19 @@ func (c *Client) GroupJoinRequest(msg map[string]any, q *repository.Query, h *Hu
 		c.SendError("failed to notify the recipient")
 		return
 	}
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		c.SendError("failed to fetch user data")
+		return
+	}
 
 	h.ActionBasedNotification([]string{
 		admin,
 	}, "group_join_request", map[string]any{
 		"group_id": request.GroupId,
 		"request":  fetchLatestJoinRequest(q, request.GroupId, c.UserID),
-	})
+	}, userData)
 }
 
 func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query, h *Hub) {
@@ -192,6 +199,12 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 		c.SendError("Error wupdating join request status")
 		return
 	}
+	var userData model.UserData
+	err = q.FetchUserInfo(request.RecipientID, &userData)
+	if err != nil {
+		c.SendError("Error fetching user data")
+		return
+	}
 
 	if request.ResponseStatus == "accepted" {
 		err = q.InsertData("group_members", []string{
@@ -215,7 +228,7 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 		}, "group_join_accept", map[string]any{
 			"group_id": request.GroupId,
 			"status":   "accepted",
-		})
+		}, userData)
 	} else if request.ResponseStatus == "declined" {
 		// Send real-time notification to the user for declined
 		h.ActionBasedNotification([]string{
@@ -223,7 +236,7 @@ func (c *Client) RespondGroupJoinRequest(msg map[string]any, q *repository.Query
 		}, "group_join_accept", map[string]any{
 			"group_id": request.GroupId,
 			"status":   "declined",
-		})
+		}, userData)
 	}
 }
 
