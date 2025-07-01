@@ -12,6 +12,7 @@ import (
 func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, h *Hub) {
 	data, err := json.Marshal(msg["data"])
 	if err != nil {
+		fmt.Println("Error marshalling data:", err)
 		c.SendError("Invalid data encoding")
 		return
 	}
@@ -19,17 +20,20 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 	var event model.AddEventData
 
 	if err = json.Unmarshal(data, &event); err != nil {
+		fmt.Printf("Error unmarshalling event data: %v\n", err)
 		c.SendError("Invalid messsage format")
 		return
 	}
 
 	groupId, err := q.FetchGroupId(event.GroupTitle)
 	if err != nil {
+		fmt.Println("Error fetching group ID:", err)
 		c.SendError("group not found")
 		return
 	}
 
 	if event.Title == "" || event.EventTime.IsZero() {
+		fmt.Println("Missing event name or time data")
 		c.SendError("Missing event name or time data")
 		return
 	}
@@ -52,6 +56,7 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		return
 	}
 	if existingEvent {
+		fmt.Println("Event with the same details already exists")
 		c.SendError("Event with the same details already exists")
 		return
 	}
@@ -76,12 +81,14 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 		event.Description,
 	})
 	if err != nil {
+		fmt.Println("Error inserting event:", err)
 		c.SendError("failed to add event")
 		return
 	}
 
 	memberIds, err := q.FetchAllGroupMembersId(groupId)
 	if err != nil {
+		fmt.Println("Error fetching group members:", err)
 		c.SendError("failed to fetch group members")
 		return
 	}
@@ -133,9 +140,18 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 			"group-event",
 		})
 		if err != nil {
+			fmt.Println("Error inserting notification:", err)
 			c.SendError("failed to add notification")
 			return
 		}
+	}
+
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		fmt.Println("Error fetching user data:", err)
+		c.SendError("failed to fetch user data")
+		return
 	}
 
 	payload := map[string]any{
@@ -148,12 +164,13 @@ func (c *Client) SendEventNotification(msg map[string]any, q *repository.Query, 
 			"location":   event.Location,
 			"message":    event.Description,
 			"group_id":   groupId,
-			"actor":      c.UserID,
 		},
+		"actor": userData,
 	}
 
 	sendData, err := json.Marshal(payload)
 	if err != nil {
+		fmt.Println("Error marshalling event data:", err)
 		c.SendError("failed to marshal event data")
 		return
 	}
