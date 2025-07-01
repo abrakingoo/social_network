@@ -1,15 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { groupService } from '@/services/groupService';
-import { webSocketOperations, useWebSocketNotifications } from '@/utils/websocket';
-import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { groupService } from "@/services/groupService";
+import {
+  webSocketOperations,
+  useWebSocketNotifications,
+} from "@/utils/websocket";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -20,66 +28,84 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Plus, UserPlus, Loader2, ChevronLeft, ChevronRight, Eye, Clock } from 'lucide-react';
-import lodash from 'lodash';
-import { titleToSlug } from '@/lib/slugUtils'; // Import slug utility
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Users,
+  Search,
+  Plus,
+  UserPlus,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  Clock,
+} from "lucide-react";
+import lodash from "lodash";
+import { titleToSlug } from "@/lib/slugUtils"; // Import slug utility
+import Loading from "@/components/ui/loading";
 
 // Request states based on backend data
 const REQUEST_STATES = {
-  NOT_REQUESTED: 'not_requested',
-  PENDING: 'pending',
-  JOINED: 'joined'
+  NOT_REQUESTED: "not_requested",
+  PENDING: "pending",
+  JOINED: "joined",
 };
 
 // Group card component for better reusability
-const GroupCard = ({ group, onRequestJoin, onLeave, isRequesting, requestState }) => {
+const GroupCard = ({
+  group,
+  onRequestJoin,
+  onLeave,
+  isRequesting,
+  requestState,
+}) => {
   const { currentUser } = useAuth();
-  const isAdmin = group.user_role === 'admin';
+  const isAdmin = group.user_role === "admin";
   const isMember = group.is_joined;
 
   // Convert group title to URL-safe slug
   const groupSlug = titleToSlug(group.title);
 
   // Determine the current request state for this group
-  const currentRequestState = requestState[group.id] || REQUEST_STATES.NOT_REQUESTED;
+  const currentRequestState =
+    requestState[group.id] || REQUEST_STATES.NOT_REQUESTED;
 
   // Determine button state and text
   const getButtonState = () => {
     if (isAdmin) {
       return {
-        text: 'Manage Group',
-        variant: 'outline',
-        action: 'link',
-        href: `/groups/${groupSlug}`
+        text: "Manage Group",
+        variant: "outline",
+        action: "link",
+        href: `/groups/${groupSlug}`,
       };
     }
 
     if (isMember || currentRequestState === REQUEST_STATES.JOINED) {
       return {
-        text: 'View Group',
-        variant: 'outline',
-        action: 'link',
-        href: `/groups/${groupSlug}`
+        text: "View Group",
+        variant: "outline",
+        action: "link",
+        href: `/groups/${groupSlug}`,
       };
     }
 
     if (currentRequestState === REQUEST_STATES.PENDING) {
       return {
-        text: 'Request Pending',
-        variant: 'outline',
-        action: 'disabled',
-        disabled: true
+        text: "Request Pending",
+        variant: "outline",
+        action: "disabled",
+        disabled: true,
       };
     }
 
     return {
-      text: 'Request to Join',
-      variant: 'default',
-      action: 'request',
-      className: 'bg-social hover:bg-social-dark'
+      text: "Request to Join",
+      variant: "default",
+      action: "request",
+      className: "bg-social hover:bg-social-dark",
     };
   };
 
@@ -98,26 +124,29 @@ const GroupCard = ({ group, onRequestJoin, onLeave, isRequesting, requestState }
         </div>
         <div className="ml-16">
           {/* Updated link to use slug instead of ID */}
-          <Link href={`/groups/${groupSlug}`} className="text-lg font-semibold hover:text-social">
+          <Link
+            href={`/groups/${groupSlug}`}
+            className="text-lg font-semibold hover:text-social"
+          >
             {group.title}
           </Link>
           <p className="text-sm text-gray-500">{group.members_count} members</p>
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-gray-600 line-clamp-3">
-          {group.about}
-        </p>
+        <p className="text-sm text-gray-600 line-clamp-3">{group.about}</p>
       </CardContent>
       <CardFooter className="border-t pt-4 pb-4">
-        {buttonState.action === 'link' ? (
+        {buttonState.action === "link" ? (
           <Button variant={buttonState.variant} className="w-full" asChild>
             <Link href={buttonState.href}>
-              {buttonState.text === 'View Group' && <Eye className="h-4 w-4 mr-2" />}
+              {buttonState.text === "View Group" && (
+                <Eye className="h-4 w-4 mr-2" />
+              )}
               {buttonState.text}
             </Link>
           </Button>
-        ) : buttonState.action === 'disabled' ? (
+        ) : buttonState.action === "disabled" ? (
           <Button
             variant="outline"
             className="w-full border-orange-300 text-orange-700 bg-orange-50 cursor-not-allowed"
@@ -148,14 +177,16 @@ const Groups = () => {
   const { toast } = useToast();
 
   // State management
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'all');
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || "",
+  );
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "all");
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [requestStates, setRequestStates] = useState({});
 
@@ -170,11 +201,11 @@ const Groups = () => {
 
     // Check if user has a pending join request
     if (group.user_join_request) {
-      if (group.user_join_request.status === 'pending') {
+      if (group.user_join_request.status === "pending") {
         return REQUEST_STATES.PENDING;
-      } else if (group.user_join_request.status === 'accepted') {
+      } else if (group.user_join_request.status === "accepted") {
         return REQUEST_STATES.JOINED;
-      } else if (group.user_join_request.status === 'declined') {
+      } else if (group.user_join_request.status === "declined") {
         return REQUEST_STATES.NOT_REQUESTED;
       }
     }
@@ -182,7 +213,8 @@ const Groups = () => {
     // Fallback: Check JoinRequest array for pending request
     if (group.JoinRequest && currentUser) {
       const userRequest = group.JoinRequest.find(
-        request => request.user_id === currentUser.id && request.status === 'pending'
+        (request) =>
+          request.user_id === currentUser.id && request.status === "pending",
       );
       if (userRequest) {
         return REQUEST_STATES.PENDING;
@@ -197,75 +229,81 @@ const Groups = () => {
     const handleGroupNotificationUpdate = (event) => {
       const { groupId, notification } = event.detail;
 
-      if (notification.type === 'membership_changed') {
+      if (notification.type === "membership_changed") {
         const { status } = notification.data;
 
-        if (status === 'accepted') {
+        if (status === "accepted") {
           // Update the group's request state and membership status
-          setGroups(prevGroups =>
-            prevGroups.map(group =>
+          setGroups((prevGroups) =>
+            prevGroups.map((group) =>
               group.id === groupId
                 ? {
                     ...group,
                     is_joined: true,
                     user_join_request: group.user_join_request
-                      ? { ...group.user_join_request, status: 'accepted' }
-                      : null
+                      ? { ...group.user_join_request, status: "accepted" }
+                      : null,
                   }
-                : group
-            )
+                : group,
+            ),
           );
-          setRequestStates(prev => ({
+          setRequestStates((prev) => ({
             ...prev,
-            [groupId]: REQUEST_STATES.JOINED
+            [groupId]: REQUEST_STATES.JOINED,
           }));
-        } else if (status === 'declined') {
+        } else if (status === "declined") {
           // Update the group's request state
-          setGroups(prevGroups =>
-            prevGroups.map(group =>
+          setGroups((prevGroups) =>
+            prevGroups.map((group) =>
               group.id === groupId
                 ? {
                     ...group,
                     is_joined: false,
                     user_join_request: group.user_join_request
-                      ? { ...group.user_join_request, status: 'declined' }
-                      : null
+                      ? { ...group.user_join_request, status: "declined" }
+                      : null,
                   }
-                : group
-            )
+                : group,
+            ),
           );
-          setRequestStates(prev => ({
+          setRequestStates((prev) => ({
             ...prev,
-            [groupId]: REQUEST_STATES.NOT_REQUESTED
+            [groupId]: REQUEST_STATES.NOT_REQUESTED,
           }));
         }
       }
       // Handle real-time leave group
-      if (notification.type === 'group_left') {
+      if (notification.type === "group_left") {
         if (notification.data.user_id === currentUser?.id) {
-          setGroups(prevGroups =>
-            prevGroups.map(group =>
+          setGroups((prevGroups) =>
+            prevGroups.map((group) =>
               group.id === groupId
                 ? {
                     ...group,
                     is_joined: false,
-                    user_join_request: null
+                    user_join_request: null,
                   }
-                : group
-            )
+                : group,
+            ),
           );
-          setRequestStates(prev => ({
+          setRequestStates((prev) => ({
             ...prev,
-            [groupId]: REQUEST_STATES.NOT_REQUESTED
+            [groupId]: REQUEST_STATES.NOT_REQUESTED,
           }));
         }
       }
     };
 
-    window.addEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
+    window.addEventListener(
+      "groupNotificationUpdate",
+      handleGroupNotificationUpdate,
+    );
 
     return () => {
-      window.removeEventListener('groupNotificationUpdate', handleGroupNotificationUpdate);
+      window.removeEventListener(
+        "groupNotificationUpdate",
+        handleGroupNotificationUpdate,
+      );
     };
   }, [currentUser?.id]);
 
@@ -274,7 +312,7 @@ const Groups = () => {
     lodash.debounce((query) => {
       fetchGroups({ search: query, filter: activeTab });
     }, 300),
-    [activeTab]
+    [activeTab],
   );
 
   // Handle search input change
@@ -285,7 +323,10 @@ const Groups = () => {
   };
 
   // Fetch groups with pagination and filters
-  const fetchGroups = async ({ search = searchQuery, filter = activeTab } = {}) => {
+  const fetchGroups = async ({
+    search = searchQuery,
+    filter = activeTab,
+  } = {}) => {
     if (!currentUser || authLoading) {
       return;
     }
@@ -295,10 +336,10 @@ const Groups = () => {
 
       const result = await groupService.getAllGroups({
         search,
-        filter
+        filter,
       });
 
-      const groupsWithRequestStates = result.groups.map(group => {
+      const groupsWithRequestStates = result.groups.map((group) => {
         const requestState = determineRequestState(group, currentUser);
         return { ...group, requestState };
       });
@@ -307,22 +348,23 @@ const Groups = () => {
 
       // Update request states mapping
       const newRequestStates = {};
-      groupsWithRequestStates.forEach(group => {
+      groupsWithRequestStates.forEach((group) => {
         newRequestStates[group.id] = group.requestState;
       });
       setRequestStates(newRequestStates);
 
       // Update URL with current filters
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filter !== 'all') params.set('tab', filter);
+      if (search) params.set("search", search);
+      if (filter !== "all") params.set("tab", filter);
       router.push(`/groups?${params.toString()}`, { scroll: false });
     } catch (error) {
-      console.error('[Groups.fetchGroups] Error:', error);
+      console.error("[Groups.fetchGroups] Error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to load groups. Please try again later.",
-        variant: "destructive"
+        description:
+          error.message || "Failed to load groups. Please try again later.",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -346,33 +388,33 @@ const Groups = () => {
       setIsRequesting(true);
 
       // Optimistic update for better UX - update both request state and group data
-      setRequestStates(prev => ({
+      setRequestStates((prev) => ({
         ...prev,
-        [groupId]: REQUEST_STATES.PENDING
+        [groupId]: REQUEST_STATES.PENDING,
       }));
 
       // Also update the group's user_join_request field optimistically
-      setGroups(prevGroups =>
-        prevGroups.map(group =>
+      setGroups((prevGroups) =>
+        prevGroups.map((group) =>
           group.id === groupId
             ? {
                 ...group,
                 user_join_request: {
-                  id: 'temp-' + Date.now(),
+                  id: "temp-" + Date.now(),
                   user_id: currentUser.id,
-                  status: 'pending',
+                  status: "pending",
                   created_at: new Date().toISOString(),
                   user: {
                     id: currentUser.id,
                     firstname: currentUser.firstname,
                     lastname: currentUser.lastname,
                     nickname: currentUser.nickname,
-                    avatar: currentUser.avatar
-                  }
-                }
+                    avatar: currentUser.avatar,
+                  },
+                },
               }
-            : group
-        )
+            : group,
+        ),
       );
 
       const result = await webSocketOperations.joinGroup(groupId);
@@ -380,29 +422,29 @@ const Groups = () => {
       if (result.success) {
         toast({
           title: "Request Sent",
-          description: "Your request to join has been sent to the group admin for approval!",
+          description:
+            "Your request to join has been sent to the group admin for approval!",
         });
       }
     } catch (error) {
       // Revert optimistic update on error
-      setRequestStates(prev => ({
+      setRequestStates((prev) => ({
         ...prev,
-        [groupId]: REQUEST_STATES.NOT_REQUESTED
+        [groupId]: REQUEST_STATES.NOT_REQUESTED,
       }));
 
       // Also revert the group's user_join_request field
-      setGroups(prevGroups =>
-        prevGroups.map(group =>
-          group.id === groupId
-            ? { ...group, user_join_request: null }
-            : group
-        )
+      setGroups((prevGroups) =>
+        prevGroups.map((group) =>
+          group.id === groupId ? { ...group, user_join_request: null } : group,
+        ),
       );
 
       toast({
         title: "Error",
-        description: error.message || "Failed to send join request. Please try again.",
-        variant: "destructive"
+        description:
+          error.message || "Failed to send join request. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsRequesting(false);
@@ -415,16 +457,14 @@ const Groups = () => {
       setIsRequesting(true);
 
       // Optimistic update for better UX
-      setRequestStates(prev => ({
+      setRequestStates((prev) => ({
         ...prev,
-        [groupId]: REQUEST_STATES.NOT_REQUESTED
+        [groupId]: REQUEST_STATES.NOT_REQUESTED,
       }));
-      setGroups(prevGroups =>
-        prevGroups.map(group =>
-          group.id === groupId
-            ? { ...group, is_joined: false }
-            : group
-        )
+      setGroups((prevGroups) =>
+        prevGroups.map((group) =>
+          group.id === groupId ? { ...group, is_joined: false } : group,
+        ),
       );
 
       const result = await webSocketOperations.leaveGroup(groupId);
@@ -437,22 +477,21 @@ const Groups = () => {
       }
     } catch (error) {
       // Revert optimistic update on error
-      setRequestStates(prev => ({
+      setRequestStates((prev) => ({
         ...prev,
-        [groupId]: REQUEST_STATES.JOINED
+        [groupId]: REQUEST_STATES.JOINED,
       }));
-      setGroups(prevGroups =>
-        prevGroups.map(group =>
-          group.id === groupId
-            ? { ...group, is_joined: true }
-            : group
-        )
+      setGroups((prevGroups) =>
+        prevGroups.map((group) =>
+          group.id === groupId ? { ...group, is_joined: true } : group,
+        ),
       );
 
       toast({
         title: "Error",
-        description: error.message || "Failed to leave group. Please try again.",
-        variant: "destructive"
+        description:
+          error.message || "Failed to leave group. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsRequesting(false);
@@ -467,7 +506,7 @@ const Groups = () => {
       toast({
         title: "Error",
         description: "Group name is required",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -481,7 +520,7 @@ const Groups = () => {
       toast({
         title: "Error",
         description: "Group name must be at least 3 characters long",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -491,7 +530,7 @@ const Groups = () => {
       toast({
         title: "Error",
         description: "Group name can only contain letters, numbers, and spaces",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -500,18 +539,19 @@ const Groups = () => {
       setIsCreating(true);
       const result = await groupService.createGroup({
         name: trimmedName,
-        description: trimmedDescription
+        description: trimmedDescription,
       });
 
       if (result.success) {
         // Reset form and close dialog
-        setNewGroupName('');
-        setNewGroupDescription('');
+        setNewGroupName("");
+        setNewGroupDescription("");
         setIsCreateOpen(false);
 
         toast({
           title: "Success",
-          description: result.message || `${trimmedName} has been created successfully!`,
+          description:
+            result.message || `${trimmedName} has been created successfully!`,
         });
 
         // Convert group title to slug for redirect
@@ -521,13 +561,17 @@ const Groups = () => {
         router.push(`/groups/${groupSlug}`);
       }
     } catch (error) {
-      const errorMessage = error.message || "Failed to create group. Please try again.";
-      const toastTitle = error.type === 'DUPLICATE_GROUP_TITLE' ? "Group Already Exists" : "Error";
+      const errorMessage =
+        error.message || "Failed to create group. Please try again.";
+      const toastTitle =
+        error.type === "DUPLICATE_GROUP_TITLE"
+          ? "Group Already Exists"
+          : "Error";
 
       toast({
         title: toastTitle,
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsCreating(false);
@@ -605,7 +649,7 @@ const Groups = () => {
                       Creating...
                     </>
                   ) : (
-                    'Create Group'
+                    "Create Group"
                   )}
                 </Button>
               </DialogFooter>
@@ -624,7 +668,11 @@ const Groups = () => {
         />
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList className="grid grid-cols-3 w-full mb-6">
           <TabsTrigger value="all">All Groups</TabsTrigger>
           <TabsTrigger value="joined">My Groups</TabsTrigger>
@@ -658,12 +706,11 @@ const Groups = () => {
               <p className="text-gray-500 mt-1">
                 {searchQuery
                   ? `No groups matching "${searchQuery}"`
-                  : activeTab === 'joined'
-                  ? "You haven't joined any groups yet"
-                  : activeTab === 'discover'
-                  ? "No groups available to discover"
-                  : "There are no groups available right now"
-                }
+                  : activeTab === "joined"
+                    ? "You haven't joined any groups yet"
+                    : activeTab === "discover"
+                      ? "No groups available to discover"
+                      : "There are no groups available right now"}
               </p>
             </div>
           )}
@@ -673,4 +720,10 @@ const Groups = () => {
   );
 };
 
-export default Groups;
+export default function GroupsContent() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <Groups />
+    </Suspense>
+  );
+}

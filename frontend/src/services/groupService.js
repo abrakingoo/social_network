@@ -219,30 +219,16 @@ export const groupService = {
     }
   },
 
-  // Create a new event - CORRECTED: Use exact backend endpoint
+  // Create a new event - UPDATED: Use WebSocket for real-time notifications
   async createEvent(eventData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/addEvent`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: getHeaders(true),
-        body: JSON.stringify(eventData)
-      });
-
-      const data = await handleApiResponse(response, 'createEvent');
-
+      const result = await webSocketOperations.createEvent(eventData);
       return {
         success: true,
-        message: data.message || 'Event created successfully'
+        message: result.message || 'Event created successfully'
       };
     } catch (error) {
-      console.error('[groupService.createEvent] Error:', error);
-
-      if (error.type === GroupErrorTypes.INVALID_INPUT) {
-        throw new Error('Invalid event data provided. Please check the event details.');
-      }
-
-      throw new Error('Failed to create event. Please try again.');
+      handleWebSocketError(error, 'createEvent');
     }
   },
 

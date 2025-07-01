@@ -1,15 +1,28 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { useNotifications } from '@/context/NotificationsContext';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationsContext";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, UserPlus, MessageSquare, Heart, Users, Check, X, Trash2, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import {
+  Bell,
+  UserPlus,
+  MessageSquare,
+  Heart,
+  Users,
+  Check,
+  X,
+  Trash2,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { webSocketOperations } from "@/utils/websocket";
 
 const Notifications = () => {
   const router = useRouter();
@@ -24,7 +37,7 @@ const Notifications = () => {
     removeNotification,
     clearAll,
     refreshNotifications,
-    respondToGroupInvitation
+    respondToGroupInvitation,
   } = useNotifications();
   const { toast } = useToast();
 
@@ -33,23 +46,40 @@ const Notifications = () => {
 
   useEffect(() => {
     if (!authLoading && !currentUser) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [authLoading, currentUser, router]);
+
+  const handleAcceptFriend = (friendId) => {
+    webSocketOperations.respondToFollowRequest(friendId, "accepted");
+    toast({
+      title: "Request accepted",
+      description: "You are now friends!",
+    });
+  };
+
+  // Handle rejecting a friend request
+  const handleRejectFriend = (friendId) => {
+    webSocketOperations.respondToFollowRequest(friendId, "declined");
+    toast({
+      title: "Follow request rejected",
+      description: "The follow request has been rejected.",
+    });
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
       await refreshNotifications();
       toast({
-        title: 'Notifications refreshed',
-        description: 'Successfully loaded latest notifications',
+        title: "Notifications refreshed",
+        description: "Successfully loaded latest notifications",
       });
     } catch (error) {
       toast({
-        title: 'Refresh failed',
-        description: 'Failed to refresh notifications',
-        variant: 'destructive'
+        title: "Refresh failed",
+        description: "Failed to refresh notifications",
+        variant: "destructive",
       });
     } finally {
       setRefreshing(false);
@@ -58,8 +88,8 @@ const Notifications = () => {
 
   const extractStringValue = (value) => {
     if (!value) return null;
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object' && value.String) return value.String;
+    if (typeof value === "string") return value;
+    if (typeof value === "object" && value.String) return value.String;
     return String(value);
   };
 
@@ -77,7 +107,7 @@ const Notifications = () => {
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 60) return "Just now";
 
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
@@ -93,37 +123,44 @@ const Notifications = () => {
 
   const getNotificationIcon = (type) => {
     const icons = {
-      'follow_request': <UserPlus className="h-5 w-5 text-blue-500" />,
-      'like': <Heart className="h-5 w-5 text-red-500" />,
-      'comment': <MessageSquare className="h-5 w-5 text-green-500" />,
-      'group_invitation': <Users className="h-5 w-5 text-purple-500" />,
-      'join_response': <Users className="h-5 w-5 text-social" />,
-      'message': <MessageSquare className="h-5 w-5 text-social" />
+      follow_request: <UserPlus className="h-5 w-5 text-blue-500" />,
+      like: <Heart className="h-5 w-5 text-red-500" />,
+      comment: <MessageSquare className="h-5 w-5 text-green-500" />,
+      group_invitation: <Users className="h-5 w-5 text-purple-500" />,
+      join_response: <Users className="h-5 w-5 text-social" />,
+      message: <MessageSquare className="h-5 w-5 text-social" />,
     };
     return icons[type] || <Bell className="h-5 w-5 text-gray-500" />;
   };
 
   const handleGroupInvitationResponse = async (notification, status) => {
-    const groupId = extractStringValue(notification.entityId) ||
-                   extractStringValue(notification.data?.entity_id);
+    const groupId =
+      extractStringValue(notification.entityId) ||
+      extractStringValue(notification.data?.entity_id);
 
     if (!groupId) {
       toast({
         title: "Error",
         description: "Group ID missing from notification.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    const success = await respondToGroupInvitation(notification.id, groupId, status);
+    const success = await respondToGroupInvitation(
+      notification.id,
+      groupId,
+      status,
+    );
 
     if (success) {
       toast({
-        title: status === 'accepted' ? 'Invitation Accepted' : 'Invitation Declined',
-        description: status === 'accepted'
-          ? 'You have joined the group successfully!'
-          : 'Group invitation declined',
+        title:
+          status === "accepted" ? "Invitation Accepted" : "Invitation Declined",
+        description:
+          status === "accepted"
+            ? "You have joined the group successfully!"
+            : "Group invitation declined",
       });
     }
   };
@@ -138,28 +175,30 @@ const Notifications = () => {
     if (activeTab === "all") return notifications;
 
     const typeMap = {
-      'follow': ['follow_request'],
-      'like': ['like'],
-      'comment': ['comment'],
-      'group': ['group_invitation', 'join_response'],
-      'message': ['message']
+      follow: ["follow_request"],
+      like: ["like"],
+      comment: ["comment"],
+      group: ["group_invitation", "join_response"],
+      message: ["message"],
     };
 
-    return notifications.filter(n => typeMap[activeTab]?.includes(n.type));
+    return notifications.filter((n) => typeMap[activeTab]?.includes(n.type));
   };
 
   const filteredNotifications = getFilteredNotifications();
 
   const renderNotificationContent = (notification) => {
-    const actorName = notification.actor && (notification.actor.firstName || notification.actor.lastName)
-      ? `${notification.actor.firstName || ''} ${notification.actor.lastName || ''}`.trim()
-      : 'System';
+    const actorName =
+      notification.actor &&
+      (notification.actor.firstName || notification.actor.lastName)
+        ? `${notification.actor.firstName || ""} ${notification.actor.lastName || ""}`.trim()
+        : "System";
 
     return (
       <div
         key={notification.id}
         className={`p-4 flex items-start cursor-pointer hover:bg-gray-50 transition-colors ${
-          notification.read ? '' : 'bg-blue-50 border-l-4 border-l-blue-500'
+          notification.read ? "" : "bg-blue-50 border-l-4 border-l-blue-500"
         }`}
         onClick={() => handleNotificationClick(notification)}
       >
@@ -168,19 +207,26 @@ const Notifications = () => {
         </div>
 
         <Avatar className="h-10 w-10 mr-3">
-          {notification.actor?.avatar && <AvatarImage src={notification.actor.avatar} />}
+          {notification.actor?.avatar && (
+            <AvatarImage src={notification.actor.avatar} />
+          )}
           <AvatarFallback>
-            {notification.actor && (notification.actor.firstName || notification.actor.lastName)
-              ? `${notification.actor.firstName?.[0] || ''}${notification.actor.lastName?.[0] || ''}`.toUpperCase() || '?'
-              : 'S'}
+            {notification.actor &&
+            (notification.actor.firstName || notification.actor.lastName)
+              ? `${notification.actor.firstName?.[0] || ""}${notification.actor.lastName?.[0] || ""}`.toUpperCase() ||
+                "?"
+              : "S"}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex-1">
           <div className="flex justify-between items-start">
             <p className="text-sm">
-              <span className="font-medium">{actorName}</span> {notification.content}
-              {notification.groupName && <span className="font-medium"> {notification.groupName}</span>}
+              <span className="font-medium">{actorName}</span>{" "}
+              {notification.content}
+              {notification.groupName && (
+                <span className="font-medium"> {notification.groupName}</span>
+              )}
             </p>
             <div className="flex items-center space-x-2">
               <span className="text-xs text-gray-500">
@@ -202,14 +248,14 @@ const Notifications = () => {
 
           {notification.actionable && !notification.read && (
             <div className="mt-2 flex space-x-2">
-              {notification.type === 'group_invitation' && (
+              {notification.type === "group_invitation" && (
                 <>
                   <Button
                     size="sm"
                     className="bg-social hover:bg-social-dark"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleGroupInvitationResponse(notification, 'accepted');
+                      handleGroupInvitationResponse(notification, "accepted");
                     }}
                   >
                     <Check className="h-4 w-4 mr-1" />
@@ -220,7 +266,7 @@ const Notifications = () => {
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleGroupInvitationResponse(notification, 'declined');
+                      handleGroupInvitationResponse(notification, "declined");
                     }}
                   >
                     <X className="h-4 w-4 mr-1" />
@@ -229,7 +275,7 @@ const Notifications = () => {
                 </>
               )}
 
-              {notification.type === 'follow_request' && (
+              {notification.type === "follow_request" && (
                 <>
                   <Button
                     size="sm"
@@ -316,7 +362,9 @@ const Notifications = () => {
               {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
             </h2>
             {unreadCount > 0 && (
-              <p className="text-sm text-gray-500">{unreadCount} unread notifications</p>
+              <p className="text-sm text-gray-500">
+                {unreadCount} unread notifications
+              </p>
             )}
             {error && (
               <p className="text-sm text-red-500 flex items-center mt-1">
@@ -333,7 +381,9 @@ const Notifications = () => {
               onClick={handleRefresh}
               disabled={refreshing}
             >
-              <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
             {unreadCount > 0 && (
@@ -349,7 +399,11 @@ const Notifications = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+        <Tabs
+          defaultValue="all"
+          className="w-full"
+          onValueChange={setActiveTab}
+        >
           <div className="p-4 border-b">
             <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="all">
@@ -367,8 +421,12 @@ const Notifications = () => {
               {loading && notifications.length === 0 ? (
                 <div className="p-8 text-center">
                   <Loader2 className="h-10 w-10 text-gray-400 mx-auto mb-2 animate-spin" />
-                  <h3 className="font-medium text-lg mb-1">Loading notifications...</h3>
-                  <p className="text-gray-500">Fetching your latest notifications</p>
+                  <h3 className="font-medium text-lg mb-1">
+                    Loading notifications...
+                  </h3>
+                  <p className="text-gray-500">
+                    Fetching your latest notifications
+                  </p>
                 </div>
               ) : filteredNotifications.length > 0 ? (
                 filteredNotifications.map(renderNotificationContent)
@@ -376,13 +434,15 @@ const Notifications = () => {
                 <div className="p-8 text-center">
                   <Bell className="h-10 w-10 text-gray-400 mx-auto mb-2" />
                   <h3 className="font-medium text-lg mb-1">No notifications</h3>
-                  <p className="text-gray-500">You don't have any notifications yet</p>
+                  <p className="text-gray-500">
+                    You don't have any notifications yet
+                  </p>
                 </div>
               )}
             </div>
           </TabsContent>
 
-          {['follow', 'like', 'comment', 'group', 'message'].map(tabValue => (
+          {["follow", "like", "comment", "group", "message"].map((tabValue) => (
             <TabsContent key={tabValue} value={tabValue} className="mt-0">
               <div className="divide-y max-h-[600px] overflow-y-auto">
                 {filteredNotifications.length > 0 ? (
@@ -390,8 +450,12 @@ const Notifications = () => {
                 ) : (
                   <div className="p-8 text-center">
                     <Bell className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                    <h3 className="font-medium text-lg mb-1">No {tabValue} notifications</h3>
-                    <p className="text-gray-500">You don't have any {tabValue} notifications yet</p>
+                    <h3 className="font-medium text-lg mb-1">
+                      No {tabValue} notifications
+                    </h3>
+                    <p className="text-gray-500">
+                      You don't have any {tabValue} notifications yet
+                    </p>
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { decode } from 'he';
 
 // Enhanced WebSocket manager with EXACT backend integration
 class WebSocketManager {
@@ -189,6 +190,9 @@ class WebSocketManager {
       // Backend sends errors with exact format: { "type": "error", "message": "..." }
       console.error('WebSocket error received:', data.message);
       this.notifyListeners("error", { message: data.message });
+    } else if (data.type === "success") {
+      // Backend sends success responses with exact format: { "type": "success", "message": "..." }
+      this.notifyListeners("success", { message: data.message });
     } else {
       this.notifyListeners(data.type, data.data || data);
     }
@@ -221,25 +225,41 @@ class WebSocketManager {
         default:
           break;
       }
+    } else if (notificationCase === "group_event") {
+      // Handle group event notifications
+      this.handleGroupEventNotification(data);
     }
   }
 
   handlePrivateMessage(data) {
+    // Decode HTML entities in the message content
+    if (data && data.message) {
+      data.message = decode(data.message || '');
+    }
     this.notifyListeners(EVENT_TYPES.PRIVATE_MESSAGE, data);
   }
 
   handleGroupMessage(data) {
-    // Decode base64 data if it's a string
+    // Decode base64 data if it's a string, then parse JSON
     let decodedData = data;
     if (typeof data === 'string') {
       try {
-        const decoded = atob(data);
+        // First decode base64 with proper UTF-8 handling
+        const binaryString = atob(data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const decoded = new TextDecoder('utf-8').decode(bytes);
         decodedData = JSON.parse(decoded);
       } catch (error) {
         console.error("Failed to decode group message data:", error);
+        return;
       }
     }
 
+    // Note: Real-time group messages are sent unescaped from backend
+    // Only historical messages from database need HTML entity decoding
     this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, decodedData);
   }
 
@@ -332,6 +352,20 @@ class WebSocketManager {
       action: {
         text: "View",
         callback: () => (window.location.href = `/notifications`),
+      },
+      data: data,
+    });
+  }
+
+  // Handle group event notifications
+  handleGroupEventNotification(data) {
+    // Dispatch event for components to handle
+    this.dispatchNotificationEvent("group_event", {
+      title: "New Event Created",
+      description: `Event "${data.title}" has been created`,
+      action: {
+        text: "View Events",
+        callback: () => (window.location.href = `/events`),
       },
       data: data,
     });
@@ -550,22 +584,57 @@ class WebSocketManager {
       });
     }
 
-    // For operations that do send responses
+    // For operations that do send responses - wait for actual response
     return new Promise((resolve, reject) => {
+      let resolved = false;
+
       const timeoutId = setTimeout(() => {
-        reject(new Error(`Operation ${type} timed out after ${timeout}ms`));
+        if (!resolved) {
+          resolved = true;
+          this.removeListener("success", successListener);
+          this.removeListener("error", errorListener);
+          reject(new Error(`Operation ${type} timed out after ${timeout}ms`));
+        }
       }, timeout);
+
+      // Listen for success response
+      const successListener = (data) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          this.removeListener("success", successListener);
+          this.removeListener("error", errorListener);
+          resolve({
+            success: true,
+            message: data.message || "Operation completed successfully",
+          });
+        }
+      };
+
+      // Listen for error response
+      const errorListener = (errorData) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          this.removeListener("success", successListener);
+          this.removeListener("error", errorListener);
+          reject(new Error(errorData.message || "Operation failed"));
+        }
+      };
+
+      this.addListener("success", successListener);
+      this.addListener("error", errorListener);
 
       try {
         this.send(type, data);
-        clearTimeout(timeoutId);
-        resolve({
-          success: true,
-          message: "Operation completed successfully",
-        });
       } catch (error) {
-        clearTimeout(timeoutId);
-        reject(error);
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          this.removeListener("success", successListener);
+          this.removeListener("error", errorListener);
+          reject(error);
+        }
       }
     });
   }
@@ -630,6 +699,19 @@ export const useWebSocketNotifications = () => {
           ) : null,
         });
       } else if (type === "group_invitation") {
+        toast({
+          title: notification.title,
+          description: notification.description,
+          action: notification.action ? (
+            <button
+              onClick={notification.action.callback}
+              className="text-sm bg-social text-white px-3 py-1 rounded hover:bg-social-dark"
+            >
+              {notification.action.text}
+            </button>
+          ) : null,
+        });
+      } else if (type === "group_event") {
         toast({
           title: notification.title,
           description: notification.description,
@@ -729,6 +811,7 @@ export const EVENT_TYPES = {
   READ_NOTIFICATION: "read_notification",
   READ_PRIVATE_MESSAGE: "read_private_message",
   MEMBER_GROUP_INVITATION_PROPOSAL: "member_group_invitation_proposal",
+  GROUP_EVENT: "group_event",
 };
 
 // WebSocket operations with exact backend payload format
@@ -987,6 +1070,20 @@ export const webSocketOperations = {
         reject(err);
       }
     });
+  },
+
+  // Create event via WebSocket for real-time notifications
+  async createEvent(eventData) {
+    try {
+      const result = await wsManager.sendAndWait(EVENT_TYPES.GROUP_EVENT, eventData);
+      return {
+        success: true,
+        message: result.message || 'Event created successfully'
+      };
+    } catch (error) {
+      console.error('[webSocketOperations.createEvent] Error:', error);
+      throw error;
+    }
   },
 };
 
