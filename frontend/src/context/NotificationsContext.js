@@ -252,18 +252,30 @@ export const NotificationProvider = ({ children }) => {
   // WebSocket notification handlers
   const handleGroupInvitation = useCallback((data) => {
     if (data && data.id) {
+      const inviter = data.inviter;
+      const inviterName = inviter?.nickname || inviter?.firstname || inviter?.first_name || inviter?.email || 'Someone';
       addNotification({
         type: 'group_invitation',
         title: 'Group Invitation',
-        content: 'invited you to join a group',
-        actor: data.inviter || null,
+        content: `${inviterName} invited you to join a group`,
+        actor: inviter || null,
         groupId: data.group_id,
         groupName: data.group_name || 'a group',
         actionable: true,
         data: data
       });
     } else {
-      // Skip notifications without backend ID
+      // Fallback: still add a notification for robustness
+      addNotification({
+        type: 'group_invitation',
+        title: 'Group Invitation',
+        content: 'You have been invited to join a group',
+        actor: null,
+        groupId: data?.group_id,
+        groupName: data?.group_name || 'a group',
+        actionable: true,
+        data: data
+      });
     }
   }, [addNotification]);
 
