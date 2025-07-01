@@ -92,12 +92,18 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 		c.SendError("failed to notify the recipient")
 		return
 	}
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		c.SendError("failed to fetch user data")
+		return
+	}
 
 	h.ActionBasedNotification([]string{
 		request.RecipientID,
 	}, "group_invitation", map[string]any{
 		"group_id": request.GroupId,
-	})
+	}, userData)
 }
 
 // FIXED: Complete RespondSendInvitation function with proper logic
@@ -319,6 +325,12 @@ func (c *Client) SendMemberInvitationProposal(msg map[string]any, q *repository.
 		c.SendError("failed to notify the recipient")
 		return
 	}
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		c.SendError("failed to fetch user data")
+		return
+	}
 
 	// Send real-time notification
 	h.ActionBasedNotification([]string{
@@ -327,7 +339,7 @@ func (c *Client) SendMemberInvitationProposal(msg map[string]any, q *repository.
 		"group_id":    request.GroupId,
 		"group_title": groupTitle,
 		"actor_id":    c.UserID,
-	})
+	}, userData)
 
 	c.SendSuccess("Invitation proposal sent successfully")
 }
