@@ -11,8 +11,6 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 		SELECT
 			un.id,
 			un.type,
-			un.entity_id,
-			un.entity_type,
 			un.is_read,
 			un.message,
 			un.created_at,
@@ -30,14 +28,6 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 		FROM notifications un
 		JOIN users u ON u.id = un.actor_id
 		WHERE un.recipient_id = ?
-		or (
-			un.recipient_group_id IS NOT NULL
-       		AND EXISTS (
-           		SELECT 1 FROM group_members gm
-             	WHERE gm.group_id = un.recipient_group_id
-              	AND gm.user_id = ?
-               )
-            )
         AND un.is_read = 0;
 	`
 
@@ -56,8 +46,6 @@ func (q *Query) GetUserNotifications(userID string) ([]model.UserNotification, e
 		err := rows.Scan(
 			&notification.ID,
 			&notification.Type,
-			&notification.EntityID,
-			&notification.EntityType,
 			&notification.IsRead,
 			&notification.Message,
 			&notification.CreatedAt,
