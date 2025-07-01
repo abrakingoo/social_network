@@ -125,11 +125,17 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 		c.SendError("failed to fetch user data")
 		return
 	}
+	groupData, err := q.FetchGroupData(request.GroupId, c.UserID)
+	if err != nil {
+		c.SendError("failed to fetch group data")
+		return
+	}
 
 	h.ActionBasedNotification([]string{
 		request.RecipientID,
 	}, "group_invitation", map[string]any{
-		"group_id": request.GroupId,
+		"group_id":   request.GroupId,
+		"group_name": groupData.Title,
 	}, userData)
 }
 
