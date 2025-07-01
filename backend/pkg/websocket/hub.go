@@ -72,8 +72,6 @@ func (h *Hub) Run() {
 			}
 			h.Mu.Unlock()
 
-			h.NotifyUserOnline(c.UserID)
-
 		case c := <-h.Unregister:
 			h.Mu.Lock()
 			delete(h.Clients, c)
