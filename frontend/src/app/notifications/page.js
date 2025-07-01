@@ -192,15 +192,16 @@ const Notifications = () => {
     ("notification rendered:", notification);
     const actorName =
       notification.actor &&
-        (notification.actor.first_name || notification.actor.last_name)
+      (notification.actor.first_name || notification.actor.last_name)
         ? `${notification.actor.first_name || ""} ${notification.actor.last_name || ""}`.trim()
         : "";
 
     return (
       <div
         key={notification.id}
-        className={`p-4 flex items-start cursor-pointer hover:bg-gray-50 transition-colors ${notification.read ? "" : "bg-blue-50 border-l-4 border-l-blue-500"
-          }`}
+        className={`p-4 flex items-start cursor-pointer hover:bg-gray-50 transition-colors ${
+          notification.read ? "" : "bg-blue-50 border-l-4 border-l-blue-500"
+        }`}
         onClick={() => handleNotificationClick(notification)}
       >
         <div className="mr-3 mt-1">
@@ -213,10 +214,10 @@ const Notifications = () => {
           )}
           <AvatarFallback>
             {notification.actor &&
-              (notification.actor.first_name || notification.actor.last_name)
+            (notification.actor.first_name || notification.actor.last_name)
               ? `${notification.actor.first_name?.[0] || ""}${notification.actor.last_name?.[0] || ""}`.toUpperCase() ||
-              "?"
-              : notification.actor.first_name}
+                "?"
+              : "Sn"}
           </AvatarFallback>
         </Avatar>
 
