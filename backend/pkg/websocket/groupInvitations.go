@@ -55,11 +55,9 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 	invitationExists, err := q.CheckRow("group_invitations", []string{
 		"group_id",
 		"receiver_id",
-		"status",
 	}, []any{
 		request.GroupId,
 		request.RecipientID,
-		"pending",
 	})
 	if err != nil {
 		c.SendError("Error checking invitation status")
