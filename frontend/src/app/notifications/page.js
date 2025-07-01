@@ -135,7 +135,7 @@ const Notifications = () => {
 
   const handleGroupInvitationResponse = async (notification, status) => {
     const groupId =
-      extractStringValue(notification.entityId) ||
+      extractStringValue(notification.groupId) ||
       extractStringValue(notification.data?.entity_id);
 
     if (!groupId) {
