@@ -41,13 +41,44 @@
 
 ## Overview
 
+The backend service for the Social Network application, built with Go and providing a robust REST API with real-time WebSocket communication. This service handles user authentication, data persistence, and all core social networking functionality.
 
+The backend features a clean architecture with separated concerns: handlers for HTTP endpoints, repositories for data access, models for data structures, utilities for common functions, and WebSocket management for real-time features.
 
 ---
 
 ## Features
 
-<code>❯ REPLACE-ME</code>
+### 🔐 **Authentication & Security**
+- Session-based authentication with CSRF protection
+- Password encryption using bcrypt
+- Secure cookie management
+- Request validation and sanitization
+
+### 📊 **Database Management**
+- SQLite database with migration system
+- Structured data models for users, posts, groups, events
+- Optimized queries for social network relationships
+- Transaction support for data consistency
+
+### 🌐 **REST API Endpoints**
+- User registration and authentication
+- Post creation, retrieval, and interaction
+- Group management and membership
+- Event creation and RSVP functionality
+- Real-time notifications
+
+### ⚡ **Real-time Communication**
+- WebSocket hub for live messaging
+- Real-time notifications and updates
+- Private messaging system
+- Live group interactions
+
+### 🏗️ **Architecture**
+- Clean separation of concerns
+- Repository pattern for data access
+- Middleware for authentication and CORS
+- Modular package structure
 
 ---
 
