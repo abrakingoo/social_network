@@ -53,6 +53,64 @@
 
 ## Overview
 
+A modern, full-stack social networking platform built with Go backend and Next.js frontend. This application provides users with a comprehensive social media experience including real-time messaging, group management, event planning, and privacy-controlled content sharing.
+
+The platform features a robust authentication system, real-time WebSocket communication, and a clean, responsive user interface. Users can create posts with customizable privacy settings, join or create groups, organize events, and interact through likes, comments, and private messaging.
+
+---
+
+## Features
+
+### 🔐 **User Authentication & Profiles**
+- Secure user registration and login with session management
+- Customizable user profiles with avatars and personal information
+- Public/private profile visibility settings
+- Password encryption and CSRF protection
+
+### 📝 **Posts & Content Sharing**
+- Create posts with text content and media attachments
+- Privacy controls: public, private, or custom visibility to specific users
+- Like and dislike functionality for posts
+- Commenting system with nested interactions
+- Real-time content updates
+
+### 👥 **Social Connections**
+- Follow/unfollow other users
+- Send and respond to follow requests
+- View followers and following lists
+- Privacy-aware content filtering based on relationships
+
+### 🏢 **Groups & Communities**
+- Create and manage groups with custom descriptions
+- Join groups or request membership for private groups
+- Group-specific posts and discussions
+- Admin controls for group management
+- Member invitation system
+
+### 📅 **Events & RSVP**
+- Create events within groups with date, time, and location
+- RSVP system with "going", "not going", and "interested" options
+- Event notifications to group members
+- Attendance tracking and management
+
+### 💬 **Real-time Messaging**
+- Private messaging between users
+- WebSocket-powered real-time communication
+- Message read status tracking
+- Notification system for new messages
+
+### 🔔 **Notifications**
+- Real-time notifications for social interactions
+- Follow requests, group invitations, and event updates
+- Message notifications and social activity alerts
+- Mark as read/unread functionality
+
+### 🎨 **Modern UI/UX**
+- Responsive design built with Next.js and Tailwind CSS
+- Clean, intuitive interface with smooth interactions
+- Mobile-friendly responsive layout
+- Dark/light theme support
+
 ---
 
 ## Project Structure
