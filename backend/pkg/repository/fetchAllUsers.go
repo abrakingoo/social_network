@@ -61,18 +61,40 @@ func (q *Query) FetchNonMutual(userID string) ([]model.Follower, error) {
 			u.is_public
 		FROM users u
 		WHERE u.id != ?
+		AND (
+    		NOT EXISTS (
+        		SELECT 1
+        		FROM user_follows uf
+        		WHERE (
+            		(uf.follower_id = u.id AND uf.following_id = ?) OR
+            		(uf.follower_id = ? AND uf.following_id = u.id)
+        			) AND uf.status = 'accepted'
+    			)	
+    	OR EXISTS (
+        	SELECT 1
+        	FROM user_follows uf2
+        	WHERE
+            	(
+                (uf2.follower_id = u.id AND uf2.following_id = ?) OR
+                (uf2.follower_id = ? AND uf2.following_id = u.id)
+            	)
+            	AND uf2.status = 'declined'
+    		)
+		)
 		AND NOT EXISTS (
-      		SELECT 1
-     			FROM user_follows uf
-      			WHERE
-        		(uf.follower_id = u.id AND uf.following_id = ?) OR
-        		(uf.follower_id = ? AND uf.following_id = u.id) OR
-          		(uf.follower_id = u.id AND uf.following_id = ? AND uf.status = 'declined')
- 		)
+    	SELECT 1
+    	FROM user_follows uf3
+    	WHERE (
+        (uf3.follower_id = u.id AND uf3.following_id = ?) OR
+        (uf3.follower_id = ? AND uf3.following_id = u.id)
+    	)
+    	AND uf3.status = 'pending'
+	)
+
 		ORDER BY u.created_at ASC
         LIMIT 100
 	`
-	rows, err := q.Db.Query(query, userID, userID, userID, userID)
+	rows, err := q.Db.Query(query, userID, userID, userID, userID, userID, userID, userID)
 	if err != nil {
 		log.Printf("FetchAllUsers: db error: %v", err)
 		return nil, fmt.Errorf("failed to fetch non mutuL users: %w", err)
@@ -183,7 +205,7 @@ func (q *Query) GetFollowersNotFollowedBack(userID string) ([]model.Follower, er
           FROM user_follows uf2
           WHERE uf2.follower_id = ?
             AND uf2.following_id = uf.follower_id
-            AND uf2.status IN ('accepted', 'pending')
+            AND uf2.status IN ('accepted', 'pending', 'declined')
         )
 		ORDER BY uf.created_at ASC
         LIMIT 100
