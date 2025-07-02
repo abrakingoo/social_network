@@ -86,6 +86,38 @@ func (c *Client) GroupMessage(msg map[string]any, q *repository.Query, h *Hub) {
 		return
 	}
 
+	// Get all group members to create notifications
+	memberIds, err := q.FetchAllGroupMembersId(message.GroupId)
+	if err != nil {
+		c.SendError("failed to fetch group members")
+		return
+	}
+
+	// Create notifications for all group members except sender
+	for _, memberID := range memberIds {
+		if memberID == c.UserID {
+			continue // Skip sender
+		}
+
+		notifID := util.UUIDGen()
+		err = q.InsertData("notifications", []string{
+			"id",
+			"recipient_id",
+			"actor_id",
+			"type",
+			"message",
+		}, []any{
+			notifID,
+			memberID,
+			c.UserID,
+			"group_message",
+			message.Message,
+		})
+		if err != nil {
+			log.Printf("Failed to create notification for member %s: %v", memberID, err)
+		}
+	}
+
 	h.BroadcastToGroup(c, message.GroupId, groupData)
 }
 
