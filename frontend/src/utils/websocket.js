@@ -220,6 +220,7 @@ class WebSocketManager {
           break;
         case "group_message":
           this.handleGroupMessage(data);
+          this.dispatchNotificationEvent("group_message", { data });
           break;
         case "follow_request":
           this.dispatchNotificationEvent("follow_request", { data });
