@@ -200,41 +200,42 @@ class WebSocketManager {
   // Handle backend notifications with EXACT format matching
   handleBackendNotification(message) {
     const { case: notificationCase, action_type, data } = message;
+
     if (notificationCase === "action_based") {
       switch (action_type) {
         case "group_join_request":
-          this.handleJoinRequestNotification(message);
+          this.handleJoinRequestNotification(data);
           break;
         case "group_join_accept":
-          this.handleJoinAcceptNotification(message);
+          this.handleJoinAcceptNotification(data);
           break;
         case "group_join_decline":
-          this.handleJoinDeclineNotification(message);
+          this.handleJoinDeclineNotification(data);
           break;
         case "group_invitation":
-          this.handleGroupInvitationNotification(message);
+          this.handleGroupInvitationNotification(data);
           break;
         case "private_message":
-          this.notifyListeners("notification", message);
+          this.dispatchNotificationEvent("private_message", { data });
           break;
         case "group_message":
-          this.handleGroupMessage(message);
+          this.handleGroupMessage(data);
           break;
         case "follow_request":
-          this.dispatchNotificationEvent("follow_request", {
-            title: "follow request",
-            description: "new follow_request",
-            data: message,
-          });
+          this.dispatchNotificationEvent("follow_request", { data });
           break;
-        
         default:
+          // Handle all other action-based notifications
+          this.dispatchNotificationEvent(action_type, { data });
           break;
       }
-     } else if (notificationCase === "group_event") {
-       //Handle group event notifications
-       this.handleGroupEventNotification(data);
-     }
+    } else if (notificationCase === "group_event") {
+      // Handle group event notifications
+      this.handleGroupEventNotification(data);
+    } else {
+      // Handle any other notification cases
+      this.dispatchNotificationEvent(notificationCase, { data });
+    }
   }
 
   handlePrivateMessage(data) {
