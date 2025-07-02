@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { decode } from 'he';
+import { decode } from "he";
 
 // Enhanced WebSocket manager with EXACT backend integration
 class WebSocketManager {
@@ -81,37 +81,50 @@ class WebSocketManager {
           // Handle potential multiple JSON messages concatenated together
           let messageData = event.data;
 
-          if (typeof messageData === 'string') {
+          if (typeof messageData === "string") {
             // Split by newlines in case backend sends multiple JSON objects separated by newlines
-            const lines = messageData.trim().split('\n').filter(line => line.trim());
+            const lines = messageData
+              .trim()
+              .split("\n")
+              .filter((line) => line.trim());
 
             if (lines.length > 1) {
               // Process each JSON object separately
-              lines.forEach(line => {
+              lines.forEach((line) => {
                 try {
                   const data = JSON.parse(line.trim());
                   this.processMessage(data);
                 } catch (parseError) {
-                  console.error("WebSocket: Error parsing individual line:", parseError, "Line:", line);
+                  console.error(
+                    "WebSocket: Error parsing individual line:",
+                    parseError,
+                    "Line:",
+                    line,
+                  );
                 }
               });
               return;
             }
 
             // Try to find and handle cases where JSON objects are concatenated without separators
-            if (messageData.includes('}{')) {
+            if (messageData.includes("}{")) {
               // Split on }{ pattern and reconstruct valid JSON
-              const parts = messageData.split('}{');
+              const parts = messageData.split("}{");
               for (let i = 0; i < parts.length; i++) {
                 let jsonStr = parts[i];
-                if (i > 0) jsonStr = '{' + jsonStr;
-                if (i < parts.length - 1) jsonStr = jsonStr + '}';
+                if (i > 0) jsonStr = "{" + jsonStr;
+                if (i < parts.length - 1) jsonStr = jsonStr + "}";
 
                 try {
                   const data = JSON.parse(jsonStr);
                   this.processMessage(data);
                 } catch (parseError) {
-                  console.error("WebSocket: Error parsing split JSON:", parseError, "Part:", jsonStr);
+                  console.error(
+                    "WebSocket: Error parsing split JSON:",
+                    parseError,
+                    "Part:",
+                    jsonStr,
+                  );
                 }
               }
               return;
@@ -121,11 +134,10 @@ class WebSocketManager {
           // Standard single JSON message processing
           const data = JSON.parse(messageData);
           this.processMessage(data);
-
         } catch (error) {
           console.error("WebSocket: Error parsing message:", error);
           // Only log raw data in development for debugging
-          if (process.env.NODE_ENV === 'development') {
+          if (process.env.NODE_ENV === "development") {
             console.error("WebSocket: Raw message data:", event.data);
             console.error("WebSocket: Message type:", typeof event.data);
             console.error("WebSocket: Message length:", event.data?.length);
@@ -227,46 +239,39 @@ class WebSocketManager {
             data: message,
           });
           break;
-        
+
         default:
           break;
       }
-     } else if (notificationCase === "group_event") {
-       //Handle group event notifications
-       this.handleGroupEventNotification(data);
-     }
+    } else if (notificationCase === "group_event") {
+      //Handle group event notifications
+      this.handleGroupEventNotification(data);
+    }
   }
 
   handlePrivateMessage(data) {
     // Decode HTML entities in the message content
     if (data && data.message) {
-      data.message = decode(data.message || '');
+      data.message = decode(data.message || "");
     }
     this.notifyListeners(EVENT_TYPES.PRIVATE_MESSAGE, data);
   }
 
-  handleGroupMessage(data) {
-    // Decode base64 data if it's a string, then parse JSON
-    let decodedData = data;
-    if (typeof data === 'string') {
+  handleGroupMessage(message) {
+    let data = message?.data || message;
+    if (typeof data === "string") {
       try {
-        // First decode base64 with proper UTF-8 handling
         const binaryString = atob(data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const decoded = new TextDecoder('utf-8').decode(bytes);
-        decodedData = JSON.parse(decoded);
-      } catch (error) {
-        console.error("Failed to decode group message data:", error);
-        return;
+        const decoded = new TextDecoder("utf-8").decode(
+          Uint8Array.from(binaryString, (c) => c.charCodeAt(0)),
+        );
+        data = JSON.parse(decoded);
+      } catch (e) {
+        console.error("Base64 decode failed, fallback to raw:", e);
       }
     }
 
-    // Note: Real-time group messages are sent unescaped from backend
-    // Only historical messages from database need HTML entity decoding
-    this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, decodedData);
+    this.notifyListeners(EVENT_TYPES.GROUP_MESSAGE, data);
   }
 
   // Handle join request notifications matching backend format
@@ -351,7 +356,7 @@ class WebSocketManager {
 
   // Handle group invitation notifications
   handleGroupInvitationNotification(data) {
-    console.log(data)
+    console.log(data);
     // Dispatch event for components to handle
     this.dispatchNotificationEvent("group_invitation", {
       title: "Group Invitation",
@@ -984,20 +989,20 @@ export const webSocketOperations = {
     }
   },
 
- sendFollowRequest(userId) {
+  sendFollowRequest(userId) {
     return wsManager.sendAndWait(EVENT_TYPES.FOLLOW_REQUEST, {
       recipient_Id: userId,
     });
   },
 
- respondToFollowRequest(userId, status) {
+  respondToFollowRequest(userId, status) {
     return wsManager.sendAndWait(EVENT_TYPES.RESPOND_FOLLOW_REQUEST, {
       recipient_Id: userId,
       status,
     });
   },
 
- unfollowUser(userId) {
+  unfollowUser(userId) {
     return wsManager.sendAndWait(EVENT_TYPES.UNFOLLOW, {
       recipient_Id: userId,
     });
@@ -1055,7 +1060,7 @@ export const webSocketOperations = {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         wsManager.removeListener(EVENT_TYPES.LOAD_GROUP_MESSAGES, listener);
-        reject(new Error('Load group messages request timed out'));
+        reject(new Error("Load group messages request timed out"));
       }, 10000); // 10 second timeout
 
       const listener = (data) => {
@@ -1081,13 +1086,16 @@ export const webSocketOperations = {
   // Create event via WebSocket for real-time notifications
   async createEvent(eventData) {
     try {
-      const result = await wsManager.sendAndWait(EVENT_TYPES.GROUP_EVENT, eventData);
+      const result = await wsManager.sendAndWait(
+        EVENT_TYPES.GROUP_EVENT,
+        eventData,
+      );
       return {
         success: true,
-        message: result.message || 'Event created successfully'
+        message: result.message || "Event created successfully",
       };
     } catch (error) {
-      console.error('[webSocketOperations.createEvent] Error:', error);
+      console.error("[webSocketOperations.createEvent] Error:", error);
       throw error;
     }
   },
