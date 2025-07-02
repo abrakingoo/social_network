@@ -350,7 +350,6 @@ export const NotificationProvider = ({ children }) => {
 
     const handleWSNotification = (event) => {
       const { type, notification } = event.detail;
-
       switch (type) {
         case 'group_invitation':
           handleGroupInvitation(notification.data);
@@ -363,6 +362,17 @@ export const NotificationProvider = ({ children }) => {
           break;
         case 'follow_request':
           handleFollowRequest(notification.data);
+          break;
+        case 'private_message':
+          addNotification({
+            id: notification.data.id,
+            type: 'private_message',
+            title: 'New Message',
+            content: `sent: "${notification.data.message || 'a message'}"`,
+            actor: notification.data.sender,
+            actionable: false,
+            data: notification.data
+          });
           break;
         case 'group_join_response':
           handleJoinResponse(notification.data);
