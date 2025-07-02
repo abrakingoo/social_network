@@ -84,15 +84,23 @@ class NotificationService {
       }
     }
 
+    const notificationType = backendNotif.Type || backendNotif.type;
+    let content = backendNotif.Message || backendNotif.message || "New notification";
+    
+    // Format group message notifications properly
+    if (notificationType === 'group_message' && actor) {
+      const actorName = `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || 'Someone';
+      content = `sent a group message: "${content}"`;
+    }
+
     return {
       id: backendNotif.ID || backendNotif.id,
-      type: backendNotif.Type || backendNotif.type,
-      content:
-        backendNotif.Message || backendNotif.message || "New notification",
+      type: notificationType,
+      content: content,
       actor,
       timestamp: new Date(backendNotif.CreatedAt || backendNotif.created_at),
       read: Boolean(backendNotif.IsRead || backendNotif.is_read),
-      actionable: this.isActionableType(backendNotif.Type || backendNotif.type),
+      actionable: this.isActionableType(notificationType),
       entityId: entityId,
       entityType: backendNotif.EntityType || backendNotif.entity_type,
       data: {
