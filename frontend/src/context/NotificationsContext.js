@@ -374,6 +374,32 @@ export const NotificationProvider = ({ children }) => {
             data: notification.data
           });
           break;
+        case 'group_message':
+          // Decode base64 group message data
+          let decodedData = notification.data;
+          if (typeof notification.data === 'string') {
+            try {
+              const binaryString = atob(notification.data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const decoded = new TextDecoder('utf-8').decode(bytes);
+              decodedData = JSON.parse(decoded);
+            } catch (error) {
+              console.error("Failed to decode group message:", error);
+              return;
+            }
+          }
+          addNotification({
+            type: 'group_message',
+            title: 'New Group Message',
+            content: `sent a group message: "${decodedData.message || 'a message'}"`,
+            actor: decodedData.sender,
+            actionable: false,
+            data: decodedData
+          });
+          break;
         case 'group_join_response':
           handleJoinResponse(notification.data);
           break;
