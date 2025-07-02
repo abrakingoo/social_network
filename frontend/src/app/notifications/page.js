@@ -385,7 +385,11 @@ const Notifications = () => {
                   </p>
                 </div>
               ) : filteredNotifications.length > 0 ? (
-                filteredNotifications.map(renderNotificationContent)
+                filteredNotifications.map((notification, index) => (
+                  <div key={notification.id || `notification-${index}`}>
+                    {renderNotificationContent(notification)}
+                  </div>
+                ))
               ) : (
                 <div className="p-8 text-center">
                   <Bell className="h-10 w-10 text-gray-400 mx-auto mb-2" />
