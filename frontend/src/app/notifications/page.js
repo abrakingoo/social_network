@@ -135,7 +135,7 @@ const Notifications = () => {
 
   const handleGroupInvitationResponse = async (notification, status) => {
     const groupId =
-      extractStringValue(notification.entityId) ||
+      extractStringValue(notification.groupId) ||
       extractStringValue(notification.data?.entity_id);
 
     if (!groupId) {
@@ -188,10 +188,12 @@ const Notifications = () => {
   const filteredNotifications = getFilteredNotifications();
 
   const renderNotificationContent = (notification) => {
+    console.log("actionable", notification);
+    ("notification rendered:", notification);
     const actorName =
       notification.actor &&
-      (notification.actor.firstName || notification.actor.lastName)
-        ? `${notification.actor.firstName || ""} ${notification.actor.lastName || ""}`.trim()
+      (notification.actor.first_name || notification.actor.last_name)
+        ? `${notification.actor.first_name || ""} ${notification.actor.last_name || ""}`.trim()
         : "";
 
     return (
@@ -212,10 +214,10 @@ const Notifications = () => {
           )}
           <AvatarFallback>
             {notification.actor &&
-            (notification.actor.firstName || notification.actor.lastName)
-              ? `${notification.actor.firstName?.[0] || ""}${notification.actor.lastName?.[0] || ""}`.toUpperCase() ||
+            (notification.actor.first_name || notification.actor.last_name)
+              ? `${notification.actor.first_name?.[0] || ""}${notification.actor.last_name?.[0] || ""}`.toUpperCase() ||
                 "?"
-              : "S"}
+              : "Sn"}
           </AvatarFallback>
         </Avatar>
 

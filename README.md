@@ -3,7 +3,7 @@
 <!-- HEADER STYLE: CLASSIC -->
 <div align="center">
 
-# <code>❯ SOCIAL NETWORK - FRONTEND</code>
+# <code>❯ SOCIAL NETWORK </code>
 
 <em></em>
 
@@ -52,14 +52,6 @@
 ---
 
 ## Overview
-
-
-
----
-
-## Features
-
-<code>❯ REPLACE-ME</code>
 
 ---
 
@@ -116,15 +108,15 @@
 			</thead>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/Dockerfile'>Dockerfile</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>Containers</code></td>
 				</tr>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/Caddyfile'>Caddyfile</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>Caddy server</code></td>
 				</tr>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/docker-compose.yml'>docker-compose.yml</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>Code>compose</code></td>
 				</tr>
 			</table>
 		</blockquote>
@@ -144,19 +136,19 @@
 			</thead>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/backend/go.sum'>go.sum</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>dependencies</code></td>
 				</tr>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/backend/Dockerfile'>Dockerfile</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>containers</code></td>
 				</tr>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/backend/server.go'>server.go</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>entry point backend</code></td>
 				</tr>
 				<tr style='border-bottom: 1px solid #eee;'>
 					<td style='padding: 8px;'><b><a href='/backend/go.mod'>go.mod</a></b></td>
-					<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+					<td style='padding: 8px;'>module</code></td>
 				</tr>
 			</table>
 			<!-- pkg Submodule -->
@@ -180,63 +172,63 @@
 							</thead>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/notification.go'>notification.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>notifications</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/client.go'>client.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>web client</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/messages.go'>messages.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>websocket messages</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/helper.go'>helper.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>helper functions</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/exitGroup.go'>exitGroup.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>exit functionality</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/groupInvitations.go'>groupInvitations.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>send and repond to invites</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/privateMessage.go'>privateMessage.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>Chat functionality</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/groupCancel.go'>groupCancel.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>Group</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/pump.go'>pump.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>write and read pump</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/unfollow.go'>unfollow.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>unfollow user</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/groups.go'>groups.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>group logic</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/groupMessage.go'>groupMessage.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>Group chat</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/broadcast.go'>broadcast.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>send to many</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/followrequest.go'>followrequest.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>follow request</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/websocket/hub.go'>hub.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>The hub</code></td>
 								</tr>
 							</table>
 						</blockquote>
@@ -256,39 +248,39 @@
 							</thead>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/email_validator.go'>email_validator.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>validate email</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/encrypt_password.go'>encrypt_password.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>encrypt password</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/environment_variables.go'>environment_variables.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>env variables</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/check_mime_type.go'>check_mime_type.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>Check type of files</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/nickname_validator.go'>nickname_validator.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>validate nickname</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/validate_password.go'>validate_password.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>validate password</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/compress.go'>compress.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>Compress files</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/sessions.go'>sessions.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>sessions</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/util/uuidGen.go'>uuidGen.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>unique identifier</code></td>
 								</tr>
 							</table>
 						</blockquote>
@@ -308,27 +300,27 @@
 							</thead>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/model/group_details.go'>group_details.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>group details</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/model/websocketModels.go'>websocketModels.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>websocket models</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/model/post.go'>post.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>post model</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/model/userData.go'>userData.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>user data model</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/model/user.go'>user.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>user model</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/model/user_detail_validator.go'>user_detail_validator.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>validate user details</code></td>
 								</tr>
 							</table>
 						</blockquote>
@@ -348,79 +340,75 @@
 							</thead>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/getPosts.go'>getPosts.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>get all posts handler</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/authenticator.go'>authenticator.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>aunthenticate sessions</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/addGroup.go'>addGroup.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>add a new group</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/cors.go'>cors.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>allows cross origins</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/websocket.go'>websocket.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>upgrade http to websocket connection</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/updateUser.go'>updateUser.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
-								</tr>
-								<tr style='border-bottom: 1px solid #eee;'>
-									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/addEvent.go'>addEvent.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>change user details</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/profile.go'>profile.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>get profile details</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/getAllUsers.go'>getAllUsers.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>get all users</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/deleteGroup.go'>deleteGroup.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>delete a group</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/allgroups.go'>allgroups.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>get all groups</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/add_post.go'>add_post.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>add a post</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/register.go'>register.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>register a new user</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/json_response.go'>json_response.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>respond with json</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/getGroup.go'>getGroup.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>get group data</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/routes_handler.go'>routes_handler.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>handle all routes and methods</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/login_handler.go'>login_handler.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>login into a user accoutn</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/logout.go'>logout.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>end a session</code></td>
 								</tr>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/handler/rsvp.go'>rsvp.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>rsvp to an event</code></td>
 								</tr>
 							</table>
 						</blockquote>
@@ -440,7 +428,7 @@
 							</thead>
 								<tr style='border-bottom: 1px solid #eee;'>
 									<td style='padding: 8px;'><b><a href='/backend/pkg/db/db.go'>db.go</a></b></td>
-									<td style='padding: 8px;'>Code>❯ REPLACE-ME</code></td>
+									<td style='padding: 8px;'>database</code></td>
 								</tr>
 							</table>
 							<!-- sqlite Submodule -->
@@ -1722,6 +1710,7 @@ npm test
 
  is protected under the [LICENSE](https://choosealicense.com/licenses) License. For more details, refer to the [LICENSE](https://choosealicense.com/licenses/) file.
 
+---
 
 <div align="right">
 

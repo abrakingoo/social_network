@@ -251,28 +251,17 @@ export const NotificationProvider = ({ children }) => {
 
   // WebSocket notification handlers
   const handleGroupInvitation = useCallback((data) => {
-    if (data && data.id) {
-      const inviter = data.inviter;
-      const inviterName = inviter?.nickname || inviter?.firstname || inviter?.first_name || inviter?.email || 'Someone';
+    console.log('Received group invitation:', data);
+    if (data) {
+      const inviter = data.actor;
+      const inviterName = inviter?.nickname || inviter?.first_name || inviter?.first_name || inviter?.email || 'Someone';
       addNotification({
         type: 'group_invitation',
         title: 'Group Invitation',
-        content: `${inviterName} invited you to join a group`,
+        content: `${inviterName} invited you to join`,
         actor: inviter || null,
-        groupId: data.group_id,
-        groupName: data.group_name || 'a group',
-        actionable: true,
-        data: data
-      });
-    } else {
-      // Fallback: still add a notification for robustness
-      addNotification({
-        type: 'group_invitation',
-        title: 'Group Invitation',
-        content: 'You have been invited to join a group',
-        actor: null,
-        groupId: data?.group_id,
-        groupName: data?.group_name || 'a group',
+        groupId: data.data.group_id,
+        groupName: data.data.group_name || 'a group',
         actionable: true,
         data: data
       });
@@ -293,17 +282,17 @@ export const NotificationProvider = ({ children }) => {
         avatar: null
       },
       groupId: data.group_id,
-      actionable: true, // User can take action
+      actionable: true,
       data: data
     });
   }, [addNotification]);
 
   const handleFollowRequest = useCallback((data) => {
+    type: 'follow_request',
     addNotification({
-      type: 'follow_request',
       title: 'Follow Request',
       content: 'wants to follow you',
-      actor: data.requester || null,
+      actor: data.actor || null,
       actionable: true,
       data: data
     });

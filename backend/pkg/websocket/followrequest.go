@@ -56,8 +56,13 @@ func (svc *FollowService) sendNotification(notifID, recipientID, actorID, ntype,
 		return
 	}
 
+	var userdata model.UserData
+	if err := svc.Query.FetchUserInfo(actorID, &userdata); err != nil {
+		return
+	}
+
 	if actionBased {
-		svc.Hub.ActionBasedNotification([]string{recipientID}, ntype, payload)
+		svc.Hub.ActionBasedNotification([]string{recipientID}, ntype, payload, userdata)
 	} else {
 		svc.Hub.InfoBasedNotification([]string{recipientID}, payload)
 	}
@@ -151,7 +156,7 @@ func (svc *FollowService) handleNewFollow(c *Client, req model.FollowRequest, us
 			return
 		}
 
-		svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "new follower",
+		svc.sendNotification(notifID, req.RecipientID, c.UserID, "follow_request", "follower_request",
 			map[string]any{"avatar": user.Avatar, "message": fmt.Sprintf("%v %v started following you", user.FirstName, user.LastName)}, false,
 		)
 	} else {

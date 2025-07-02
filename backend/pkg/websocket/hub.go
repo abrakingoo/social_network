@@ -86,9 +86,6 @@ func (h *Hub) Run() {
 				}
 			}
 			h.Mu.Unlock()
-
-			h.NotifyUserOffline(c.UserID)
-
 		}
 	}
 }

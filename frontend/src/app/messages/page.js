@@ -138,16 +138,23 @@ const Messages = () => {
 
   let usersToMessage = [];
 
-
   if (users.followers != null) {
-    usersToMessage = [...users.followers]
+    usersToMessage = [...users.followers];
   }
-
+  
   if (users.following != null) {
-    usersToMessage = [...usersToMessage, ...users.following]
+    usersToMessage = [...usersToMessage, ...users.following];
   }
-
-  console.log(usersToMessage)
+  
+  // Deduplicate based on user ID
+  const seen = new Set();
+  usersToMessage = usersToMessage.filter(user => {
+    if (!user || !user.id) return false; // skip invalid users
+    if (seen.has(user.id)) return false;
+    seen.add(user.id);
+    return true;
+  });
+  
 
   // Don't render if user is not authenticated
   if (!currentUser) {

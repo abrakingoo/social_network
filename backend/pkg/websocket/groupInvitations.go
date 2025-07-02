@@ -52,6 +52,31 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 
 	notId := util.UUIDGen()
 
+	invitationExists, err := q.CheckRow("group_invitations", []string{
+		"group_id",
+		"receiver_id",
+	}, []any{
+		request.GroupId,
+		request.RecipientID,
+	})
+	if err != nil {
+		c.SendError("Error checking invitation status")
+		return
+	}
+	if invitationExists {
+		err = q.DeleteData("group_invitations", []string{
+			"group_id",
+			"receiver_id",
+		}, []any{
+			request.GroupId,
+			request.RecipientID,
+		})
+		if err != nil {
+			c.SendError("Error while deleting existing invitation")
+			return
+		}
+	}
+
 	err = q.InsertData("group_invitations", []string{
 		"id",
 		"group_id",
@@ -66,38 +91,50 @@ func (c *Client) SendInvitation(msg map[string]any, q *repository.Query, h *Hub)
 		"pending",
 	})
 	if err != nil {
+		fmt.Println(err)
 		c.SendError("failed to send invitation")
 		return
 	}
 
-	// FIXED: Include group_id in the notification so frontend can access it
 	err = q.InsertData("notifications", []string{
 		"id",
 		"recipient_id",
 		"actor_id",
 		"type",
 		"message",
-		"entity_id",   // ADDED: Store group_id here
-		"entity_type", // ADDED: Store entity type
+		"entity_id",
+		"entity_type",
 	}, []any{
 		notId,
 		request.RecipientID,
 		c.UserID,
 		"group_invitation",
 		"new group invitation request",
-		request.GroupId, // FIXED: Store the group_id
-		"group",         // FIXED: Entity type for groups
+		request.GroupId,
+		"group",
 	})
 	if err != nil {
 		c.SendError("failed to notify the recipient")
+		return
+	}
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		c.SendError("failed to fetch user data")
+		return
+	}
+	groupData, err := q.FetchGroupData(request.GroupId, c.UserID)
+	if err != nil {
+		c.SendError("failed to fetch group data")
 		return
 	}
 
 	h.ActionBasedNotification([]string{
 		request.RecipientID,
 	}, "group_invitation", map[string]any{
-		"group_id": request.GroupId,
-	})
+		"group_id":   request.GroupId,
+		"group_name": groupData.Title,
+	}, userData)
 }
 
 // FIXED: Complete RespondSendInvitation function with proper logic
@@ -310,13 +347,19 @@ func (c *Client) SendMemberInvitationProposal(msg map[string]any, q *repository.
 		notId,
 		request.RecipientID,
 		c.UserID,
-		"group_view_invitation", // NEW notification type
+		"group_view_invitation",
 		fmt.Sprintf("has suggested you check out the group: %s", groupTitle),
 		request.GroupId,
 		"group",
 	})
 	if err != nil {
 		c.SendError("failed to notify the recipient")
+		return
+	}
+	var userData model.UserData
+	err = q.FetchUserInfo(c.UserID, &userData)
+	if err != nil {
+		c.SendError("failed to fetch user data")
 		return
 	}
 
@@ -327,7 +370,7 @@ func (c *Client) SendMemberInvitationProposal(msg map[string]any, q *repository.
 		"group_id":    request.GroupId,
 		"group_title": groupTitle,
 		"actor_id":    c.UserID,
-	})
+	}, userData)
 
 	c.SendSuccess("Invitation proposal sent successfully")
 }
